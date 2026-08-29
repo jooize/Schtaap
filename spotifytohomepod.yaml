@@ -8,7 +8,11 @@
 # Bridged networking (socket_vmnet) puts the VM on the LAN so mDNS works in
 # both directions: phone -> librespot discovery, OwnTone -> HomePods.
 
-base: template://docker-rootful
+base: template:docker-rootful
+
+# socket_vmnet bridged networking requires the QEMU driver; the vz
+# backend spins forever trying to attach to the bridged socket.
+vmType: qemu
 
 cpus: 2
 memory: 2GiB
@@ -28,8 +32,16 @@ provision:
       export DEBIAN_FRONTEND=noninteractive
 
       # --- librespot via raspotify (prebuilt deb + systemd service) ---
+      # raspotify's install.sh fails on noble: it asks for "libasound2"
+      # by name, which noble renamed to libasound2t64. Installing the
+      # deb directly lets apt satisfy the dependency via the t64
+      # provider. Mirrored in provision.sh -- keep both in sync.
       if ! dpkg -s raspotify >/dev/null 2>&1; then
-        curl -sL https://dtcooper.github.io/raspotify/install.sh | sh
+        apt-get update -q
+        apt-get install -y -q libasound2t64
+        curl -fsSL -o /tmp/raspotify.deb \
+          https://dtcooper.github.io/raspotify/raspotify-latest_arm64.deb
+        apt-get install -y -q /tmp/raspotify.deb
       fi
 
       # Audio handoff: librespot writes raw PCM (44.1kHz/16-bit/stereo)

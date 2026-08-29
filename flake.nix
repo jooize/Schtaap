@@ -43,6 +43,10 @@
         });
 
         lima = pkgs.lima;
+
+        # Bridged socket_vmnet networking works only with Lima's QEMU
+        # driver, not vz.
+        qemu = pkgs.qemu;
       };
 
       devShells.${system}.default = pkgs.mkShell {

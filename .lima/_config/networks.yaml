@@ -6,6 +6,13 @@
 paths:
   socketVMNet: /opt/socket_vmnet/bin/socket_vmnet
   varRun: /private/var/run/lima
+  # Declared so Lima uses the scoped rules instead of probing for
+  # general passwordless sudo.
+  sudoers: /private/etc/sudoers.d/lima
+
+# Who may start the network helper via the sudoers entry. admin is
+# tighter than Lima's usual "everyone" default.
+group: admin
 
 networks:
   bridged:
