@@ -42,6 +42,8 @@ general {
   uid = "owntone"
   db_path = "/var/cache/owntone/songs3.db"
   cache_dir = "/var/cache/owntone"
+  # Default only trusts 192.168.*; this LAN is 10.*.
+  trusted_networks = { "localhost", "10.", "192.168.", "fd" }
 }
 library {
   name = "SpotifyToHomePod"
