@@ -1,0 +1,6 @@
+#!/bin/sh
+# limactl wrapper keeping all Lima state project-local (.lima/).
+set -eu
+dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+export LIMA_HOME="$dir/.lima"
+exec "$dir/result-lima/bin/limactl" "$@"

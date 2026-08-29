@@ -1,0 +1,85 @@
+# Lima template: bridged VM that turns HomePods into a Spotify Connect target.
+#
+# raspotify (packaged librespot) advertises a Spotify Connect endpoint via
+# zeroconf -- no credentials stored; the sender's phone authorizes each
+# session. Audio lands in a fifo that OwnTone (official container) picks up
+# and streams to the HomePods over AirPlay 2, synced.
+#
+# Bridged networking (socket_vmnet) puts the VM on the LAN so mDNS works in
+# both directions: phone -> librespot discovery, OwnTone -> HomePods.
+
+base: template://docker-rootful
+
+cpus: 2
+memory: 2GiB
+disk: 20GiB
+
+# Nothing from the Mac is needed inside the VM.
+mounts: []
+
+networks:
+  - lima: bridged
+
+provision:
+  - mode: system
+    script: |
+      #!/bin/bash
+      set -eux -o pipefail
+      export DEBIAN_FRONTEND=noninteractive
+
+      # --- librespot via raspotify (prebuilt deb + systemd service) ---
+      if ! dpkg -s raspotify >/dev/null 2>&1; then
+        curl -sL https://dtcooper.github.io/raspotify/install.sh | sh
+      fi
+
+      # Audio handoff: librespot writes raw PCM (44.1kHz/16-bit/stereo)
+      # into a fifo that OwnTone watches as library content.
+      install -d -m 755 /srv/music
+      [ -p /srv/music/spotify ] || mkfifo -m 666 /srv/music/spotify
+
+      cat > /etc/raspotify/conf <<'EOF'
+      LIBRESPOT_NAME="HomePods"
+      LIBRESPOT_BITRATE="320"
+      LIBRESPOT_BACKEND="pipe"
+      LIBRESPOT_DEVICE="/srv/music/spotify"
+      # Nothing persists on our machines: the sender's phone authorizes
+      # each session over zeroconf.
+      LIBRESPOT_DISABLE_AUDIO_CACHE=
+      LIBRESPOT_DISABLE_CREDENTIAL_CACHE=
+      EOF
+      systemctl enable raspotify
+      systemctl restart raspotify
+
+      # --- OwnTone (official container, host network for mDNS/AirPlay) ---
+      install -d -m 755 /etc/owntone
+      install -d -m 755 -o 1000 -g 1000 /var/cache/owntone
+      cat > /etc/owntone/owntone.conf <<'EOF'
+      general {
+        uid = "owntone"
+        db_path = "/var/cache/owntone/songs3.db"
+        cache_dir = "/var/cache/owntone"
+      }
+      library {
+        name = "SpotifyToHomePod"
+        directories = { "/srv/music" }
+        pipe_autostart = true
+      }
+      EOF
+
+      if ! docker inspect owntone >/dev/null 2>&1; then
+        docker run -d --name owntone \
+          --network host \
+          -e UID=1000 -e GID=1000 \
+          -v /etc/owntone:/etc/owntone \
+          -v /srv/music:/srv/music \
+          -v /var/cache/owntone:/var/cache/owntone \
+          --restart unless-stopped \
+          docker.io/owntone/owntone:latest
+      fi
+
+probes:
+  - description: "owntone web UI responding"
+    script: |
+      #!/bin/bash
+      set -eu
+      timeout 60s bash -c 'until curl -fsS http://localhost:3689/api/config >/dev/null 2>&1; do sleep 3; done'

@@ -1,0 +1,13 @@
+# Managed by this project's flake (socket_vmnet built from source).
+# Lima rejects Nix store paths (/nix/store is root:nixbld 1775; the
+# sticky bit makes it safe, but Lima's check only accepts gid 0), so the
+# flake-built binaries are installed to root-owned /opt/socket_vmnet --
+# Lima's documented layout. See README for the install command.
+paths:
+  socketVMNet: /opt/socket_vmnet/bin/socket_vmnet
+  varRun: /private/var/run/lima
+
+networks:
+  bridged:
+    mode: bridged
+    interface: en0

@@ -1,0 +1,2 @@
+time="2026-08-29T15:18:09+02:00" level=info msg="Please check https://lima-vm.io/docs/config/network/vmnet/#socket_vmnet for more information."
+time="2026-08-29T15:18:09+02:00" level=fatal msg="networks.yaml: \"/opt/socket_vmnet/bin/socket_vmnet\" (`paths.socketVMNet`) has to be installed"
