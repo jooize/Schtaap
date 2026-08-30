@@ -16,18 +16,23 @@ struct Output: Identifiable, Decodable, Sendable, Hashable {
     let needsAuthKey: Bool?
     let format: String?
 
-    var isAirPlay: Bool { type.caseInsensitiveCompare("AirPlay") == .orderedSame }
+    /// Matched by prefix: the engine reports "AirPlay 2", not "AirPlay".
+    var isAirPlay: Bool { type.lowercased().hasPrefix("airplay") }
+
+    /// The device will not accept a stream until a code shown on its screen is
+    /// typed back. The engine sets this after a selection attempt triggers the
+    /// device to display a PIN.
+    var needsVerification: Bool { needsAuthKey == true }
 
     /// SF Symbol for the row's icon well. The engine does not tell us which
     /// AirPlay device is a HomePod versus an Apple TV, so this stays generic
     /// until we learn to read the model from the mDNS TXT record.
     var symbolName: String {
-        switch type.lowercased() {
-        case "airplay": "hifispeaker.fill"
-        case "chromecast": "tv.and.hifispeaker.fill"
-        case "fifo": "waveform"
-        default: "speaker.wave.2.fill"
-        }
+        let kind = type.lowercased()
+        if kind.hasPrefix("airplay") { return "hifispeaker.fill" }
+        if kind.hasPrefix("chromecast") { return "tv.and.hifispeaker.fill" }
+        if kind.hasPrefix("fifo") { return "waveform" }
+        return "speaker.wave.2.fill"
     }
 }
 

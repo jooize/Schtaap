@@ -25,6 +25,17 @@ struct PopoverView: View {
             .padding(.horizontal, Metrics.horizontalInset)
             .padding(.bottom, 12)
 
+            if let verifying = store.verifying {
+                VerificationCard(
+                    output: verifying,
+                    errorMessage: store.verificationError,
+                    onSubmit: { store.submitVerification(pin: $0) },
+                    onCancel: { store.cancelVerification() }
+                )
+                .padding(.horizontal, Metrics.horizontalInset)
+                .padding(.bottom, 10)
+            }
+
             if store.outputs.isEmpty {
                 emptyState
             } else {
@@ -100,10 +111,6 @@ struct PopoverView: View {
             MenuRow(title: "\(Branding.appName) Settings…") {
                 NSApp.activate(ignoringOtherApps: true)
                 openSettings()
-            } trailing: {
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 10, weight: .semibold))
-                    .foregroundStyle(.tertiary)
             }
 
             MenuRow(title: "Quit \(Branding.appName)") {

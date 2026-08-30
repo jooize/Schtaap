@@ -25,6 +25,12 @@ final class EngineStore {
     /// Master volume in 0...100. Written straight through by the slider.
     private(set) var masterVolume: Double = 50
 
+    /// Set when a device answers a selection attempt by displaying a code on
+    /// its screen instead of accepting the stream. Apple TVs and some
+    /// receivers do this. The popover swaps in a PIN field while it is set.
+    private(set) var verifying: Output?
+    private(set) var verificationError: String?
+
     let client: EngineClient
 
     private let notify: NotifyClient
@@ -139,6 +145,12 @@ final class EngineStore {
     // MARK: - Writes
 
     func toggle(_ output: Output) {
+        // A device that has already asked for a code goes straight back to the
+        // prompt rather than through another attempt that can only fail.
+        if !output.selected, output.needsVerification {
+            beginVerification(for: output)
+            return
+        }
         setSelected(!output.selected, for: output)
     }
 
@@ -148,7 +160,46 @@ final class EngineStore {
         Task { [client] in
             try? await client.setSelected(selected, forOutput: output.id)
             await self.refreshOutputs()
+            if selected { self.promptForVerificationIfNeeded(output.id) }
         }
+    }
+
+    // MARK: - Device verification
+
+    func beginVerification(for output: Output) {
+        verifying = output
+        verificationError = nil
+    }
+
+    func cancelVerification() {
+        verifying = nil
+        verificationError = nil
+    }
+
+    func submitVerification(pin: String) {
+        guard let output = verifying else { return }
+
+        Task { [client] in
+            do {
+                try await client.verify(pin: pin, forOutput: output.id)
+                await self.refreshOutputs()
+                if self.outputs.first(where: { $0.id == output.id })?.selected == true {
+                    self.cancelVerification()
+                } else {
+                    self.verificationError = "That code was not accepted."
+                }
+            } catch {
+                self.verificationError = error.localizedDescription
+            }
+        }
+    }
+
+    /// A selection that left the output unselected and asking for a key means
+    /// the device is now showing a code.
+    private func promptForVerificationIfNeeded(_ id: String) {
+        guard let current = outputs.first(where: { $0.id == id }) else { return }
+        guard current.needsVerification, !current.selected else { return }
+        beginVerification(for: current)
     }
 
     func setVolume(_ value: Double, for output: Output) {

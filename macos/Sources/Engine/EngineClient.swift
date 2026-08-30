@@ -68,6 +68,13 @@ actor EngineClient {
         try await put("api/outputs/\(id)", body: ["volume": clampVolume(volume)])
     }
 
+    /// Answers a device's on-screen verification code. Sent together with
+    /// `selected` so a successful pairing also completes the selection the
+    /// user originally asked for.
+    func verify(pin: String, forOutput id: String) async throws {
+        try await put("api/outputs/\(id)", body: ["pin": pin, "selected": true])
+    }
+
     /// Enables exactly `ids` and disables everything else, in one request.
     /// This is what speaker presets and rejoin-on-free should use, since it
     /// cannot leave the set half-applied.

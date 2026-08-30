@@ -22,6 +22,12 @@ struct OutputRow: View {
                         .lineLimit(1)
                         .truncationMode(.tail)
                     Spacer(minLength: 0)
+                    if output.needsVerification, !output.selected {
+                        Image(systemName: "lock.fill")
+                            .font(.system(size: 10))
+                            .foregroundStyle(.tertiary)
+                            .help("This device asks for a code before it will play")
+                    }
                 }
                 .contentShape(Rectangle())
             }

@@ -1,9 +1,13 @@
 # XcodeGen source of truth. Regenerate with:  ./macos/generate
 #
-# The product name is deliberately confined to this file (and the display
-# strings in Sources/Support/Branding.swift). No Swift type carries it, so
+# The product name is deliberately confined to this file (and the fallback
+# string in Sources/Support/Branding.swift). No Swift type carries it, so
 # renaming the app is: change `name:` + PRODUCT_BUNDLE_IDENTIFIER here,
 # change Branding.swift, regenerate.
+#
+# Versions live in Version.xcconfig, never here -- see the project-level
+# configFiles below. Target settings must not carry MARKETING_VERSION or
+# CURRENT_PROJECT_VERSION, or they would shadow the xcconfig.
 
 name: Tutti
 
@@ -18,12 +22,14 @@ configs:
   Debug: debug
   Release: release
 
+configFiles:
+  Debug: Version.xcconfig
+  Release: Version.xcconfig
+
 settings:
   base:
     SWIFT_VERSION: "6.0"
     SWIFT_STRICT_CONCURRENCY: complete
-    MARKETING_VERSION: "0.1.0"
-    CURRENT_PROJECT_VERSION: "1"
     DEAD_CODE_STRIPPING: YES
     ENABLE_USER_SCRIPT_SANDBOXING: YES
     GCC_WARN_INHIBIT_ALL_WARNINGS: NO
@@ -42,7 +48,8 @@ targets:
       - path: Sources
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: bar.esko.tutti
+        # Reverse-DNS casing: lowercase organization, CamelCase brand segment.
+        PRODUCT_BUNDLE_IDENTIFIER: bar.esko.Tutti
         PRODUCT_NAME: $(TARGET_NAME)
         INFOPLIST_KEY_NSHumanReadableCopyright: ""
         COMBINE_HIDPI_IMAGES: YES
@@ -52,8 +59,9 @@ targets:
       # swept into the target as a resource.
       path: Info.plist
       properties:
+        # No CFBundleDisplayName: the system falls back to CFBundleName, so
+        # there is only one name to keep in sync.
         CFBundleName: $(PRODUCT_NAME)
-        CFBundleDisplayName: $(PRODUCT_NAME)
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         CFBundlePackageType: APPL
@@ -69,6 +77,37 @@ schemes:
     build:
       targets:
         Tutti: all
+      preActions:
+        # Runs before Xcode reads the xcconfig, which is the only point early
+        # enough to set CURRENT_PROJECT_VERSION dynamically. A build phase
+        # would run after Info.plist processing.
+        - name: Bump Build Number
+          settingsTarget: Tutti
+          script: |
+            set -o errexit
+            set -o nounset
+
+            build_file="${SRCROOT}/.build-number"
+            version_file="${SRCROOT}/.last-version"
+
+            current_version="$(sed -n 's/^MARKETING_VERSION *= *//p' "${SRCROOT}/Version.xcconfig" | head -1)"
+            last_version=""
+            if [ -f "$version_file" ]; then
+              last_version="$(cat "$version_file")"
+            fi
+
+            if [ "$current_version" != "$last_version" ]; then
+              build_number=0
+              printf '%s\n' "$current_version" > "$version_file"
+            elif [ -f "$build_file" ]; then
+              build_number="$(cat "$build_file")"
+            else
+              build_number=0
+            fi
+
+            build_number=$((build_number + 1))
+            printf '%s\n' "$build_number" > "$build_file"
+            printf 'CURRENT_PROJECT_VERSION = %s\n' "$build_number" > "${SRCROOT}/BuildNumber.xcconfig"
     run:
       config: Debug
     profile:

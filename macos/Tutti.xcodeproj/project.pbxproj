@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		0CD1055918631B8A09D437AA /* VerificationCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B8927D4431C875762545813 /* VerificationCard.swift */; };
 		134915B5059A9FD7B91189C3 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C12DB9FDBB50F6679691EAF8 /* SettingsView.swift */; };
 		1C399DD990ECFC9AB4A28EDB /* PresenceMode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49589558318F1462F9063C0C /* PresenceMode.swift */; };
 		2468F89BEE583103E0D3CB85 /* PopoverView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 836DCBD336E70130B715D00C /* PopoverView.swift */; };
@@ -27,6 +28,7 @@
 
 /* Begin PBXFileReference section */
 		07F7398340A23F82CEDA629C /* MenuBarLabel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarLabel.swift; sourceTree = "<group>"; };
+		1B8927D4431C875762545813 /* VerificationCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VerificationCard.swift; sourceTree = "<group>"; };
 		365EBA8E6F488D74B05A8F13 /* NowPlayingCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NowPlayingCard.swift; sourceTree = "<group>"; };
 		49589558318F1462F9063C0C /* PresenceMode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PresenceMode.swift; sourceTree = "<group>"; };
 		500F8F2133971779753162A1 /* OutputRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OutputRow.swift; sourceTree = "<group>"; };
@@ -43,6 +45,7 @@
 		C12DB9FDBB50F6679691EAF8 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		CC5239B909D87054B34F49F3 /* AppMain.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppMain.swift; sourceTree = "<group>"; };
 		E5A36685164C766FE0FE7700 /* NotifyClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotifyClient.swift; sourceTree = "<group>"; };
+		"TEMP_7C37ADFA-16EF-46AC-B10A-B4783E5CC1CD" /* Version.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Version.xcconfig; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -74,6 +77,7 @@
 				500F8F2133971779753162A1 /* OutputRow.swift */,
 				836DCBD336E70130B715D00C /* PopoverView.swift */,
 				C12DB9FDBB50F6679691EAF8 /* SettingsView.swift */,
+				1B8927D4431C875762545813 /* VerificationCard.swift */,
 			);
 			path = UI;
 			sourceTree = "<group>";
@@ -115,6 +119,14 @@
 				49589558318F1462F9063C0C /* PresenceMode.swift */,
 			);
 			path = Support;
+			sourceTree = "<group>";
+		};
+		"TEMP_DB21DD97-47A9-4B19-8280-ADB39373B294" /* macos */ = {
+			isa = PBXGroup;
+			children = (
+				"TEMP_7C37ADFA-16EF-46AC-B10A-B4783E5CC1CD" /* Version.xcconfig */,
+			);
+			path = macos;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -186,6 +198,7 @@
 				2468F89BEE583103E0D3CB85 /* PopoverView.swift in Sources */,
 				1C399DD990ECFC9AB4A28EDB /* PresenceMode.swift in Sources */,
 				134915B5059A9FD7B91189C3 /* SettingsView.swift in Sources */,
+				0CD1055918631B8A09D437AA /* VerificationCard.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -194,6 +207,7 @@
 /* Begin XCBuildConfiguration section */
 		0897C94399D4433118D5CFF5 /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = "TEMP_7C37ADFA-16EF-46AC-B10A-B4783E5CC1CD" /* Version.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ANALYZER_NONNULL = YES;
@@ -229,7 +243,6 @@
 				CODE_SIGNING_REQUIRED = NO;
 				CODE_SIGN_IDENTITY = "-";
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 1;
 				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
@@ -245,7 +258,6 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 15.0;
-				MARKETING_VERSION = 0.1.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -269,7 +281,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = bar.esko.tutti;
+				PRODUCT_BUNDLE_IDENTIFIER = bar.esko.Tutti;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
 			};
@@ -287,7 +299,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = bar.esko.tutti;
+				PRODUCT_BUNDLE_IDENTIFIER = bar.esko.Tutti;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
 			};
@@ -295,6 +307,7 @@
 		};
 		D77CF51768ED944D8C0B0719 /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = "TEMP_7C37ADFA-16EF-46AC-B10A-B4783E5CC1CD" /* Version.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ANALYZER_NONNULL = YES;
@@ -330,7 +343,6 @@
 				CODE_SIGNING_REQUIRED = NO;
 				CODE_SIGN_IDENTITY = "-";
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 1;
 				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -352,7 +364,6 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 15.0;
-				MARKETING_VERSION = 0.1.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
