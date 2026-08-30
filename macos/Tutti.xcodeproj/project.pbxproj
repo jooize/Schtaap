@@ -23,7 +23,9 @@
 		ACBF801DEAF333A8AE1C254A /* MenuBarLabel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 07F7398340A23F82CEDA629C /* MenuBarLabel.swift */; };
 		BD4DC060E73D5CACA8B1AE29 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8FBEFBD930F0E25D6F76BAA4 /* Models.swift */; };
 		D0C630EA83B635470781616A /* AppMain.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC5239B909D87054B34F49F3 /* AppMain.swift */; };
+		D5A4053E883E5E8B2269CA6C /* DeviceKind.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C0D8A18EDDDA6CFA5004B3B /* DeviceKind.swift */; };
 		DEA47C1AEA3E298423C23D15 /* Branding.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8EAF73867DC41A88001A161A /* Branding.swift */; };
+		E947AA9CBCCA11EC0834D1EE /* AirPlayDirectory.swift in Sources */ = {isa = PBXBuildFile; fileRef = 883AF2C23BE1D5EE4C7D0B82 /* AirPlayDirectory.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -34,9 +36,11 @@
 		500F8F2133971779753162A1 /* OutputRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OutputRow.swift; sourceTree = "<group>"; };
 		51F5AA1B43A57D7652656F3F /* LoginItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginItem.swift; sourceTree = "<group>"; };
 		5E81F843E0CEA284C821265E /* EngineEndpoint.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EngineEndpoint.swift; sourceTree = "<group>"; };
+		7C0D8A18EDDDA6CFA5004B3B /* DeviceKind.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceKind.swift; sourceTree = "<group>"; };
 		7E0C7563888793701294D90A /* EngineClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EngineClient.swift; sourceTree = "<group>"; };
 		7E6A3882847B1553494B1C00 /* Tutti.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Tutti.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		836DCBD336E70130B715D00C /* PopoverView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PopoverView.swift; sourceTree = "<group>"; };
+		883AF2C23BE1D5EE4C7D0B82 /* AirPlayDirectory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AirPlayDirectory.swift; sourceTree = "<group>"; };
 		88606BECBE85980E3D1DE5E4 /* Fixtures.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Fixtures.swift; sourceTree = "<group>"; };
 		8EAF73867DC41A88001A161A /* Branding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Branding.swift; sourceTree = "<group>"; };
 		8FBEFBD930F0E25D6F76BAA4 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
@@ -45,7 +49,7 @@
 		C12DB9FDBB50F6679691EAF8 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		CC5239B909D87054B34F49F3 /* AppMain.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppMain.swift; sourceTree = "<group>"; };
 		E5A36685164C766FE0FE7700 /* NotifyClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotifyClient.swift; sourceTree = "<group>"; };
-		"TEMP_7C37ADFA-16EF-46AC-B10A-B4783E5CC1CD" /* Version.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Version.xcconfig; sourceTree = "<group>"; };
+		"TEMP_18C39556-BC50-4C48-AF09-3AFC15594346" /* Version.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Version.xcconfig; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -101,6 +105,8 @@
 		C2A5F5EE6FA48D2DEE29938A /* Engine */ = {
 			isa = PBXGroup;
 			children = (
+				883AF2C23BE1D5EE4C7D0B82 /* AirPlayDirectory.swift */,
+				7C0D8A18EDDDA6CFA5004B3B /* DeviceKind.swift */,
 				7E0C7563888793701294D90A /* EngineClient.swift */,
 				5E81F843E0CEA284C821265E /* EngineEndpoint.swift */,
 				B8C00EEB0E43CB58E2985278 /* EngineStore.swift */,
@@ -121,10 +127,10 @@
 			path = Support;
 			sourceTree = "<group>";
 		};
-		"TEMP_DB21DD97-47A9-4B19-8280-ADB39373B294" /* macos */ = {
+		"TEMP_A4B91863-500D-4354-97B6-308C887B9761" /* macos */ = {
 			isa = PBXGroup;
 			children = (
-				"TEMP_7C37ADFA-16EF-46AC-B10A-B4783E5CC1CD" /* Version.xcconfig */,
+				"TEMP_18C39556-BC50-4C48-AF09-3AFC15594346" /* Version.xcconfig */,
 			);
 			path = macos;
 			sourceTree = "<group>";
@@ -182,9 +188,11 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				E947AA9CBCCA11EC0834D1EE /* AirPlayDirectory.swift in Sources */,
 				D0C630EA83B635470781616A /* AppMain.swift in Sources */,
 				DEA47C1AEA3E298423C23D15 /* Branding.swift in Sources */,
 				33705D5D7F0ACA39F710A793 /* Controls.swift in Sources */,
+				D5A4053E883E5E8B2269CA6C /* DeviceKind.swift in Sources */,
 				53FF6C575C57DAFECFC5C8CF /* EngineClient.swift in Sources */,
 				7EFD3424C43382F1964BB3B8 /* EngineEndpoint.swift in Sources */,
 				4EE6714A21D1534C07383377 /* EngineStore.swift in Sources */,
@@ -207,7 +215,7 @@
 /* Begin XCBuildConfiguration section */
 		0897C94399D4433118D5CFF5 /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = "TEMP_7C37ADFA-16EF-46AC-B10A-B4783E5CC1CD" /* Version.xcconfig */;
+			baseConfigurationReference = "TEMP_18C39556-BC50-4C48-AF09-3AFC15594346" /* Version.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ANALYZER_NONNULL = YES;
@@ -307,7 +315,7 @@
 		};
 		D77CF51768ED944D8C0B0719 /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = "TEMP_7C37ADFA-16EF-46AC-B10A-B4783E5CC1CD" /* Version.xcconfig */;
+			baseConfigurationReference = "TEMP_18C39556-BC50-4C48-AF09-3AFC15594346" /* Version.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ANALYZER_NONNULL = YES;

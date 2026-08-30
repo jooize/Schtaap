@@ -5,6 +5,7 @@ import SwiftUI
 /// handles multi-output AirPlay.
 struct OutputRow: View {
     let output: Output
+    let symbolName: String
     @Binding var volume: Double
     let onToggle: () -> Void
     var onVolumeEditingChanged: (Bool) -> Void = { _ in }
@@ -15,7 +16,7 @@ struct OutputRow: View {
         VStack(alignment: .leading, spacing: 5) {
             Button(action: onToggle) {
                 HStack(spacing: 10) {
-                    IconWell(symbol: output.symbolName, isActive: output.selected)
+                    IconWell(symbol: symbolName, isActive: output.selected)
                     Text(output.name)
                         .font(.system(size: 13))
                         .foregroundStyle(.primary)
@@ -54,6 +55,7 @@ struct OutputRow: View {
 #Preview("Selected") {
     OutputRow(
         output: Fixtures.outputs[0],
+        symbolName: DeviceKind.homePod.symbolName,
         volume: .constant(62),
         onToggle: {}
     )
@@ -64,6 +66,7 @@ struct OutputRow: View {
 #Preview("Not selected") {
     OutputRow(
         output: Fixtures.outputs[2],
+        symbolName: DeviceKind.homePodMini.symbolName,
         volume: .constant(30),
         onToggle: {}
     )

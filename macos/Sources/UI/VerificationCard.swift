@@ -8,6 +8,7 @@ import SwiftUI
 /// without the popover dismissing out from under it.
 struct VerificationCard: View {
     let output: Output
+    let symbolName: String
     let errorMessage: String?
     let onSubmit: (String) -> Void
     let onCancel: () -> Void
@@ -18,7 +19,7 @@ struct VerificationCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 9) {
             HStack(spacing: 10) {
-                IconWell(symbol: output.symbolName, isActive: false)
+                IconWell(symbol: symbolName, isActive: false)
                 VStack(alignment: .leading, spacing: 1) {
                     Text(output.name)
                         .font(.system(size: 13, weight: .medium))
@@ -71,7 +72,8 @@ struct VerificationCard: View {
 
 #Preview {
     VerificationCard(
-        output: Fixtures.outputs[0],
+        output: Fixtures.outputs[7],
+        symbolName: DeviceKind.television.symbolName,
         errorMessage: nil,
         onSubmit: { _ in },
         onCancel: {}

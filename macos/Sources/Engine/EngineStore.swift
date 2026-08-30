@@ -33,6 +33,9 @@ final class EngineStore {
 
     let client: EngineClient
 
+    /// Bonjour lookup for device hardware, which the engine's API omits.
+    let directory = AirPlayDirectory()
+
     private let notify: NotifyClient
     private let usesFixtures: Bool
 
@@ -64,6 +67,8 @@ final class EngineStore {
             return
         }
 
+        directory.start()
+
         lifecycle = Task { [weak self] in
             guard let self else { return }
             await self.refreshAll()
@@ -74,6 +79,7 @@ final class EngineStore {
     }
 
     func stop() {
+        directory.stop()
         lifecycle?.cancel()
         lifecycle = nil
         for task in volumeWrites.values { task.cancel() }
@@ -244,6 +250,15 @@ final class EngineStore {
             try? await client.setMasterVolume(level)
             await self.refreshPlayer()
         }
+    }
+
+    // MARK: - Presentation
+
+    /// The icon for an output: its real hardware when Bonjour has told us,
+    /// the coarse guess from the engine's output type otherwise.
+    func symbolName(for output: Output) -> String {
+        let name = directory.kind(forOutputNamed: output.name)?.symbolName ?? output.symbolName
+        return SymbolCatalog.name(name)
     }
 
     // MARK: - Helpers

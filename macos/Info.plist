@@ -27,5 +27,11 @@
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
 	</dict>
+	<key>NSBonjourServices</key>
+	<array>
+		<string>_airplay._tcp</string>
+	</array>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>$(PRODUCT_NAME) looks for AirPlay speakers on your network so it can show each one with the right icon.</string>
 </dict>
 </plist>

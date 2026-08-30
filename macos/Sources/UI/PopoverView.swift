@@ -6,6 +6,12 @@ struct PopoverView: View {
     @Environment(EngineStore.self) private var store
     @Environment(\.openSettings) private var openSettings
 
+    @State private var showsAllOutputs = false
+
+    /// How many rows the collapsed list aims for. Selected speakers are never
+    /// hidden, so a large selection can exceed this.
+    private static let collapsedRowTarget = 6
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             title
@@ -28,6 +34,7 @@ struct PopoverView: View {
             if let verifying = store.verifying {
                 VerificationCard(
                     output: verifying,
+                    symbolName: store.symbolName(for: verifying),
                     errorMessage: store.verificationError,
                     onSubmit: { store.submitVerification(pin: $0) },
                     onCancel: { store.cancelVerification() }
@@ -74,9 +81,10 @@ struct PopoverView: View {
                 .padding(.horizontal, Metrics.horizontalInset)
                 .padding(.bottom, 2)
 
-            ForEach(store.outputs) { output in
+            ForEach(visibleOutputs) { output in
                 OutputRow(
                     output: output,
+                    symbolName: store.symbolName(for: output),
                     volume: volume(for: output),
                     onToggle: { store.toggle(output) },
                     onVolumeEditingChanged: { editing in
@@ -85,7 +93,40 @@ struct PopoverView: View {
                 )
                 .padding(.horizontal, Metrics.horizontalInset - 6)
             }
+
+            if hiddenOutputCount > 0 || showsAllOutputs {
+                MenuRow(title: showsAllOutputs ? "Show Less" : "Show More") {
+                    withAnimation(.snappy(duration: 0.18)) { showsAllOutputs.toggle() }
+                } trailing: {
+                    Image(systemName: showsAllOutputs ? "chevron.up" : "chevron.down")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(.tertiary)
+                }
+                .padding(.horizontal, Metrics.horizontalInset - 6)
+                .padding(.top, 2)
+            }
         }
+    }
+
+    /// Collapsed, the list keeps every selected speaker -- those carry sliders
+    /// and are in use -- and fills the remainder with unselected ones in the
+    /// engine's own order, so nothing reorders when the list expands.
+    private var visibleOutputs: [Output] {
+        guard !showsAllOutputs else { return store.outputs }
+
+        let selectedCount = store.outputs.count(where: \.selected)
+        var budget = max(0, Self.collapsedRowTarget - selectedCount)
+
+        return store.outputs.filter { output in
+            if output.selected { return true }
+            guard budget > 0 else { return false }
+            budget -= 1
+            return true
+        }
+    }
+
+    private var hiddenOutputCount: Int {
+        store.outputs.count - visibleOutputs.count
     }
 
     private var emptyState: some View {
