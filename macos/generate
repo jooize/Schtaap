@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# Regenerate the Xcode project from project.yml.
+set -o errexit
+set -o nounset
+set -o pipefail
+
+here="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
+cd -- "$here"
+
+if command -v xcodegen >/dev/null 2>&1; then
+  exec xcodegen generate --spec project.yml
+fi
+
+exec nix run nixpkgs#xcodegen -- generate --spec project.yml

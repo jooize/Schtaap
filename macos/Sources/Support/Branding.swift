@@ -1,0 +1,22 @@
+import Foundation
+
+/// The only place the product name appears in code.
+///
+/// `appName` reads `CFBundleName`, which XcodeGen fills from `PRODUCT_NAME`,
+/// so renaming the app in `project.yml` carries through the whole UI. Nothing
+/// else in this target should hardcode the name.
+enum Branding {
+    static var appName: String {
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleName") as? String ?? "Tutti"
+    }
+
+    /// Directory under ~/Library/Application Support that holds engine
+    /// config, database, cache and logs. Ours, never owntone-named.
+    static var supportDirectory: URL {
+        let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+        return base.appending(path: appName, directoryHint: .isDirectory)
+    }
+
+    /// Fallback name advertised to Spotify Connect before the user picks one.
+    static let defaultConnectName = "HomePods"
+}

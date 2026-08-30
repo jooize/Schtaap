@@ -1,0 +1,172 @@
+import Foundation
+
+enum EngineError: Error, LocalizedError, Equatable {
+    case unreachable(String)
+    case http(status: Int)
+    case malformedResponse(String)
+
+    var errorDescription: String? {
+        switch self {
+        case .unreachable(let detail): "Engine not reachable: \(detail)"
+        case .http(let status): "Engine returned HTTP \(status)"
+        case .malformedResponse(let detail): "Unexpected engine response: \(detail)"
+        }
+    }
+}
+
+/// Thin async wrapper over the engine's JSON API.
+///
+/// Deliberately stateless: every call is a request. Live state arrives through
+/// `NotifyClient` instead of polling, and `EngineStore` is what holds it.
+actor EngineClient {
+    nonisolated let endpoint: EngineEndpoint
+
+    private let session: URLSession
+    private let decoder: JSONDecoder
+
+    init(endpoint: EngineEndpoint = .default) {
+        self.endpoint = endpoint
+
+        let config = URLSessionConfiguration.ephemeral
+        config.timeoutIntervalForRequest = 5
+        config.timeoutIntervalForResource = 10
+        config.waitsForConnectivity = false
+        self.session = URLSession(configuration: config)
+
+        let decoder = JSONDecoder()
+        decoder.keyDecodingStrategy = .convertFromSnakeCase
+        self.decoder = decoder
+    }
+
+    // MARK: - Reads
+
+    func outputs() async throws -> [Output] {
+        let response: OutputsResponse = try await get("api/outputs")
+        return response.outputs
+    }
+
+    func player() async throws -> PlayerStatus {
+        try await get("api/player")
+    }
+
+    /// Nil when the queue is empty (the engine answers 204).
+    func nowPlaying() async throws -> NowPlaying? {
+        let (data, response) = try await perform(request(.get, "api/queue/items/now_playing"))
+        if response.statusCode == 204 { return nil }
+        try check(response)
+        guard !data.isEmpty else { return nil }
+        return try decode(NowPlaying.self, from: data)
+    }
+
+    // MARK: - Writes
+
+    func setSelected(_ selected: Bool, forOutput id: String) async throws {
+        try await put("api/outputs/\(id)", body: ["selected": selected])
+    }
+
+    func setVolume(_ volume: Int, forOutput id: String) async throws {
+        try await put("api/outputs/\(id)", body: ["volume": clampVolume(volume)])
+    }
+
+    /// Enables exactly `ids` and disables everything else, in one request.
+    /// This is what speaker presets and rejoin-on-free should use, since it
+    /// cannot leave the set half-applied.
+    func setEnabledOutputs(_ ids: [String]) async throws {
+        try await put("api/outputs/set", body: ["outputs": ids])
+    }
+
+    func setMasterVolume(_ volume: Int) async throws {
+        try await put("api/player/volume", query: [
+            URLQueryItem(name: "volume", value: String(clampVolume(volume)))
+        ])
+    }
+
+    // MARK: - Artwork
+
+    /// Artwork paths from the engine are relative; external stream artwork is
+    /// absolute. Both shapes appear in `artwork_url`.
+    nonisolated func artworkURL(for path: String, maxPixels: Int) -> URL? {
+        if let absolute = URL(string: path), absolute.scheme != nil {
+            return absolute
+        }
+        var components = URLComponents(
+            url: endpoint.api(path.hasPrefix("/") ? String(path.dropFirst()) : path),
+            resolvingAgainstBaseURL: false
+        )
+        components?.queryItems = [
+            URLQueryItem(name: "maxwidth", value: String(maxPixels)),
+            URLQueryItem(name: "maxheight", value: String(maxPixels)),
+        ]
+        return components?.url
+    }
+
+    // MARK: - Plumbing
+
+    private enum Method: String {
+        case get = "GET"
+        case put = "PUT"
+    }
+
+    private nonisolated func clampVolume(_ volume: Int) -> Int {
+        min(100, max(0, volume))
+    }
+
+    private func request(_ method: Method, _ path: String, query: [URLQueryItem] = []) -> URLRequest {
+        var url = endpoint.api(path)
+        if !query.isEmpty, var components = URLComponents(url: url, resolvingAgainstBaseURL: false) {
+            components.queryItems = query
+            url = components.url ?? url
+        }
+        var request = URLRequest(url: url)
+        request.httpMethod = method.rawValue
+        return request
+    }
+
+    private func get<T: Decodable>(_ path: String) async throws -> T {
+        let (data, response) = try await perform(request(.get, path))
+        try check(response)
+        return try decode(T.self, from: data)
+    }
+
+    private func put(
+        _ path: String,
+        query: [URLQueryItem] = [],
+        body: [String: any Sendable]? = nil
+    ) async throws {
+        var request = request(.put, path, query: query)
+        if let body {
+            request.httpBody = try JSONSerialization.data(withJSONObject: body)
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        }
+        let (_, response) = try await perform(request)
+        try check(response)
+    }
+
+    private func perform(_ request: URLRequest) async throws -> (Data, HTTPURLResponse) {
+        do {
+            let (data, response) = try await session.data(for: request)
+            guard let http = response as? HTTPURLResponse else {
+                throw EngineError.malformedResponse("not an HTTP response")
+            }
+            return (data, http)
+        } catch let error as EngineError {
+            throw error
+        } catch {
+            throw EngineError.unreachable(error.localizedDescription)
+        }
+    }
+
+    private func check(_ response: HTTPURLResponse) throws {
+        guard (200..<300).contains(response.statusCode) else {
+            throw EngineError.http(status: response.statusCode)
+        }
+    }
+
+    private func decode<T: Decodable>(_ type: T.Type, from data: Data) throws -> T {
+        do {
+            return try decoder.decode(type, from: data)
+        } catch {
+            throw EngineError.malformedResponse(String(describing: error))
+        }
+    }
+}
