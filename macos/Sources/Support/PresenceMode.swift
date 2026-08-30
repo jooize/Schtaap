@@ -4,6 +4,16 @@ import Foundation
 enum PreferenceKey {
     static let presenceMode = "presenceMode"
     static let connectName = "connectName"
+    static let identifySpeakers = "identifySpeakers"
+}
+
+enum Preferences {
+    /// Whether to browse Bonjour for speaker hardware. Defaults on, and is
+    /// read outside SwiftUI too, so the default lives here rather than in an
+    /// `@AppStorage` declaration.
+    static var identifiesSpeakers: Bool {
+        UserDefaults.standard.object(forKey: PreferenceKey.identifySpeakers) as? Bool ?? true
+    }
 }
 
 /// Where the app is visible. Playback is unaffected by all three: the engine

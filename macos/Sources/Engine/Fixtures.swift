@@ -19,16 +19,20 @@ enum Fixtures {
     ]
 
     /// What a Bonjour browse would report for the outputs above.
-    static let deviceKinds: [String: DeviceKind] = [
-        "Kitchen": .homePod,
-        "Living Room": .homePod,
-        "The Office": .homePodMini,
-        "Goober's Room": .homePodMini,
-        "Pantry": .homePodMini,
-        "Bedroom": .homePod,
-        "Living Room Apple TV": .appleTV,
-        "The Television": .television,
-        "MacBook Pro": .mac(portable: true),
+    static let deviceIdentities: [String: DeviceIdentity] = [
+        "Kitchen": DeviceIdentity(kind: .homePod),
+        "Living Room": DeviceIdentity(
+            kind: .homePod,
+            isStereoPairMember: true,
+            groupName: "Living Room Apple TV"
+        ),
+        "The Office": DeviceIdentity(kind: .homePodMini),
+        "Goober's Room": DeviceIdentity(kind: .homePodMini, isStereoPairMember: true),
+        "Pantry": DeviceIdentity(kind: .homePodMini),
+        "Bedroom": DeviceIdentity(kind: .homePod),
+        "Living Room Apple TV": DeviceIdentity(kind: .appleTV),
+        "The Television": DeviceIdentity(kind: .television),
+        "MacBook Pro": DeviceIdentity(kind: .mac(portable: true)),
     ]
 
     static let player = PlayerStatus(
@@ -78,6 +82,6 @@ extension EngineStore {
 
     func applyFixtures() {
         load(outputs: Fixtures.outputs, player: Fixtures.player, nowPlaying: Fixtures.nowPlaying)
-        directory.load(Fixtures.deviceKinds)
+        directory.load(Fixtures.deviceIdentities)
     }
 }

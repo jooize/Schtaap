@@ -10,34 +10,24 @@ enum DeviceKind: Sendable, Equatable {
     case homePod
     case homePodMini
     case appleTV
-    case airPortExpress
     case mac(portable: Bool)
     case television
     case speaker
 
-    var symbolName: String {
-        switch self {
-        case .homePod: "homepod.fill"
-        case .homePodMini: "homepodmini.fill"
-        case .appleTV: "appletv.fill"
-        case .airPortExpress: "airport.express"
-        case .mac(let portable): portable ? "laptopcomputer" : "desktopcomputer"
-        case .television: "tv.fill"
-        case .speaker: "hifispeaker.fill"
-        }
-    }
-
-    /// Apple encodes hardware in `model` the same way it does in
-    /// `hw.model`: a family name followed by generation,revision.
+    /// Apple encodes hardware in `model` the same way it does in `hw.model`:
+    /// a family name followed by generation,revision.
     static func from(model: String, manufacturer: String?, integrator: String?) -> DeviceKind {
         if model.hasPrefix("AudioAccessory") {
             // AudioAccessory5,x is the mini; 1,x and 6,x are full size.
             return model.hasPrefix("AudioAccessory5") ? .homePodMini : .homePod
         }
         if model.hasPrefix("AppleTV") { return .appleTV }
-        if model.hasPrefix("AirPort") { return .airPortExpress }
         if model.hasPrefix("MacBook") { return .mac(portable: true) }
         if model.hasPrefix("Mac") || model.hasPrefix("iMac") { return .mac(portable: false) }
+
+        // An AirPort Express is an AirPlay speaker as far as anyone using it is
+        // concerned, and its own symbol is an unrecognisable brick at row size.
+        if model.hasPrefix("AirPort") { return .speaker }
 
         // Third-party. `integrator` is advertised by the built-into-the-TV
         // AirPlay 2 program (LG, Samsung, Sony, Vizio); third-party speakers
@@ -46,6 +36,35 @@ enum DeviceKind: Sendable, Equatable {
         let isApple = manufacturer?.hasPrefix("Apple") ?? false
         if !isApple, integrator != nil { return .television }
         return .speaker
+    }
+}
+
+/// What Bonjour told us about one output: its hardware, whether it is half of
+/// a stereo pair, and the name of the group it belongs to.
+struct DeviceIdentity: Sendable, Equatable {
+    var kind: DeviceKind
+    var isStereoPairMember: Bool = false
+
+    /// Set only when the device belongs to a group named something other than
+    /// itself -- a HomePod pair adopted into an Apple TV's home theatre, for
+    /// instance. Nil for a device that is its own group.
+    var groupName: String?
+
+    var symbolName: String {
+        switch kind {
+        case .homePod:
+            isStereoPairMember ? "homepod.2.fill" : "homepod.fill"
+        case .homePodMini:
+            isStereoPairMember ? "homepodmini.2.fill" : "homepodmini.fill"
+        case .appleTV:
+            "appletv.fill"
+        case .mac(let portable):
+            portable ? "laptopcomputer" : "desktopcomputer"
+        case .television:
+            "tv.fill"
+        case .speaker:
+            isStereoPairMember ? "hifispeaker.2.fill" : "hifispeaker.fill"
+        }
     }
 }
 

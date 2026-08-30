@@ -11,8 +11,11 @@ struct SettingsView: View {
 }
 
 struct GeneralSettings: View {
+    @Environment(EngineStore.self) private var store
+
     @AppStorage(PreferenceKey.presenceMode) private var presence: PresenceMode = .menuBarOnly
     @AppStorage(PreferenceKey.connectName) private var connectName: String = Branding.defaultConnectName
+    @AppStorage(PreferenceKey.identifySpeakers) private var identifySpeakers = true
 
     @State private var launchAtLogin = LoginItem.isEnabled
     @State private var loginItemError: String?
@@ -56,10 +59,21 @@ struct GeneralSettings: View {
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }
+
+            Section {
+                Toggle("Identify speakers on the network", isOn: $identifySpeakers)
+                Text("Looks up each speaker over Bonjour to show whether it is a HomePod, an Apple TV or a television, and which ones are stereo pairs. Requires local network access. Turning this off, or declining that permission, only makes the icons generic. Everything else works the same.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
         }
         .formStyle(.grouped)
         .onChange(of: presence) { _, mode in
             mode.apply()
+        }
+        .onChange(of: identifySpeakers) { _, enabled in
+            enabled ? store.startDirectoryIfEnabled() : store.directory.reset()
         }
         .onChange(of: launchAtLogin) { _, enabled in
             do {
@@ -75,4 +89,5 @@ struct GeneralSettings: View {
 
 #Preview {
     SettingsView()
+        .environment(EngineStore.preview())
 }

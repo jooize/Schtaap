@@ -6,6 +6,8 @@ import SwiftUI
 struct OutputRow: View {
     let output: Output
     let symbolName: String
+    /// Group this speaker was adopted into, when it differs from its own name.
+    var groupName: String?
     @Binding var volume: Double
     let onToggle: () -> Void
     var onVolumeEditingChanged: (Bool) -> Void = { _ in }
@@ -16,12 +18,21 @@ struct OutputRow: View {
         VStack(alignment: .leading, spacing: 5) {
             Button(action: onToggle) {
                 HStack(spacing: 10) {
-                    IconWell(symbol: symbolName, isActive: output.selected)
-                    Text(output.name)
-                        .font(.system(size: 13))
-                        .foregroundStyle(.primary)
-                        .lineLimit(1)
-                        .truncationMode(.tail)
+                    DeviceIcon(symbol: symbolName, isActive: output.selected)
+                    VStack(alignment: .leading, spacing: 0) {
+                        Text(output.name)
+                            .font(.system(size: 13))
+                            .foregroundStyle(.primary)
+                            .lineLimit(1)
+                            .truncationMode(.tail)
+                        if let groupName {
+                            Text(groupName)
+                                .font(.system(size: 10))
+                                .foregroundStyle(.tertiary)
+                                .lineLimit(1)
+                                .truncationMode(.tail)
+                        }
+                    }
                     Spacer(minLength: 0)
                     if output.needsVerification, !output.selected {
                         Image(systemName: "lock.fill")
@@ -52,10 +63,10 @@ struct OutputRow: View {
     }
 }
 
-#Preview("Selected") {
+#Preview("Selected HomePod") {
     OutputRow(
         output: Fixtures.outputs[0],
-        symbolName: DeviceKind.homePod.symbolName,
+        symbolName: DeviceIdentity(kind: .homePod).symbolName,
         volume: .constant(62),
         onToggle: {}
     )
@@ -63,10 +74,11 @@ struct OutputRow: View {
     .padding()
 }
 
-#Preview("Not selected") {
+#Preview("Paired mini, in a group") {
     OutputRow(
-        output: Fixtures.outputs[2],
-        symbolName: DeviceKind.homePodMini.symbolName,
+        output: Fixtures.outputs[3],
+        symbolName: DeviceIdentity(kind: .homePodMini, isStereoPairMember: true).symbolName,
+        groupName: "Living Room Apple TV",
         volume: .constant(30),
         onToggle: {}
     )

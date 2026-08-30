@@ -74,8 +74,9 @@ targets:
         # Required from macOS 15 to browse Bonjour. Used only to read the
         # hardware model out of each speaker's TXT record for its icon.
         NSLocalNetworkUsageDescription: >-
-          $(PRODUCT_NAME) looks for AirPlay speakers on your network so it can
-          show each one with the right icon.
+          $(PRODUCT_NAME) looks up your AirPlay speakers so it can tell a
+          HomePod from an Apple TV and spot stereo pairs. Your speakers work
+          without this.
         NSBonjourServices:
           - _airplay._tcp
 

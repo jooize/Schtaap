@@ -3,28 +3,26 @@ import SwiftUI
 enum Metrics {
     static let popoverWidth: CGFloat = 300
     static let horizontalInset: CGFloat = 14
-    static let iconWell: CGFloat = 26
-    /// Icon well plus the gap after it, so sliders line up under row titles.
+    static let iconColumn: CGFloat = 26
+    /// Icon column plus the gap after it, so sliders line up under row titles.
     static let rowTextInset: CGFloat = 36
 }
 
-/// The circular icon behind each output name.
+/// The device icon at the head of each row.
 ///
-/// Selection is carried entirely by this well being accent-tinted, matching
-/// the system Sound menu. No checkmark, no badge.
-struct IconWell: View {
+/// Drawn large and unenclosed rather than shrunk into a filled circle: a
+/// HomePod or an Apple TV is recognisable at this size, and the silhouettes
+/// carry more meaning than a well does. Selection is the accent tint.
+struct DeviceIcon: View {
     let symbol: String
     let isActive: Bool
 
     var body: some View {
-        ZStack {
-            Circle()
-                .fill(isActive ? AnyShapeStyle(Color.accentColor) : AnyShapeStyle(.quaternary))
-            Image(systemName: symbol)
-                .font(.system(size: 12))
-                .foregroundStyle(isActive ? AnyShapeStyle(.white) : AnyShapeStyle(.secondary))
-        }
-        .frame(width: Metrics.iconWell, height: Metrics.iconWell)
+        Image(systemName: symbol)
+            .font(.system(size: 18))
+            .symbolRenderingMode(.hierarchical)
+            .foregroundStyle(isActive ? AnyShapeStyle(Color.accentColor) : AnyShapeStyle(.secondary))
+            .frame(width: Metrics.iconColumn, height: 24)
     }
 }
 

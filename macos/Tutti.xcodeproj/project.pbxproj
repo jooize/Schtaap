@@ -49,7 +49,7 @@
 		C12DB9FDBB50F6679691EAF8 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		CC5239B909D87054B34F49F3 /* AppMain.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppMain.swift; sourceTree = "<group>"; };
 		E5A36685164C766FE0FE7700 /* NotifyClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotifyClient.swift; sourceTree = "<group>"; };
-		"TEMP_18C39556-BC50-4C48-AF09-3AFC15594346" /* Version.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Version.xcconfig; sourceTree = "<group>"; };
+		"TEMP_ED2CCDE0-2CC8-4788-A67E-BBE30F5AB249" /* Version.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Version.xcconfig; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -127,10 +127,10 @@
 			path = Support;
 			sourceTree = "<group>";
 		};
-		"TEMP_A4B91863-500D-4354-97B6-308C887B9761" /* macos */ = {
+		"TEMP_598CCA20-4585-45F4-8A50-977A3B8AC2AF" /* macos */ = {
 			isa = PBXGroup;
 			children = (
-				"TEMP_18C39556-BC50-4C48-AF09-3AFC15594346" /* Version.xcconfig */,
+				"TEMP_ED2CCDE0-2CC8-4788-A67E-BBE30F5AB249" /* Version.xcconfig */,
 			);
 			path = macos;
 			sourceTree = "<group>";
@@ -215,7 +215,7 @@
 /* Begin XCBuildConfiguration section */
 		0897C94399D4433118D5CFF5 /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = "TEMP_18C39556-BC50-4C48-AF09-3AFC15594346" /* Version.xcconfig */;
+			baseConfigurationReference = "TEMP_ED2CCDE0-2CC8-4788-A67E-BBE30F5AB249" /* Version.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ANALYZER_NONNULL = YES;
@@ -315,7 +315,7 @@
 		};
 		D77CF51768ED944D8C0B0719 /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = "TEMP_18C39556-BC50-4C48-AF09-3AFC15594346" /* Version.xcconfig */;
+			baseConfigurationReference = "TEMP_ED2CCDE0-2CC8-4788-A67E-BBE30F5AB249" /* Version.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ANALYZER_NONNULL = YES;

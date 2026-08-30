@@ -67,8 +67,6 @@ final class EngineStore {
             return
         }
 
-        directory.start()
-
         lifecycle = Task { [weak self] in
             guard let self else { return }
             await self.refreshAll()
@@ -257,8 +255,28 @@ final class EngineStore {
     /// The icon for an output: its real hardware when Bonjour has told us,
     /// the coarse guess from the engine's output type otherwise.
     func symbolName(for output: Output) -> String {
-        let name = directory.kind(forOutputNamed: output.name)?.symbolName ?? output.symbolName
+        let name = directory.identity(forOutputNamed: output.name)?.symbolName ?? output.symbolName
         return SymbolCatalog.name(name)
+    }
+
+    /// The group a speaker was adopted into, when that is not simply itself --
+    /// a HomePod pair belonging to an Apple TV's home theatre, say.
+    func groupName(for output: Output) -> String? {
+        directory.identity(forOutputNamed: output.name)?.groupName
+    }
+
+    /// Starts the Bonjour browse, if the user has not turned it off.
+    ///
+    /// Called when the popover first appears rather than at launch, so the
+    /// local network prompt arrives with the speaker list on screen instead of
+    /// unexplained at login.
+    func startDirectoryIfEnabled() {
+        guard !usesFixtures else { return }
+        guard Preferences.identifiesSpeakers else {
+            directory.reset()
+            return
+        }
+        directory.start()
     }
 
     // MARK: - Helpers

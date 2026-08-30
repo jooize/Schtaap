@@ -19,7 +19,7 @@ struct VerificationCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 9) {
             HStack(spacing: 10) {
-                IconWell(symbol: symbolName, isActive: false)
+                DeviceIcon(symbol: symbolName, isActive: false)
                 VStack(alignment: .leading, spacing: 1) {
                     Text(output.name)
                         .font(.system(size: 13, weight: .medium))
@@ -73,7 +73,7 @@ struct VerificationCard: View {
 #Preview {
     VerificationCard(
         output: Fixtures.outputs[7],
-        symbolName: DeviceKind.television.symbolName,
+        symbolName: DeviceIdentity(kind: .television).symbolName,
         errorMessage: nil,
         onSubmit: { _ in },
         onCancel: {}

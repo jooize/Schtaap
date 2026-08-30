@@ -57,6 +57,9 @@ struct PopoverView: View {
         }
         .padding(.vertical, 12)
         .frame(width: Metrics.popoverWidth)
+        // Deferred to first open so the local network prompt appears with the
+        // speaker list on screen, rather than unexplained at login.
+        .onAppear { store.startDirectoryIfEnabled() }
     }
 
     // MARK: - Sections
@@ -85,6 +88,7 @@ struct PopoverView: View {
                 OutputRow(
                     output: output,
                     symbolName: store.symbolName(for: output),
+                    groupName: store.groupName(for: output),
                     volume: volume(for: output),
                     onToggle: { store.toggle(output) },
                     onVolumeEditingChanged: { editing in
