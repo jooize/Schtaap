@@ -1,0 +1,128 @@
+#!/usr/bin/env bash
+# Build the bundled engine payload and stage it for Xcode to copy.
+#
+# Nix builds owntone and librespot; relocate.bash rewrites their dylib
+# closure into a self-contained tree with no /nix/store references; the
+# result is swapped into macos/Engine, which is gitignored. Xcode's copy
+# phase takes it from there into Tutti.app/Contents/Helpers/engine.
+#
+# No binaries live in the repository. A clone builds the app but ships no
+# engine until this has run once.
+set -o errexit
+set -o nounset
+set -o pipefail
+
+here="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
+repo="$(cd -- "$here/.." && pwd -P)"
+stage_dir="$here/Engine"
+
+dry_run=0
+
+usage() {
+  cat <<'EOF'
+Usage: build-engine [--dry-run] [-h|--help]
+
+Builds the OwnTone and librespot payload from the flake, relocates its
+dylib closure, and stages it at macos/Engine (gitignored).
+
+  --dry-run  Print every action, change nothing
+  -h, --help This text
+EOF
+}
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --dry-run) dry_run=1; shift ;;
+    -h|--help) usage; exit 0 ;;
+    *) printf 'unknown argument: %s\n' "$1" >&2; usage >&2; exit 1 ;;
+  esac
+done
+
+run() {
+  if (( dry_run )); then
+    printf 'DRY-RUN: '
+    printf '%q ' "$@"
+    printf '\n'
+  else
+    "$@"
+  fi
+}
+
+note() {
+  printf '%s\n' "$*"
+}
+
+# nix build prints the store path on stdout; anything it says about
+# fetching goes to stderr, so the capture stays clean.
+build() {
+  nix build --no-link --print-out-paths "$repo#$1"
+}
+
+note "Building owntone..."
+owntone="$(build owntone)"
+note "  $owntone"
+
+note "Building librespot..."
+librespot="$(build librespot)"
+note "  $librespot"
+
+owntone_version="$(nix eval --raw "$repo#owntone.version")"
+librespot_version="$(nix eval --raw "$repo#librespot.version")"
+
+# Stage into a scratch tree, then swap. The old payload is moved aside
+# rather than deleted in place, and the scratch parent takes it away on
+# exit, so a failed build never leaves a half-written Engine directory.
+work="$(mktemp -d)"
+trap 'rm -rf -- "$work"' EXIT
+staged="$work/Engine"
+
+note "Relocating dylib closure..."
+run "$here/relocate.bash" --out "$staged" \
+  "$owntone/bin/owntone" \
+  "$owntone/lib/owntone/owntone-sqlext.so" \
+  "$librespot/bin/librespot"
+
+# The web root is not a Mach-O file, so relocate.bash never sees it.
+# owntone needs it passed as -w or it refuses to start.
+run cp -R -- "$owntone/share/owntone/htdocs" "$staged/htdocs"
+
+# Everything in the store is read-only, and cp preserves that. Left alone,
+# the next run cannot clear the payload it is replacing, and neither can
+# anything else that has to move these files.
+#
+# No `--` here: macOS chmod does not accept it. The path is one we built
+# under mktemp, so it cannot start with a dash.
+run chmod -R u+w "$staged/htdocs"
+
+# What the app shows when asked which engine it is running.
+if (( dry_run )); then
+  printf 'DRY-RUN: write %s\n' "$staged/manifest.json"
+else
+  cat > "$staged/manifest.json" <<EOF
+{
+  "owntone": "$owntone_version",
+  "librespot": "$librespot_version"
+}
+EOF
+fi
+
+# Prove the relocated binaries run before anything is swapped into place.
+# Without this the first sign of a broken closure is a silent launchd
+# failure long after the build looked fine.
+if (( ! dry_run )); then
+  note "Verifying..."
+  "$staged/bin/owntone" -v >/dev/null
+  "$staged/bin/librespot" --version >/dev/null
+fi
+
+if [[ -d "$stage_dir" ]]; then
+  run mv -- "$stage_dir" "$work/previous"
+fi
+run mv -- "$staged" "$stage_dir"
+
+if (( dry_run )); then
+  note "Dry run complete; nothing was staged."
+else
+  note "Staged $(du -sh -- "$stage_dir" | cut -f1) at macos/Engine"
+  note "  owntone $owntone_version, librespot $librespot_version"
+fi

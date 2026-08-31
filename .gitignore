@@ -14,6 +14,11 @@ result*
 # macOS app build output. Tutti.xcodeproj and macos/Info.plist are generated
 # by XcodeGen but committed, so a clone builds without it.
 macos/.build/
+
+# The bundled engine payload: owntone, librespot and their relocated dylib
+# closure, ~25 MB of Mach-O. Rebuilt from the flake by macos/build-engine,
+# so it is derived, not source, and no binary belongs in git history.
+macos/Engine/
 *.xcodeproj/xcuserdata/
 *.xcodeproj/project.xcworkspace/xcuserdata/
 *.xcodeproj/project.xcworkspace/xcshareddata/IDEWorkspaceChecks.plist
