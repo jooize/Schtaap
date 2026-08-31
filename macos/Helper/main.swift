@@ -9,8 +9,20 @@ import MachO
 // plist names this executable and one argument, and everything else is
 // resolved here, from the bundle this binary is standing in.
 //
-// It ends in exec(), not a child process, so launchd supervises the engine
-// itself and nothing extra shows up in the process tree.
+// It spawns the engine and waits on it rather than exec'ing into it, which
+// costs one extra process in the tree and buys the app its own name.
+//
+// macOS attributes local network access to the responsible process, not to
+// whichever binary opened the socket. exec() replaced this process's image
+// with librespot's, leaving no responsible ancestor, so the permission
+// prompt read "Allow librespot to find devices on local networks?" -- a name
+// the user has never seen and no reason to trust. Staying alive as the
+// parent makes this helper the responsible process, and its embedded
+// Info.plist carries the app's name.
+//
+// Waiting also means launchd's KeepAlive still works: this process exits
+// with the engine's own status, so a crashed engine looks like a crashed
+// job and gets restarted.
 
 /// What the app writes for the helper to read. Regenerated whenever a
 /// setting changes; the agent is then restarted to pick it up.
@@ -114,8 +126,8 @@ private struct Layout {
     }
 }
 
-/// Sends this process's stdout and stderr to `file`, so they survive the
-/// exec below and end up somewhere a user can be pointed at.
+/// Sends this process's stdout and stderr to `file`, so the engine inherits
+/// them and its output ends up somewhere a user can be pointed at.
 ///
 /// The plist cannot do this with StandardErrorPath: that key takes an
 /// absolute path, and the destination is only known once the app bundle has
@@ -144,21 +156,55 @@ private func redirectOutput(to file: URL) {
     close(descriptor)
 }
 
-/// Replaces this process with `executable`. Only returns on failure.
-private func exec(_ executable: URL, _ arguments: [String]) -> Never {
-    let argv: [String] = [executable.path] + arguments
-    // execv wants a NULL-terminated array of mutable C strings that outlive
-    // the call. strdup'd copies are never freed, which is correct: either
-    // execv succeeds and the whole address space is replaced, or the process
-    // is about to exit.
-    var pointers: [UnsafeMutablePointer<CChar>?] = argv.map { strdup($0) }
-    pointers.append(nil)
-    execv(executable.path, &pointers)
+/// The spawned engine, for the signal handlers below. A global because a C
+/// signal handler takes no context.
+private nonisolated(unsafe) var enginePID: pid_t = 0
 
-    FileHandle.standardError.write(Data(
-        "exec \(executable.path) failed: \(String(cString: strerror(errno)))\n".utf8
-    ))
-    exit(EXIT_FAILURE)
+/// Passes a termination signal on to the engine so it can shut down, rather
+/// than leaving it orphaned when launchd stops this job.
+private func forwardToEngine(_ signal: Int32) {
+    if enginePID > 0 { kill(enginePID, signal) }
+}
+
+/// Starts `executable`, waits for it, and exits with its fate.
+private func supervise(_ executable: URL, _ arguments: [String]) -> Never {
+    // posix_spawn wants a NULL-terminated array of mutable C strings. The
+    // strdup'd copies are never freed, which is correct: this process is
+    // either about to spend its life in waitpid or about to exit.
+    var argv: [UnsafeMutablePointer<CChar>?] = ([executable.path] + arguments).map { strdup($0) }
+    argv.append(nil)
+
+    var pid: pid_t = 0
+    let spawned = posix_spawn(&pid, executable.path, nil, nil, argv, environ)
+    guard spawned == 0 else {
+        FileHandle.standardError.write(Data(
+            "could not start \(executable.path): \(String(cString: strerror(spawned)))\n".utf8
+        ))
+        exit(EXIT_FAILURE)
+    }
+    enginePID = pid
+
+    signal(SIGTERM, forwardToEngine)
+    signal(SIGINT, forwardToEngine)
+
+    var status: Int32 = 0
+    while waitpid(pid, &status, 0) < 0 {
+        // waitpid is interrupted every time a signal is forwarded; only a
+        // real error ends the wait.
+        guard errno == EINTR else {
+            FileHandle.standardError.write(Data(
+                "lost track of the engine: \(String(cString: strerror(errno)))\n".utf8
+            ))
+            exit(EXIT_FAILURE)
+        }
+    }
+
+    // Report the engine's outcome as this process's own, so launchd's
+    // KeepAlive and its throttling see what actually happened. Swift does
+    // not surface the wait macros, so the low seven bits are the signal that
+    // killed it and the next eight are the exit status.
+    let terminatingSignal = status & 0x7F
+    exit(terminatingSignal == 0 ? (status >> 8) & 0xFF : EXIT_FAILURE)
 }
 
 private func run() throws -> Never {
@@ -178,7 +224,7 @@ private func run() throws -> Never {
         // -s and -w override the two paths compiled into owntone at
         // /usr/local. Without them it dies on a missing SQLite extension and
         // an unstat-able web root.
-        exec(layout.engineBin.appending(path: "owntone"), [
+        supervise(layout.engineBin.appending(path: "owntone"), [
             "-f",
             "-c", layout.owntoneConfig.path,
             "-s", layout.engineBin.appending(path: "owntone-sqlext.so").path,
@@ -191,7 +237,7 @@ private func run() throws -> Never {
         redirectOutput(to: layout.logFile("librespot"))
         // The pipe backend writes raw PCM into the named pipe OwnTone reads
         // as a library item. No audio device is opened here.
-        exec(layout.engineBin.appending(path: "librespot"), [
+        supervise(layout.engineBin.appending(path: "librespot"), [
             "--name", settings.connectName,
             "--backend", "pipe",
             "--device", settings.audioPipe,

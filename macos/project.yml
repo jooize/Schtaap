@@ -28,6 +28,12 @@ configFiles:
 
 settings:
   base:
+    # The product name, in the one place it is allowed to live. The app
+    # target takes its PRODUCT_NAME from here, and so does the engine
+    # helper's CFBundleName -- the helper is a separate target but must
+    # present itself to the user as the app, not as itself.
+    APP_PRODUCT_NAME: Tutti
+
     SWIFT_VERSION: "6.0"
     SWIFT_STRICT_CONCURRENCY: complete
     DEAD_CODE_STRIPPING: YES
@@ -56,6 +62,25 @@ targets:
         PRODUCT_NAME: $(TARGET_NAME)
         ENABLE_HARDENED_RUNTIME: YES
         SKIP_INSTALL: YES
+        # A bare executable has no Info.plist, so when macOS has to name the
+        # process to the user it falls back to the file name -- which is how
+        # the local network prompt came to say "librespot". This embeds one
+        # in the binary's __TEXT,__info_plist section. Combined with the
+        # helper staying alive as the engine's parent, and so being the
+        # process macOS holds responsible, the prompt speaks for the app.
+        CREATE_INFOPLIST_SECTION_IN_BINARY: YES
+    info:
+      path: HelperInfo.plist
+      properties:
+        # Deliberately the app's name, not the target's: the user has heard
+        # of the app and has never heard of EngineHelper.
+        CFBundleName: $(APP_PRODUCT_NAME)
+        CFBundleIdentifier: $(PRODUCT_BUNDLE_IDENTIFIER)
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        NSLocalNetworkUsageDescription: >-
+          $(APP_PRODUCT_NAME) appears as a speaker in Spotify and plays to
+          your AirPlay speakers.
 
   Tutti:
     type: application
@@ -113,7 +138,7 @@ targets:
       base:
         # Reverse-DNS casing: lowercase organization, CamelCase brand segment.
         PRODUCT_BUNDLE_IDENTIFIER: bar.esko.Tutti
-        PRODUCT_NAME: $(TARGET_NAME)
+        PRODUCT_NAME: $(APP_PRODUCT_NAME)
         INFOPLIST_KEY_NSHumanReadableCopyright: ""
         COMBINE_HIDPI_IMAGES: YES
         ENABLE_HARDENED_RUNTIME: YES

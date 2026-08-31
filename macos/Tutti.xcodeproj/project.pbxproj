@@ -50,10 +50,11 @@
 		10CB1D5C86ADBACB7C8E7541 /* CopyFiles */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
-			dstPath = Contents/Library;
+			dstPath = Contents/Helpers;
 			dstSubfolderSpec = 1;
 			files = (
-				765424DD1E826234ACE7FB5D /* LaunchAgents in CopyFiles */,
+				36447C4746A62F904E39DBDB /* bin in CopyFiles */,
+				E8DCCEF86151B73BCA8757B2 /* lib in CopyFiles */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -71,21 +72,20 @@
 		A30CD52F92CF6493D108B09E /* CopyFiles */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
-			dstPath = "";
-			dstSubfolderSpec = 7;
+			dstPath = Contents/Library;
+			dstSubfolderSpec = 1;
 			files = (
-				398F9DCB146BDAE5D659BF18 /* htdocs in CopyFiles */,
+				765424DD1E826234ACE7FB5D /* LaunchAgents in CopyFiles */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		E78883BE35F7653E426B6C1A /* CopyFiles */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
-			dstPath = Contents/Helpers;
-			dstSubfolderSpec = 1;
+			dstPath = "";
+			dstSubfolderSpec = 7;
 			files = (
-				36447C4746A62F904E39DBDB /* bin in CopyFiles */,
-				E8DCCEF86151B73BCA8757B2 /* lib in CopyFiles */,
+				398F9DCB146BDAE5D659BF18 /* htdocs in CopyFiles */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -120,7 +120,7 @@
 		E5A36685164C766FE0FE7700 /* NotifyClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotifyClient.swift; sourceTree = "<group>"; };
 		F3FD946E10AD3797BBDE65F3 /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 		FA32B1B5907D80AE1C4A9A62 /* bin */ = {isa = PBXFileReference; lastKnownFileType = folder; name = bin; path = Engine/bin; sourceTree = SOURCE_ROOT; };
-		"TEMP_FA7252E3-6FCA-421B-AEEE-89C59EA1B325" /* Version.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Version.xcconfig; sourceTree = "<group>"; };
+		"TEMP_78D99AA4-34A5-4133-A19A-03FA69F8DC96" /* Version.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Version.xcconfig; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -222,10 +222,10 @@
 			path = Support;
 			sourceTree = "<group>";
 		};
-		"TEMP_7A93506A-92BE-4F89-A8C3-A0D28B7B9ABB" /* macos */ = {
+		"TEMP_8E2E80E3-F5A0-43C0-BD11-4F9BCC8AEFA2" /* macos */ = {
 			isa = PBXGroup;
 			children = (
-				"TEMP_FA7252E3-6FCA-421B-AEEE-89C59EA1B325" /* Version.xcconfig */,
+				"TEMP_78D99AA4-34A5-4133-A19A-03FA69F8DC96" /* Version.xcconfig */,
 			);
 			path = macos;
 			sourceTree = "<group>";
@@ -351,9 +351,10 @@
 /* Begin XCBuildConfiguration section */
 		0897C94399D4433118D5CFF5 /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = "TEMP_FA7252E3-6FCA-421B-AEEE-89C59EA1B325" /* Version.xcconfig */;
+			baseConfigurationReference = "TEMP_78D99AA4-34A5-4133-A19A-03FA69F8DC96" /* Version.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
+				APP_PRODUCT_NAME = Tutti;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
@@ -417,7 +418,9 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				COMBINE_HIDPI_IMAGES = YES;
+				CREATE_INFOPLIST_SECTION_IN_BINARY = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
+				INFOPLIST_FILE = HelperInfo.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
@@ -442,7 +445,7 @@
 					"@executable_path/../Frameworks",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = bar.esko.Tutti;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_NAME = "$(APP_PRODUCT_NAME)";
 				SDKROOT = macosx;
 			};
 			name = Debug;
@@ -460,16 +463,17 @@
 					"@executable_path/../Frameworks",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = bar.esko.Tutti;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_NAME = "$(APP_PRODUCT_NAME)";
 				SDKROOT = macosx;
 			};
 			name = Release;
 		};
 		D77CF51768ED944D8C0B0719 /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = "TEMP_FA7252E3-6FCA-421B-AEEE-89C59EA1B325" /* Version.xcconfig */;
+			baseConfigurationReference = "TEMP_78D99AA4-34A5-4133-A19A-03FA69F8DC96" /* Version.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
+				APP_PRODUCT_NAME = Tutti;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
@@ -540,7 +544,9 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				COMBINE_HIDPI_IMAGES = YES;
+				CREATE_INFOPLIST_SECTION_IN_BINARY = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
+				INFOPLIST_FILE = HelperInfo.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",

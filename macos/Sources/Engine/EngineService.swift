@@ -78,6 +78,10 @@ final class EngineService {
     /// moved.
     func apply(connectName: String) {
         guard !isOffline else { return }
+        Task { await install(connectName: connectName) }
+    }
+
+    private func install(connectName: String) async {
         guard hasPayload else {
             status = .missingPayload
             return
@@ -93,7 +97,14 @@ final class EngineService {
 
         do {
             var registeredAnything = false
-            for service in services where service.status != .enabled {
+            for (service, label) in zip(services, labels) {
+                if service.status == .enabled && isLoaded(label) { continue }
+                // Registered on paper but absent from launchd. Clearing the
+                // record first is not optional: register() on top of a live
+                // one is a no-op, so the engine would stay missing forever.
+                if service.status == .enabled {
+                    await unregisterAndWait(service)
+                }
                 try service.register()
                 registeredAnything = true
             }
@@ -107,7 +118,22 @@ final class EngineService {
             return
         }
 
+        // launchd takes a moment to spawn a newly registered agent, and
+        // asking immediately would report a failure that has not happened.
+        try? await Task.sleep(for: .seconds(1))
         refreshStatus()
+    }
+
+    /// Unregisters and waits for it to actually be gone.
+    ///
+    /// `unregister()` returns before the daemon has finished, so registering
+    /// straight afterwards races it and can land on the record that was
+    /// supposed to be removed. Only the completion-handler form says when it
+    /// is really done.
+    private func unregisterAndWait(_ service: SMAppService) async {
+        await withCheckedContinuation { continuation in
+            service.unregister { _ in continuation.resume() }
+        }
     }
 
     /// Unregisters both agents and stops them.
@@ -128,11 +154,54 @@ final class EngineService {
         let states = services.map(\.status)
         if states.contains(.requiresApproval) {
             status = .requiresApproval
-        } else if states.allSatisfy({ $0 == .enabled }) {
+        } else if states.allSatisfy({ $0 == .enabled }) && labels.allSatisfy(isLoaded) {
             status = .running
         } else {
             status = .notRegistered
         }
+    }
+
+    /// Whether launchd is actually running this agent, which is a different
+    /// question from whether it is registered.
+    ///
+    /// `SMAppService.status` reports the Background Task Management record,
+    /// and that record outlives the job in both directions. Boot the agent
+    /// out by hand and status still reads `.enabled` with nothing left to
+    /// run. Rebuild the app and its registration keeps the code requirement
+    /// taken from the old signature, so launchd holds a job it refuses to
+    /// spawn -- "Could not find and/or execute program" -- and crash-loops
+    /// forever while status stays `.enabled`. Only launchctl can tell the
+    /// three apart, and only re-registering fixes the third.
+    ///
+    /// Reading `state = running` out of human-readable output is fragile, so
+    /// anything unrecognised counts as healthy. A false negative would
+    /// re-register a working engine on every launch; a false positive just
+    /// leaves the existing state alone.
+    private func isLoaded(_ label: String) -> Bool {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/bin/launchctl")
+        process.arguments = ["print", "gui/\(getuid())/\(label)"]
+        let pipe = Pipe()
+        process.standardOutput = pipe
+        process.standardError = FileHandle.nullDevice
+        do {
+            try process.run()
+        } catch {
+            return false
+        }
+        let output = pipe.fileHandleForReading.readDataToEndOfFile()
+        process.waitUntilExit()
+
+        // No such job: nothing registered with launchd at all.
+        guard process.terminationStatus == 0 else { return false }
+
+        guard let text = String(data: output, encoding: .utf8) else { return true }
+        guard let stateLine = text
+            .split(separator: "\n")
+            .first(where: { $0.contains("state = ") })
+        else { return true }
+
+        return !stateLine.contains("state = spawn scheduled")
     }
 
     /// Takes the agents down and lets launchd bring them straight back, so
