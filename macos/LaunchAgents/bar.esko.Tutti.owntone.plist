@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+    The AirPlay 2 half of the engine, registered by the app through
+    SMAppService.agent(plistName:).
+
+    The file name must equal the Label, and both carry the bundle
+    identifier, so renaming the app means renaming this file too. That is
+    the one place the branding rule in project.yml cannot reach: launchd
+    labels have to be unique across the system, and the reverse-DNS
+    identifier is what makes them so.
+
+    BundleProgram is resolved relative to the app bundle, which is the only
+    reason this plist can stay static. Every other path -- config, database,
+    web root, log -- is computed by the helper at launch. See
+    macos/Helper/main.swift.
+-->
+<plist version="1.0">
+<dict>
+	<key>Label</key>
+	<string>bar.esko.Tutti.owntone</string>
+
+	<key>BundleProgram</key>
+	<string>Contents/MacOS/EngineHelper</string>
+
+	<key>ProgramArguments</key>
+	<array>
+		<string>Contents/MacOS/EngineHelper</string>
+		<string>owntone</string>
+	</array>
+
+	<key>RunAtLoad</key>
+	<true/>
+
+	<key>KeepAlive</key>
+	<true/>
+
+	<!--
+	    Audio playback is latency-sensitive, and the default background
+	    task policy is free to throttle CPU and I/O. Interactive opts out.
+	-->
+	<key>ProcessType</key>
+	<string>Interactive</string>
+</dict>
+</plist>

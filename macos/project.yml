@@ -41,11 +41,74 @@ settings:
     CODE_SIGNING_ALLOWED: YES
 
 targets:
+  # The program launchd runs for both engine agents. A LaunchAgent plist is
+  # a static file and cannot name paths that are only known at runtime, so
+  # it names this instead and this resolves the rest. Deliberately unbranded:
+  # the app name reaches it through the bundle it finds itself in.
+  EngineHelper:
+    type: tool
+    platform: macOS
+    sources:
+      - path: Helper
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: bar.esko.Tutti.EngineHelper
+        PRODUCT_NAME: $(TARGET_NAME)
+        ENABLE_HARDENED_RUNTIME: YES
+        SKIP_INSTALL: YES
+
   Tutti:
     type: application
     platform: macOS
+    dependencies:
+      - target: EngineHelper
+        copy:
+          destination: wrapper
+          subpath: Contents/MacOS
     sources:
       - path: Sources
+
+      # The relocated owntone and librespot payload, built from the flake by
+      # ./build-engine. Optional so a clone still builds the UI without Nix;
+      # the app then has no engine to register, which it reports rather than
+      # pretending otherwise.
+      #
+      # bin and lib are copied separately from htdocs because codesign walks
+      # Contents/Helpers looking for nested code and fails on anything there
+      # that is not signable: with the whole payload in one place it stopped
+      # on index.html with "code object is not signed at all". Code belongs
+      # in a code location and the web root does not. The split also keeps
+      # relocate.bash's @executable_path/../lib install names correct, since
+      # bin and lib stay siblings.
+      - path: Engine/bin
+        type: folder
+        optional: true
+        buildPhase:
+          copyFiles:
+            destination: wrapper
+            subpath: Contents/Helpers
+      - path: Engine/lib
+        type: folder
+        optional: true
+        buildPhase:
+          copyFiles:
+            destination: wrapper
+            subpath: Contents/Helpers
+      - path: Engine/htdocs
+        type: folder
+        optional: true
+        buildPhase:
+          copyFiles:
+            destination: resources
+
+      # SMAppService reads agent plists from Contents/Library/LaunchAgents
+      # and nowhere else.
+      - path: LaunchAgents
+        type: folder
+        buildPhase:
+          copyFiles:
+            destination: wrapper
+            subpath: Contents/Library
     settings:
       base:
         # Reverse-DNS casing: lowercase organization, CamelCase brand segment.

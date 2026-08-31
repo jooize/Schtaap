@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+    The Spotify Connect half of the engine: it advertises this Mac as a
+    speaker and writes raw PCM into the named pipe OwnTone reads.
+
+    The name shown in Spotify is not here. It lives in engine.json under
+    Application Support, which the app rewrites when the user edits it; the
+    agent is then restarted to pick it up. Putting it in argv would mean
+    rewriting and re-registering this plist on every edit.
+
+    See the owntone plist for why the file name carries the bundle
+    identifier.
+-->
+<plist version="1.0">
+<dict>
+	<key>Label</key>
+	<string>bar.esko.Tutti.librespot</string>
+
+	<key>BundleProgram</key>
+	<string>Contents/MacOS/EngineHelper</string>
+
+	<key>ProgramArguments</key>
+	<array>
+		<string>Contents/MacOS/EngineHelper</string>
+		<string>librespot</string>
+	</array>
+
+	<key>RunAtLoad</key>
+	<true/>
+
+	<key>KeepAlive</key>
+	<true/>
+
+	<key>ProcessType</key>
+	<string>Interactive</string>
+</dict>
+</plist>
