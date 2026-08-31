@@ -50,20 +50,35 @@ struct DeviceIdentity: Sendable, Equatable {
     /// instance. Nil for a device that is its own group.
     var groupName: String?
 
-    var symbolName: String {
+    /// Shared by both halves of a stereo pair (the `tsid` TXT key). Nil for
+    /// unpaired speakers or when only one half is visible on the network.
+    var pairID: String?
+
+    /// The glyph for one physical unit, ignoring pair membership.
+    ///
+    /// A merged pair row draws one of these per member rather than the joined
+    /// `.2` variant, because only separate glyphs can be tinted separately --
+    /// which is how a pair playing on one speaker shows as half-lit.
+    var unitSymbolName: String {
         switch kind {
-        case .homePod:
-            isStereoPairMember ? "homepod.2.fill" : "homepod.fill"
-        case .homePodMini:
-            isStereoPairMember ? "homepodmini.2.fill" : "homepodmini.fill"
-        case .appleTV:
-            "appletv.fill"
-        case .mac(let portable):
-            portable ? "laptopcomputer" : "desktopcomputer"
-        case .television:
-            "tv.fill"
-        case .speaker:
-            isStereoPairMember ? "hifispeaker.2.fill" : "hifispeaker.fill"
+        case .homePod: "homepod.fill"
+        case .homePodMini: "homepodmini.fill"
+        case .appleTV: "appletv.fill"
+        case .mac(let portable): portable ? "laptopcomputer" : "desktopcomputer"
+        case .television: "tv.fill"
+        case .speaker: "hifispeaker.fill"
+        }
+    }
+
+    /// The glyph for the device as one thing: a paired speaker gets the joined
+    /// two-unit variant where SF Symbols has one.
+    var symbolName: String {
+        guard isStereoPairMember else { return unitSymbolName }
+        switch kind {
+        case .homePod: return "homepod.2.fill"
+        case .homePodMini: return "homepodmini.2.fill"
+        case .speaker: return "hifispeaker.2.fill"
+        default: return unitSymbolName
         }
     }
 }

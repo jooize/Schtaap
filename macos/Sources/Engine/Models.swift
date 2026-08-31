@@ -40,6 +40,64 @@ struct OutputsResponse: Decodable, Sendable {
     let outputs: [Output]
 }
 
+/// A row in the speaker list: either a single output or a merged stereo pair.
+///
+/// The engine reports each half of a stereo pair as its own output. This groups
+/// them into one row with a single volume slider and toggle.
+///
+/// Member order is the engine's names sorted: stable, but carrying no channel
+/// meaning. Neither `_airplay._tcp` nor `_raop._tcp` advertises which half of a
+/// pair is left and which is right -- verified against live HomePod pairs, where
+/// `tsid` names the pair and the members' records are otherwise identical. The
+/// one per-member key, `pgmid`, appears only inside an Apple TV home-theatre
+/// group and indexes position in that group, not a channel. So the UI names the
+/// speaker that is playing and never labels one "L" or "R".
+struct SpeakerGroup: Identifiable {
+    let id: String
+    let displayName: String
+    let members: [Output]
+    /// Glyph for the row taken as one device.
+    let symbolName: String
+    /// Glyph for a single physical unit. A pair row draws one per member.
+    let memberSymbolName: String
+    let groupName: String?
+    let isPair: Bool
+
+    /// Every member playing.
+    var selected: Bool { !members.isEmpty && members.allSatisfy(\.selected) }
+
+    /// At least one member playing. What the row's on/off appearance follows,
+    /// so a half-playing pair never looks switched off.
+    var anySelected: Bool { members.contains(where: \.selected) }
+
+    /// Some but not all of a pair is playing. The row is on, but the stereo
+    /// image its name promises is not what is coming out of the speakers.
+    var isPartial: Bool { anySelected && !selected }
+
+    var selectedCount: Int { members.count(where: \.selected) }
+
+    /// Names of the members currently playing, for the degraded subline.
+    var selectedMemberNames: [String] { members.filter(\.selected).map(\.name) }
+
+    /// The quietest member, so the slider never claims a level no speaker is at.
+    var volume: Int {
+        guard let first = members.first else { return 0 }
+        return members.dropFirst().reduce(first.volume) { min($0, $1.volume) }
+    }
+    var needsVerification: Bool { members.contains(where: \.needsVerification) }
+    var memberNames: [String] { members.map(\.name) }
+
+    static func derivePairName(from members: [Output]) -> String {
+        let stripped = members.map { output -> String in
+            if let range = output.name.range(of: #" \(\d+\)$"#, options: .regularExpression) {
+                return String(output.name[..<range.lowerBound])
+            }
+            return output.name
+        }
+        return stripped.first ?? ""
+    }
+}
+
 /// `GET /api/player`.
 struct PlayerStatus: Decodable, Sendable, Equatable {
     enum State: String, Decodable, Sendable {

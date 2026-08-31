@@ -32,6 +32,6 @@
 		<string>_airplay._tcp</string>
 	</array>
 	<key>NSLocalNetworkUsageDescription</key>
-	<string>$(PRODUCT_NAME) looks up your AirPlay speakers so it can tell a HomePod from an Apple TV and spot stereo pairs. Your speakers work without this.</string>
+	<string>$(PRODUCT_NAME) appears as a speaker in Spotify and plays to your AirPlay speakers.</string>
 </dict>
 </plist>

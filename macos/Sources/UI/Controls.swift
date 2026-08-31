@@ -26,28 +26,84 @@ struct DeviceIcon: View {
     }
 }
 
+/// The icon at the head of a speaker row.
+///
+/// A single device draws one glyph. A stereo pair draws one glyph per member,
+/// each tinted by that member's own selection, so a pair playing through only
+/// one of its speakers reads as half-lit before a word is read.
+///
+/// Left-to-right is the members' sorted order, not their channels: AirPlay does
+/// not say which half of a pair is left. See `SpeakerGroup`.
+struct SpeakerGroupIcon: View {
+    let group: SpeakerGroup
+
+    var body: some View {
+        HStack(spacing: 1) {
+            if group.isPair {
+                ForEach(group.members) { member in
+                    glyph(group.memberSymbolName, size: 14, isActive: member.selected)
+                        .help(member.selected ? "\(member.name): playing" : "\(member.name): not playing")
+                }
+            } else {
+                glyph(group.symbolName, size: 18, isActive: group.selected)
+            }
+        }
+        .frame(width: Metrics.iconColumn, height: 24)
+    }
+
+    private func glyph(_ symbol: String, size: CGFloat, isActive: Bool) -> some View {
+        Image(systemName: symbol)
+            .font(.system(size: size))
+            .symbolRenderingMode(.hierarchical)
+            .foregroundStyle(isActive ? AnyShapeStyle(Color.accentColor) : AnyShapeStyle(inactiveStyle))
+    }
+
+    /// A silent speaker inside a row that is otherwise playing recedes further
+    /// than one in a row that is simply off, so the gap in a pair is the thing
+    /// the eye lands on.
+    private var inactiveStyle: HierarchicalShapeStyle {
+        group.isPartial ? .quaternary : .secondary
+    }
+}
+
 /// Native `Slider` with SF Symbol end caps. Deliberately not hand-drawn: this
 /// is where the system's own knob, keyboard handling and VoiceOver come from.
 struct VolumeSlider: View {
     @Binding var value: Double
     var leadingSymbol: String? = "speaker.fill"
     var trailingSymbol: String? = "speaker.wave.3.fill"
+    var isMuted: Bool = false
     var onEditingChanged: (Bool) -> Void = { _ in }
+    var onMuteToggle: (() -> Void)?
 
     var body: some View {
         HStack(spacing: 8) {
-            if let leadingSymbol { cap(leadingSymbol) }
+            if let _ = leadingSymbol {
+                Button {
+                    onMuteToggle?()
+                } label: {
+                    Image(systemName: isMuted ? "speaker.slash.fill" : effectiveLeadingSymbol)
+                        .font(.system(size: 11))
+                        .foregroundStyle(isMuted ? .tertiary : .secondary)
+                        .frame(width: 15)
+                }
+                .buttonStyle(.plain)
+                .disabled(onMuteToggle == nil)
+            }
             Slider(value: $value, in: 0...100, onEditingChanged: onEditingChanged)
                 .controlSize(.small)
-            if let trailingSymbol { cap(trailingSymbol) }
+                .opacity(isMuted ? 0.4 : 1)
+            if let trailingSymbol {
+                Image(systemName: trailingSymbol)
+                    .font(.system(size: 11))
+                    .foregroundStyle(isMuted ? .tertiary : .secondary)
+                    .frame(width: 15)
+            }
         }
     }
 
-    private func cap(_ name: String) -> some View {
-        Image(systemName: name)
-            .font(.system(size: 11))
-            .foregroundStyle(.secondary)
-            .frame(width: 15)
+    private var effectiveLeadingSymbol: String {
+        leadingSymbol ?? "speaker.fill"
     }
 }
 

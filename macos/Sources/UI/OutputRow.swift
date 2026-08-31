@@ -1,16 +1,21 @@
 import SwiftUI
 
-/// One speaker. Tapping anywhere on the title line toggles it; the volume
-/// slider only appears once the speaker is selected, which is how the system
-/// handles multi-output AirPlay.
+/// One row in the speaker list: a single output or a merged stereo pair.
+///
+/// Tapping anywhere on the title line toggles it; the volume slider appears
+/// once the speaker is playing, matching the system Sound popover.
+///
+/// A stereo pair is one row with one slider, so it needs to say when it is not
+/// actually in stereo. Three things carry that at once: the icon lights only the
+/// halves that are playing, the badge counts them, and the subline names the
+/// speaker that is on by itself.
 struct OutputRow: View {
-    let output: Output
-    let symbolName: String
-    /// Group this speaker was adopted into, when it differs from its own name.
-    var groupName: String?
+    let group: SpeakerGroup
+    var isMuted: Bool = false
     @Binding var volume: Double
     let onToggle: () -> Void
     var onVolumeEditingChanged: (Bool) -> Void = { _ in }
+    var onMuteToggle: (() -> Void)?
 
     @State private var isHovering = false
 
@@ -18,23 +23,22 @@ struct OutputRow: View {
         VStack(alignment: .leading, spacing: 5) {
             Button(action: onToggle) {
                 HStack(spacing: 10) {
-                    DeviceIcon(symbol: symbolName, isActive: output.selected)
-                    VStack(alignment: .leading, spacing: 0) {
-                        Text(output.name)
-                            .font(.system(size: 13))
-                            .foregroundStyle(.primary)
-                            .lineLimit(1)
-                            .truncationMode(.tail)
-                        if let groupName {
-                            Text(groupName)
-                                .font(.system(size: 10))
-                                .foregroundStyle(.tertiary)
+                    SpeakerGroupIcon(group: group)
+                    VStack(alignment: .leading, spacing: 1) {
+                        HStack(spacing: 5) {
+                            Text(group.displayName)
+                                .font(.system(size: 13))
+                                .foregroundStyle(.primary)
                                 .lineLimit(1)
                                 .truncationMode(.tail)
+                            if group.isPair {
+                                PairBadge(group: group)
+                            }
                         }
+                        subline
                     }
                     Spacer(minLength: 0)
-                    if output.needsVerification, !output.selected {
+                    if group.needsVerification, !group.anySelected {
                         Image(systemName: "lock.fill")
                             .font(.system(size: 10))
                             .foregroundStyle(.tertiary)
@@ -44,13 +48,19 @@ struct OutputRow: View {
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .accessibilityAddTraits(output.selected ? [.isSelected] : [])
+            .accessibilityAddTraits(group.anySelected ? [.isSelected] : [])
+            .accessibilityValue(group.isPartial ? Text(partialText) : Text(""))
 
-            if output.selected {
-                VolumeSlider(value: $volume, onEditingChanged: onVolumeEditingChanged)
-                    .padding(.leading, Metrics.rowTextInset)
-                    .padding(.trailing, 2)
-                    .padding(.bottom, 2)
+            if group.anySelected {
+                VolumeSlider(
+                    value: $volume,
+                    isMuted: isMuted,
+                    onEditingChanged: onVolumeEditingChanged,
+                    onMuteToggle: onMuteToggle
+                )
+                .padding(.leading, Metrics.rowTextInset)
+                .padding(.trailing, 2)
+                .padding(.bottom, 2)
             }
         }
         .padding(.horizontal, 6)
@@ -61,12 +71,78 @@ struct OutputRow: View {
         )
         .onHover { isHovering = $0 }
     }
+
+    /// One line under the title. A half-playing pair is the more urgent thing to
+    /// say, so it displaces the group name while it lasts.
+    @ViewBuilder
+    private var subline: some View {
+        if group.isPartial {
+            HStack(spacing: 3) {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .font(.system(size: 9))
+                    .foregroundStyle(.orange)
+                Text(partialText)
+                    .font(.system(size: 10))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+            }
+        } else if let groupName = group.groupName {
+            Text("\u{25B8} \(groupName)")
+                .font(.system(size: 10))
+                .foregroundStyle(.tertiary)
+                .lineLimit(1)
+                .truncationMode(.tail)
+        }
+    }
+
+    /// Names the speaker rather than a channel: which half of a pair is left is
+    /// not something AirPlay tells us. See `SpeakerGroup`.
+    private var partialText: String {
+        if group.selectedCount == 1, let name = group.selectedMemberNames.first {
+            return "\(name) only"
+        }
+        return "\(group.selectedCount) of \(group.members.count) speakers"
+    }
+}
+
+/// "Stereo" while a pair plays on both speakers, a warning count while it does
+/// not. The tint change is what makes the difference readable at 9 points.
+private struct PairBadge: View {
+    let group: SpeakerGroup
+
+    var body: some View {
+        Text(label)
+            .font(.system(size: 9, weight: .medium))
+            .foregroundStyle(tint)
+            .padding(.horizontal, 4)
+            .padding(.vertical, 1)
+            .background(
+                RoundedRectangle(cornerRadius: 3, style: .continuous)
+                    .fill(tint.opacity(0.12))
+            )
+    }
+
+    private var label: String {
+        group.isPartial ? "\(group.selectedCount) of \(group.members.count)" : "Stereo"
+    }
+
+    private var tint: Color {
+        group.isPartial ? .orange : .accentColor
+    }
 }
 
 #Preview("Selected HomePod") {
     OutputRow(
-        output: Fixtures.outputs[0],
-        symbolName: DeviceIdentity(kind: .homePod).symbolName,
+        group: SpeakerGroup(
+            id: "1",
+            displayName: Fixtures.outputs[0].name,
+            members: [Fixtures.outputs[0]],
+            symbolName: DeviceIdentity(kind: .homePod).symbolName,
+            memberSymbolName: DeviceIdentity(kind: .homePod).unitSymbolName,
+            groupName: nil,
+            isPair: false
+        ),
         volume: .constant(62),
         onToggle: {}
     )
@@ -74,12 +150,36 @@ struct OutputRow: View {
     .padding()
 }
 
-#Preview("Paired mini, in a group") {
+#Preview("Stereo pair in a group") {
     OutputRow(
-        output: Fixtures.outputs[3],
-        symbolName: DeviceIdentity(kind: .homePodMini, isStereoPairMember: true).symbolName,
-        groupName: "Living Room Apple TV",
-        volume: .constant(30),
+        group: SpeakerGroup(
+            id: "PAIR",
+            displayName: "Loft",
+            members: [Fixtures.outputs[1], Fixtures.outputs[2]],
+            symbolName: DeviceIdentity(kind: .homePod, isStereoPairMember: true).symbolName,
+            memberSymbolName: DeviceIdentity(kind: .homePod).unitSymbolName,
+            groupName: "Loft Apple TV",
+            isPair: true
+        ),
+        volume: .constant(45),
+        onToggle: {}
+    )
+    .frame(width: Metrics.popoverWidth)
+    .padding()
+}
+
+#Preview("Stereo pair, one speaker missing") {
+    OutputRow(
+        group: SpeakerGroup(
+            id: "PAIR",
+            displayName: "Den",
+            members: [Fixtures.outputs[4], Fixtures.outputs[5]],
+            symbolName: DeviceIdentity(kind: .homePodMini, isStereoPairMember: true).symbolName,
+            memberSymbolName: DeviceIdentity(kind: .homePodMini).unitSymbolName,
+            groupName: nil,
+            isPair: true
+        ),
+        volume: .constant(55),
         onToggle: {}
     )
     .frame(width: Metrics.popoverWidth)

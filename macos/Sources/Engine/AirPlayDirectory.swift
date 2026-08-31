@@ -122,7 +122,8 @@ final class AirPlayDirectory {
                 isStereoPairMember: paired,
                 // Every device names its own group; only a name that differs
                 // from the device's own tells the user anything.
-                groupName: advertisement.groupName
+                groupName: advertisement.groupName,
+                pairID: paired ? advertisement.pairID : nil
             )
         }
 

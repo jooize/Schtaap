@@ -66,17 +66,15 @@ targets:
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         CFBundlePackageType: APPL
         LSMinimumSystemVersion: $(MACOSX_DEPLOYMENT_TARGET)
-        # Starts as an agent so no Dock icon flashes before the stored
-        # presence mode is applied. PresenceMode promotes to .regular.
+        # A menu bar agent: no Dock icon, no main window, no Settings
+        # scene. Everything the app does happens in the popover.
         LSUIElement: true
         NSAppTransportSecurity:
           NSAllowsLocalNetworking: true
-        # Required from macOS 15 to browse Bonjour. Used only to read the
-        # hardware model out of each speaker's TXT record for its icon.
+        # Required from macOS 15 for Bonjour and AirPlay.
         NSLocalNetworkUsageDescription: >-
-          $(PRODUCT_NAME) looks up your AirPlay speakers so it can tell a
-          HomePod from an Apple TV and spot stereo pairs. Your speakers work
-          without this.
+          $(PRODUCT_NAME) appears as a speaker in Spotify and plays to
+          your AirPlay speakers.
         NSBonjourServices:
           - _airplay._tcp
 

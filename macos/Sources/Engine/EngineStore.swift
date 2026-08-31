@@ -25,6 +25,14 @@ final class EngineStore {
     /// Master volume in 0...100. Written straight through by the slider.
     private(set) var masterVolume: Double = 50
 
+    /// True when the user has muted via the popover. The pre-mute level is
+    /// kept so unmuting restores it.
+    private(set) var isMasterMuted = false
+    var preMuteLevel: Double = 50
+
+    private var mutedGroups: Set<String> = []
+    private var preMuteGroupVolumes: [String: Int] = [:]
+
     /// Set when a device answers a selection attempt by displaying a code on
     /// its screen instead of accepting the stream. Apple TVs and some
     /// receivers do this. The popover swaps in a PIN field while it is set.
@@ -250,6 +258,121 @@ final class EngineStore {
         }
     }
 
+    func toggleMasterMute() {
+        if isMasterMuted {
+            isMasterMuted = false
+            setMasterVolume(preMuteLevel)
+        } else {
+            preMuteLevel = masterVolume
+            isMasterMuted = true
+            setMasterVolume(0)
+        }
+    }
+
+    func toggleGroupMute(_ group: SpeakerGroup) {
+        if mutedGroups.contains(group.id) {
+            mutedGroups.remove(group.id)
+            let restore = preMuteGroupVolumes[group.id] ?? group.volume
+            setGroupVolume(Double(restore), for: group)
+        } else {
+            preMuteGroupVolumes[group.id] = group.volume
+            mutedGroups.insert(group.id)
+            setGroupVolume(0, for: group)
+        }
+    }
+
+    func isGroupMuted(_ group: SpeakerGroup) -> Bool {
+        mutedGroups.contains(group.id)
+    }
+
+    func preMuteGroupLevel(for group: SpeakerGroup) -> Int {
+        preMuteGroupVolumes[group.id] ?? group.volume
+    }
+
+    func setPreMuteGroupLevel(_ value: Double, for group: SpeakerGroup) {
+        preMuteGroupVolumes[group.id] = Int(value.rounded())
+    }
+
+    // MARK: - Speaker groups
+
+    /// Outputs merged into rows: stereo pairs become one entry with a shared
+    /// volume slider and toggle. Sorted by display name so related speakers
+    /// (a pair and its group parent Apple TV) sit together.
+    var speakerGroups: [SpeakerGroup] {
+        let visible = outputs.filter { $0.isAirPlay }
+        var pairBuckets: [String: [Output]] = [:]
+        var singles: [Output] = []
+
+        for output in visible {
+            if let identity = directory.identity(forOutputNamed: output.name),
+               identity.isStereoPairMember,
+               let pairID = identity.pairID {
+                pairBuckets[pairID, default: []].append(output)
+            } else {
+                singles.append(output)
+            }
+        }
+
+        var groups: [SpeakerGroup] = []
+
+        for (pairID, members) in pairBuckets {
+            let sorted = members.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+            let displayName = SpeakerGroup.derivePairName(from: sorted)
+            let identity = directory.identity(forOutputNamed: sorted[0].name)
+            let symbol = SymbolCatalog.name(identity?.symbolName ?? sorted[0].symbolName)
+
+            groups.append(SpeakerGroup(
+                id: pairID,
+                displayName: displayName,
+                members: sorted,
+                symbolName: symbol,
+                memberSymbolName: unitSymbolName(for: sorted[0]),
+                groupName: identity?.groupName,
+                isPair: true
+            ))
+        }
+
+        for output in singles {
+            groups.append(SpeakerGroup(
+                id: output.id,
+                displayName: output.name,
+                members: [output],
+                symbolName: symbolName(for: output),
+                memberSymbolName: unitSymbolName(for: output),
+                groupName: groupName(for: output),
+                isPair: false
+            ))
+        }
+
+        groups.sort { $0.displayName.localizedCaseInsensitiveCompare($1.displayName) == .orderedAscending }
+        return groups
+    }
+
+    func toggle(_ group: SpeakerGroup) {
+        let target = !group.selected
+        for member in group.members where member.selected != target {
+            if !target || !member.needsVerification {
+                setSelected(target, for: member)
+            } else {
+                beginVerification(for: member)
+            }
+        }
+    }
+
+    func setGroupVolume(_ value: Double, for group: SpeakerGroup) {
+        for member in group.members {
+            setVolume(value, for: member)
+        }
+    }
+
+    func beginAdjusting(_ group: SpeakerGroup) {
+        for member in group.members { adjusting.insert(member.id) }
+    }
+
+    func endAdjusting(_ group: SpeakerGroup) {
+        for member in group.members { endAdjusting(member) }
+    }
+
     // MARK: - Presentation
 
     /// The icon for an output: its real hardware when Bonjour has told us,
@@ -259,23 +382,27 @@ final class EngineStore {
         return SymbolCatalog.name(name)
     }
 
+    /// The icon for one physical unit of an output, never the joined two-unit
+    /// variant. A merged pair row draws one per member so each can be tinted by
+    /// its own selection.
+    func unitSymbolName(for output: Output) -> String {
+        let name = directory.identity(forOutputNamed: output.name)?.unitSymbolName ?? output.symbolName
+        return SymbolCatalog.name(name)
+    }
+
     /// The group a speaker was adopted into, when that is not simply itself --
     /// a HomePod pair belonging to an Apple TV's home theatre, say.
     func groupName(for output: Output) -> String? {
         directory.identity(forOutputNamed: output.name)?.groupName
     }
 
-    /// Starts the Bonjour browse, if the user has not turned it off.
+    /// Starts the Bonjour browse.
     ///
     /// Called when the popover first appears rather than at launch, so the
     /// local network prompt arrives with the speaker list on screen instead of
     /// unexplained at login.
     func startDirectoryIfEnabled() {
         guard !usesFixtures else { return }
-        guard Preferences.identifiesSpeakers else {
-            directory.reset()
-            return
-        }
         directory.start()
     }
 
