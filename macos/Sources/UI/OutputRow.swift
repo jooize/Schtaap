@@ -6,9 +6,9 @@ import SwiftUI
 /// once the speaker is playing, matching the system Sound popover.
 ///
 /// A stereo pair is one row with one slider, so it needs to say when it is not
-/// actually in stereo. Three things carry that at once: the icon lights only the
-/// halves that are playing, the badge counts them, and the subline names the
-/// speaker that is on by itself.
+/// actually in stereo. Three things carry that at once: the joined icon splits
+/// into its halves and lights only the ones playing, the badge counts them, and
+/// the subline names the speaker that has gone quiet.
 struct OutputRow: View {
     let group: SpeakerGroup
     var isMuted: Bool = false
@@ -96,13 +96,15 @@ struct OutputRow: View {
         }
     }
 
-    /// Names the speaker rather than a channel: which half of a pair is left is
-    /// not something AirPlay tells us. See `SpeakerGroup`.
+    /// Names the silent speaker in full, rather than calling it L or R: which
+    /// half of a pair is left is not something AirPlay tells us, and a name is
+    /// the only handle the user has on the thing. See `SpeakerGroup`.
     private var partialText: String {
-        if group.selectedCount == 1, let name = group.selectedMemberNames.first {
-            return "\(name) only"
+        let silent = group.silentMemberNames
+        if silent.count == 1, let name = silent.first {
+            return "\(name) is not playing"
         }
-        return "\(group.selectedCount) of \(group.members.count) speakers"
+        return "\(group.selectedCount) of \(group.members.count) speakers playing"
     }
 }
 

@@ -76,8 +76,11 @@ struct SpeakerGroup: Identifiable {
 
     var selectedCount: Int { members.count(where: \.selected) }
 
-    /// Names of the members currently playing, for the degraded subline.
-    var selectedMemberNames: [String] { members.filter(\.selected).map(\.name) }
+    /// Names of the members that are not playing. The degraded subline names
+    /// these rather than the live ones: the silent speaker is the one the user
+    /// has to go do something about, and it is also the half whose name carries
+    /// AirPlay's "(2)" suffix, so it reads differently from the row's title.
+    var silentMemberNames: [String] { members.filter { !$0.selected }.map(\.name) }
 
     /// The quietest member, so the slider never claims a level no speaker is at.
     var volume: Int {

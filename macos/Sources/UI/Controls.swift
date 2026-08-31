@@ -28,9 +28,10 @@ struct DeviceIcon: View {
 
 /// The icon at the head of a speaker row.
 ///
-/// A single device draws one glyph. A stereo pair draws one glyph per member,
-/// each tinted by that member's own selection, so a pair playing through only
-/// one of its speakers reads as half-lit before a word is read.
+/// A pair normally draws as the joined two-unit glyph, because normally it is
+/// one thing. It splits into a glyph per member only when it stops behaving
+/// like one -- when some of it is playing and some is not. The split is itself
+/// half the signal; the tint on each half is the other.
 ///
 /// Left-to-right is the members' sorted order, not their channels: AirPlay does
 /// not say which half of a pair is left. See `SpeakerGroup`.
@@ -38,11 +39,13 @@ struct SpeakerGroupIcon: View {
     let group: SpeakerGroup
 
     var body: some View {
-        HStack(spacing: 1) {
-            if group.isPair {
-                ForEach(group.members) { member in
-                    glyph(group.memberSymbolName, size: 14, isActive: member.selected)
-                        .help(member.selected ? "\(member.name): playing" : "\(member.name): not playing")
+        Group {
+            if group.isPartial {
+                HStack(spacing: 1) {
+                    ForEach(group.members) { member in
+                        glyph(group.memberSymbolName, size: 14, isActive: member.selected)
+                            .help(member.selected ? "\(member.name): playing" : "\(member.name): not playing")
+                    }
                 }
             } else {
                 glyph(group.symbolName, size: 18, isActive: group.selected)
