@@ -57,8 +57,13 @@ audio streams from Spotify's servers to the VM directly.
   `./lima shell spotifytohomepod ip -4 addr show dev lima0`).
 - The phone picks the device named "HomePods" in Spotify's device list.
   Premium is required on the playing account (librespot limitation).
-- Track metadata does not show in OwnTone's UI (rust librespot has no
-  metadata pipe); the phone's Spotify app shows it as usual.
+- Track metadata does not show in OwnTone's UI yet; the phone's Spotify
+  app shows it as usual. librespot does not write a metadata pipe itself,
+  but it does report every track over `--onevent`, and
+  `bridge/librespot-metadata` turns those events into the Shairport-format
+  metadata pipe OwnTone reads. Not yet wired into this VM: add
+  `LIBRESPOT_ONEVENT` to `/etc/raspotify/conf` and create
+  `/srv/music/spotify.metadata` to turn it on.
 
 ## Rebuild from scratch
 
