@@ -121,6 +121,7 @@ final class EngineStore {
     }
 
     func refreshOutputs() async {
+        guard !usesFixtures else { return }
         do {
             let fetched = try await client.outputs()
             outputs = fetched.map { output in
@@ -139,6 +140,7 @@ final class EngineStore {
     }
 
     func refreshPlayer() async {
+        guard !usesFixtures else { return }
         do {
             let status = try await client.player()
             player = status
@@ -151,10 +153,21 @@ final class EngineStore {
     }
 
     func refreshNowPlaying() async {
+        guard !usesFixtures else { return }
         nowPlaying = try? await client.nowPlaying()
     }
 
     // MARK: - Writes
+
+    /// Fixtures exist to run the UI with no engine, so every write below stops
+    /// at the optimistic local update and never reaches the network.
+    ///
+    /// This is not belt and braces. The default endpoint is localhost:3689, and
+    /// a Lima VM forwards that port to a real owntone, so an unguarded refresh
+    /// answers 200 and swaps the fixture speakers for the household's -- whose
+    /// names the fixture directory knows nothing about, so every icon goes
+    /// generic and every pair comes apart the first time anything is clicked.
+    private var isOffline: Bool { usesFixtures }
 
     func toggle(_ output: Output) {
         // A device that has already asked for a code goes straight back to the
@@ -168,6 +181,7 @@ final class EngineStore {
 
     func setSelected(_ selected: Bool, for output: Output) {
         apply(to: output.id) { $0.selected = selected }
+        guard !isOffline else { return }
 
         Task { [client] in
             try? await client.setSelected(selected, forOutput: output.id)
@@ -190,6 +204,14 @@ final class EngineStore {
 
     func submitVerification(pin: String) {
         guard let output = verifying else { return }
+
+        // No engine to accept a code, so any code passes and the flow can still
+        // be walked through offline.
+        guard !isOffline else {
+            apply(to: output.id) { $0.selected = true }
+            cancelVerification()
+            return
+        }
 
         Task { [client] in
             do {
@@ -217,6 +239,7 @@ final class EngineStore {
     func setVolume(_ value: Double, for output: Output) {
         let level = Int(value.rounded())
         apply(to: output.id) { $0.volume = level }
+        guard !isOffline else { return }
         debounce(key: output.id) { [client] in
             try? await client.setVolume(level, forOutput: output.id)
         }
@@ -229,6 +252,7 @@ final class EngineStore {
     func endAdjusting(_ output: Output) {
         adjusting.remove(output.id)
         volumeWrites[output.id]?.cancel()
+        guard !isOffline else { return }
         let level = outputs.first(where: { $0.id == output.id })?.volume ?? output.volume
         Task { [client] in
             try? await client.setVolume(level, forOutput: output.id)
@@ -238,6 +262,7 @@ final class EngineStore {
 
     func setMasterVolume(_ value: Double) {
         masterVolume = value
+        guard !isOffline else { return }
         let level = Int(value.rounded())
         debounce(key: Self.masterKey) { [client] in
             try? await client.setMasterVolume(level)
@@ -251,6 +276,7 @@ final class EngineStore {
     func endAdjustingMaster() {
         isAdjustingMaster = false
         volumeWrites[Self.masterKey]?.cancel()
+        guard !isOffline else { return }
         let level = Int(masterVolume.rounded())
         Task { [client] in
             try? await client.setMasterVolume(level)
@@ -296,8 +322,13 @@ final class EngineStore {
     // MARK: - Speaker groups
 
     /// Outputs merged into rows: stereo pairs become one entry with a shared
-    /// volume slider and toggle. Sorted by display name so related speakers
-    /// (a pair and its group parent Apple TV) sit together.
+    /// volume slider and toggle.
+    ///
+    /// Whatever is playing sorts to the top -- those rows carry sliders and are
+    /// the ones being adjusted -- and everything else follows alphabetically, so
+    /// a pair and the Apple TV it belongs to still sit together within each
+    /// half. Collapsing the list drops rows off the bottom and never reorders
+    /// what stays.
     var speakerGroups: [SpeakerGroup] {
         let visible = outputs.filter { $0.isAirPlay }
         var pairBuckets: [String: [Output]] = [:]
@@ -344,7 +375,10 @@ final class EngineStore {
             ))
         }
 
-        groups.sort { $0.displayName.localizedCaseInsensitiveCompare($1.displayName) == .orderedAscending }
+        groups.sort { left, right in
+            if left.anySelected != right.anySelected { return left.anySelected }
+            return left.displayName.localizedCaseInsensitiveCompare(right.displayName) == .orderedAscending
+        }
         return groups
     }
 

@@ -182,7 +182,9 @@ struct PopoverView: View {
                     group: group,
                     isMuted: store.isGroupMuted(group),
                     volume: groupVolume(for: group),
-                    onToggle: { store.toggle(group) },
+                    // Animated because selecting a speaker lifts its row to the
+                    // top of the list; without it the row appears to teleport.
+                    onToggle: { withAnimation(.snappy(duration: 0.2)) { store.toggle(group) } },
                     onVolumeEditingChanged: { editing in
                         editing ? store.beginAdjusting(group) : store.endAdjusting(group)
                     },
