@@ -8,6 +8,7 @@ import SwiftUI
 /// still playing and its volume is still the thing you are most likely to want.
 struct PopoverView: View {
     @Environment(EngineStore.self) private var store
+    @Environment(EngineService.self) private var engine
     @State private var showsAllOutputs = false
     @State private var launchAtLogin = LoginItem.isEnabled
     @State private var isEditingName = false
@@ -56,7 +57,12 @@ struct PopoverView: View {
         .contentShape(Rectangle())
         .onTapGesture { commitName() }
         .onExitCommand { leavePage() }
-        .onAppear { store.startDirectoryIfEnabled() }
+        .onAppear {
+            store.startDirectoryIfEnabled()
+            // launchd can have stopped the agents, or the user approved them
+            // in System Settings, since the popover was last open.
+            engine.refreshStatus()
+        }
         .onDisappear { commitName() }
         .onChange(of: isNameFocused) { _, focused in
             if !focused { commitName() }
@@ -229,19 +235,34 @@ struct PopoverView: View {
         store.speakerGroups.count - visibleGroups.count
     }
 
+    /// Shown when there is no speaker list to show. What is wrong is usually
+    /// the engine rather than the network, so this asks the engine first and
+    /// only falls back to the connection when the agents are up.
     private var emptyState: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text(store.connection.isOnline ? "No speakers found" : "Engine not running")
+            Text(emptyStateTitle)
                 .font(.system(size: 13, weight: .medium))
-            Text(engineHint)
+            Text(emptyStateDetail)
                 .font(.system(size: 11))
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
-            Button("Try Again") {
-                Task { await store.refreshAll() }
+
+            if case .requiresApproval = engine.status {
+                Button("Open Login Items") { engine.openLoginItemsSettings() }
+                    .controlSize(.small)
+                    .padding(.top, 2)
+            } else if case .missingPayload = engine.status {
+                // Nothing the user can do from here: this build has no engine
+                // in it, which is a thing that happened at compile time.
+                EmptyView()
+            } else {
+                Button("Try Again") {
+                    engine.apply(connectName: connectName)
+                    Task { await store.refreshAll() }
+                }
+                .controlSize(.small)
+                .padding(.top, 2)
             }
-            .controlSize(.small)
-            .padding(.top, 2)
         }
         .padding(.horizontal, Metrics.horizontalInset)
         .padding(.bottom, 4)
@@ -281,18 +302,50 @@ struct PopoverView: View {
         requestedPage = nil
     }
 
+    /// Leaves the name field and hands the result to the engine.
+    ///
+    /// The name is librespot's `--name`, so a changed one has to reach the
+    /// agent to mean anything. `apply` writes it and restarts librespot only
+    /// if the file actually changed, which is why this can be called on every
+    /// dismissal, focus loss and tap outside the field.
     private func commitName() {
         isNameFocused = false
         isEditingName = false
+
+        let trimmed = connectName.trimmingCharacters(in: .whitespacesAndNewlines)
+        // An empty name would leave librespot advertising nothing at all, so
+        // clearing the field falls back rather than committing the blank.
+        connectName = trimmed.isEmpty ? Branding.defaultConnectName : trimmed
+        engine.apply(connectName: connectName)
     }
 
     // MARK: - Derived values
 
-    private var engineHint: String {
-        switch store.connection {
-        case .offline(let reason): reason
-        case .connecting: "Waiting for the audio engine to answer."
-        case .online: "The engine is running but has not discovered any AirPlay speakers yet."
+    private var emptyStateTitle: String {
+        switch engine.status {
+        case .missingPayload: "No audio engine"
+        case .requiresApproval: "Waiting for permission"
+        case .failed: "The engine could not start"
+        case .notRegistered, .running:
+            store.connection.isOnline ? "No speakers found" : "Engine not running"
+        }
+    }
+
+    private var emptyStateDetail: String {
+        switch engine.status {
+        case .missingPayload:
+            "This build of \(Branding.appName) was made without the audio engine."
+        case .requiresApproval:
+            "macOS needs you to allow \(Branding.appName)'s background items before "
+                + "it can play to your speakers."
+        case .failed(let reason):
+            reason
+        case .notRegistered, .running:
+            switch store.connection {
+            case .offline(let reason): reason
+            case .connecting: "Waiting for the audio engine to answer."
+            case .online: "The engine is running but has not discovered any AirPlay speakers yet."
+            }
         }
     }
 
@@ -337,4 +390,5 @@ struct PopoverView: View {
 #Preview {
     PopoverView()
         .environment(EngineStore.preview())
+        .environment(EngineService(usesFixtures: true))
 }

@@ -10,6 +10,7 @@
 		0163FBEFA0C3D67D9581743F /* Preferences.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE34C46A98E9C471AD2981CF /* Preferences.swift */; };
 		0182006A97F5E58E593302A4 /* EngineHelper in Embed Dependencies */ = {isa = PBXBuildFile; fileRef = 588F72484D2A314DCCFB8806 /* EngineHelper */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		0561F5604AD0D3B400D03AA1 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3FD946E10AD3797BBDE65F3 /* main.swift */; };
+		0A7F04E9FF884E6E7494F864 /* EngineInstallation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9099AC0F4E779730ABE00191 /* EngineInstallation.swift */; };
 		2468F89BEE583103E0D3CB85 /* PopoverView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 836DCBD336E70130B715D00C /* PopoverView.swift */; };
 		2B59663E36784F1B972A7C9E /* OutputRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 500F8F2133971779753162A1 /* OutputRow.swift */; };
 		33705D5D7F0ACA39F710A793 /* Controls.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5B2E4E93D68E7F39B2E2DD1 /* Controls.swift */; };
@@ -27,6 +28,7 @@
 		ACBF801DEAF333A8AE1C254A /* MenuBarLabel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 07F7398340A23F82CEDA629C /* MenuBarLabel.swift */; };
 		ACC4CC004774AF5352D532B7 /* PopoverPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 120986F0B2623EF185B59679 /* PopoverPage.swift */; };
 		BD4DC060E73D5CACA8B1AE29 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8FBEFBD930F0E25D6F76BAA4 /* Models.swift */; };
+		BFA2F12DD8658CC5D21F2373 /* EngineService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77AA1B76E0CDED7C10244B5C /* EngineService.swift */; };
 		D0C630EA83B635470781616A /* AppMain.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC5239B909D87054B34F49F3 /* AppMain.swift */; };
 		D5A4053E883E5E8B2269CA6C /* DeviceKind.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C0D8A18EDDDA6CFA5004B3B /* DeviceKind.swift */; };
 		DEA47C1AEA3E298423C23D15 /* Branding.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8EAF73867DC41A88001A161A /* Branding.swift */; };
@@ -48,11 +50,10 @@
 		10CB1D5C86ADBACB7C8E7541 /* CopyFiles */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
-			dstPath = Contents/Helpers;
+			dstPath = Contents/Library;
 			dstSubfolderSpec = 1;
 			files = (
-				36447C4746A62F904E39DBDB /* bin in CopyFiles */,
-				E8DCCEF86151B73BCA8757B2 /* lib in CopyFiles */,
+				765424DD1E826234ACE7FB5D /* LaunchAgents in CopyFiles */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -70,20 +71,21 @@
 		A30CD52F92CF6493D108B09E /* CopyFiles */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
-			dstPath = Contents/Library;
-			dstSubfolderSpec = 1;
+			dstPath = "";
+			dstSubfolderSpec = 7;
 			files = (
-				765424DD1E826234ACE7FB5D /* LaunchAgents in CopyFiles */,
+				398F9DCB146BDAE5D659BF18 /* htdocs in CopyFiles */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		E78883BE35F7653E426B6C1A /* CopyFiles */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
-			dstPath = "";
-			dstSubfolderSpec = 7;
+			dstPath = Contents/Helpers;
+			dstSubfolderSpec = 1;
 			files = (
-				398F9DCB146BDAE5D659BF18 /* htdocs in CopyFiles */,
+				36447C4746A62F904E39DBDB /* bin in CopyFiles */,
+				E8DCCEF86151B73BCA8757B2 /* lib in CopyFiles */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -99,6 +101,7 @@
 		588F72484D2A314DCCFB8806 /* EngineHelper */ = {isa = PBXFileReference; includeInIndex = 0; path = EngineHelper; sourceTree = BUILT_PRODUCTS_DIR; };
 		5D0A1585567777DC529F39BB /* lib */ = {isa = PBXFileReference; lastKnownFileType = folder; name = lib; path = Engine/lib; sourceTree = SOURCE_ROOT; };
 		5E81F843E0CEA284C821265E /* EngineEndpoint.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EngineEndpoint.swift; sourceTree = "<group>"; };
+		77AA1B76E0CDED7C10244B5C /* EngineService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EngineService.swift; sourceTree = "<group>"; };
 		7C0D8A18EDDDA6CFA5004B3B /* DeviceKind.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceKind.swift; sourceTree = "<group>"; };
 		7E0C7563888793701294D90A /* EngineClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EngineClient.swift; sourceTree = "<group>"; };
 		7E6A3882847B1553494B1C00 /* Tutti.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Tutti.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -108,6 +111,7 @@
 		88606BECBE85980E3D1DE5E4 /* Fixtures.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Fixtures.swift; sourceTree = "<group>"; };
 		8EAF73867DC41A88001A161A /* Branding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Branding.swift; sourceTree = "<group>"; };
 		8FBEFBD930F0E25D6F76BAA4 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
+		9099AC0F4E779730ABE00191 /* EngineInstallation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EngineInstallation.swift; sourceTree = "<group>"; };
 		B5B2E4E93D68E7F39B2E2DD1 /* Controls.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Controls.swift; sourceTree = "<group>"; };
 		B8C00EEB0E43CB58E2985278 /* EngineStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EngineStore.swift; sourceTree = "<group>"; };
 		BE34C46A98E9C471AD2981CF /* Preferences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Preferences.swift; sourceTree = "<group>"; };
@@ -116,7 +120,7 @@
 		E5A36685164C766FE0FE7700 /* NotifyClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotifyClient.swift; sourceTree = "<group>"; };
 		F3FD946E10AD3797BBDE65F3 /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 		FA32B1B5907D80AE1C4A9A62 /* bin */ = {isa = PBXFileReference; lastKnownFileType = folder; name = bin; path = Engine/bin; sourceTree = SOURCE_ROOT; };
-		"TEMP_35F1258E-B423-4850-A7D0-ED30547B9CA4" /* Version.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Version.xcconfig; sourceTree = "<group>"; };
+		"TEMP_FA7252E3-6FCA-421B-AEEE-89C59EA1B325" /* Version.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Version.xcconfig; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -198,6 +202,8 @@
 				7C0D8A18EDDDA6CFA5004B3B /* DeviceKind.swift */,
 				7E0C7563888793701294D90A /* EngineClient.swift */,
 				5E81F843E0CEA284C821265E /* EngineEndpoint.swift */,
+				9099AC0F4E779730ABE00191 /* EngineInstallation.swift */,
+				77AA1B76E0CDED7C10244B5C /* EngineService.swift */,
 				B8C00EEB0E43CB58E2985278 /* EngineStore.swift */,
 				88606BECBE85980E3D1DE5E4 /* Fixtures.swift */,
 				8FBEFBD930F0E25D6F76BAA4 /* Models.swift */,
@@ -216,10 +222,10 @@
 			path = Support;
 			sourceTree = "<group>";
 		};
-		"TEMP_35A8F0D4-022A-4F5C-9DA3-EC78B8A3D2EF" /* macos */ = {
+		"TEMP_7A93506A-92BE-4F89-A8C3-A0D28B7B9ABB" /* macos */ = {
 			isa = PBXGroup;
 			children = (
-				"TEMP_35F1258E-B423-4850-A7D0-ED30547B9CA4" /* Version.xcconfig */,
+				"TEMP_FA7252E3-6FCA-421B-AEEE-89C59EA1B325" /* Version.xcconfig */,
 			);
 			path = macos;
 			sourceTree = "<group>";
@@ -315,6 +321,8 @@
 				D5A4053E883E5E8B2269CA6C /* DeviceKind.swift in Sources */,
 				53FF6C575C57DAFECFC5C8CF /* EngineClient.swift in Sources */,
 				7EFD3424C43382F1964BB3B8 /* EngineEndpoint.swift in Sources */,
+				0A7F04E9FF884E6E7494F864 /* EngineInstallation.swift in Sources */,
+				BFA2F12DD8658CC5D21F2373 /* EngineService.swift in Sources */,
 				4EE6714A21D1534C07383377 /* EngineStore.swift in Sources */,
 				83885E4839B614316B99F5C1 /* Fixtures.swift in Sources */,
 				727F8DBDB87A34BAF83A004D /* LoginItem.swift in Sources */,
@@ -343,7 +351,7 @@
 /* Begin XCBuildConfiguration section */
 		0897C94399D4433118D5CFF5 /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = "TEMP_35F1258E-B423-4850-A7D0-ED30547B9CA4" /* Version.xcconfig */;
+			baseConfigurationReference = "TEMP_FA7252E3-6FCA-421B-AEEE-89C59EA1B325" /* Version.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ANALYZER_NONNULL = YES;
@@ -459,7 +467,7 @@
 		};
 		D77CF51768ED944D8C0B0719 /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = "TEMP_35F1258E-B423-4850-A7D0-ED30547B9CA4" /* Version.xcconfig */;
+			baseConfigurationReference = "TEMP_FA7252E3-6FCA-421B-AEEE-89C59EA1B325" /* Version.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ANALYZER_NONNULL = YES;

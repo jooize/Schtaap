@@ -6,10 +6,20 @@ import SwiftUI
 @main
 struct AppMain: App {
     @State private var store: EngineStore
+    @State private var engine: EngineService
 
     init() {
-        let store = EngineStore(usesFixtures: EngineStore.fixturesRequested)
+        let usesFixtures = EngineStore.fixturesRequested
+
+        let store = EngineStore(usesFixtures: usesFixtures)
         _store = State(initialValue: store)
+
+        let engine = EngineService(usesFixtures: usesFixtures)
+        _engine = State(initialValue: engine)
+
+        // The engine first, so the agents are on their way up before anything
+        // asks them a question. Both calls are no-ops under fixtures.
+        engine.apply(connectName: Preferences.connectName)
         store.start()
     }
 
@@ -17,6 +27,7 @@ struct AppMain: App {
         MenuBarExtra {
             PopoverView()
                 .environment(store)
+                .environment(engine)
         } label: {
             MenuBarLabel(isPlaying: store.player?.isPlaying ?? false)
         }
