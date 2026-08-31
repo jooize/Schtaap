@@ -144,6 +144,53 @@ def fetch_cover(covers, timeout, log):
     return None
 
 
+def cover_path(state_dir, track_id):
+    safe = "".join(ch for ch in track_id if ch.isalnum()) or "current"
+    return os.path.join(state_dir, "cover-%s.img" % safe)
+
+
+def cache_cover(state_dir, track_id, data, log):
+    """Keep the fetched cover on disk.
+
+    A track's items may have to be sent more than once (see `delivered`), and
+    re-fetching the same image over the network each time would be wasteful and
+    could fail the second time round.
+    """
+    if not data:
+        return None
+    try:
+        os.makedirs(state_dir, exist_ok=True)
+        path = cover_path(state_dir, track_id)
+        temp = "%s.%d.tmp" % (path, os.getpid())
+        with open(temp, "wb") as handle:
+            handle.write(data)
+        os.replace(temp, path)
+        return path
+    except OSError as exc:
+        log("could not cache cover: %s" % exc)
+        return None
+
+
+def load_cover(path):
+    if not path:
+        return None
+    try:
+        with open(path, "rb") as handle:
+            return handle.read(PICTURE_SIZE_MAX + 1)
+    except OSError:
+        return None
+
+
+def prune_covers(state_dir, keep):
+    """Drop every cached cover but the current one."""
+    try:
+        for name in os.listdir(state_dir):
+            if name.startswith("cover-") and os.path.join(state_dir, name) != keep:
+                os.remove(os.path.join(state_dir, name))
+    except OSError:
+        pass
+
+
 def env(name, default=""):
     return os.environ.get(name, default)
 
@@ -260,8 +307,22 @@ def ensure_pipe(pipe_path, log):
 # --- events ------------------------------------------------------------------
 
 
-def build_track_changed(args, state, log):
-    """A new track: clear what was there, then say everything we know."""
+POSITION_EVENTS = ("playing", "paused", "seeked", "position_correction")
+
+
+def track_items(args, state, position_ms):
+    """Everything owntone needs in order to describe the current track."""
+    blob = flush_item()
+    blob += text_item(CODE_TITLE, state.get("title", ""))
+    blob += text_item(CODE_ARTIST, state.get("artist", ""))
+    blob += text_item(CODE_ALBUM, state.get("album", ""))
+    if not args.no_artwork:
+        blob += picture_item(load_cover(state.get("cover_path")))
+    blob += progress_item(position_ms, int(state.get("duration_ms") or 0), args.sample_rate)
+    return blob
+
+
+def remember_track(args, state, state_dir, log):
     title = env("NAME")
     album = env("ALBUM")
     artist = joined("ARTISTS")
@@ -272,48 +333,56 @@ def build_track_changed(args, state, log):
         artist = artist or show
         album = album or show
 
-    duration_ms = int(env("DURATION_MS", "0") or 0)
+    track_id = env("TRACK_ID")
+    path = None
+    if not args.no_artwork:
+        path = cache_cover(state_dir, track_id,
+                           fetch_cover(env("COVERS"), args.artwork_timeout, log), log)
+    prune_covers(state_dir, path)
 
     state.clear()
     state.update({
-        "track_id": env("TRACK_ID"),
-        "duration_ms": duration_ms,
+        "track_id": track_id,
+        "duration_ms": int(env("DURATION_MS", "0") or 0),
         "title": title,
+        "artist": artist,
+        "album": album,
+        "cover_path": path,
+        # Set once the items have actually reached owntone. Until then every
+        # later event is a chance to try again -- see build().
+        "delivered": False,
     })
 
-    blob = flush_item()
-    blob += text_item(CODE_TITLE, title)
-    blob += text_item(CODE_ARTIST, artist)
-    blob += text_item(CODE_ALBUM, album)
 
-    if not args.no_artwork:
-        blob += picture_item(fetch_cover(env("COVERS"), args.artwork_timeout, log))
+def build(args, state, state_dir, log):
+    """The items for this event, and whether they describe the whole track.
 
-    blob += progress_item(0, duration_ms, args.sample_rate)
-    return blob
-
-
-def build_position(args, state):
-    """A position event: only useful if we still know how long the track is."""
-    duration_ms = int(state.get("duration_ms") or 0)
-    position_ms = int(env("POSITION_MS", "0") or 0)
-    return progress_item(position_ms, duration_ms, args.sample_rate)
-
-
-def build(args, state, log):
+    owntone only starts watching the metadata pipe once playback begins, so the
+    track_changed that announces a track usually arrives before there is anyone
+    to read it. That send is dropped, and the track would otherwise play with no
+    title at all. So the description is kept until something confirms it landed,
+    and the next event re-sends it.
+    """
     event = args.event or env("PLAYER_EVENT")
 
     if event == "track_changed":
-        return event, build_track_changed(args, state, log)
+        remember_track(args, state, state_dir, log)
+        return event, track_items(args, state, 0), True
 
-    if event in ("playing", "paused", "seeked", "position_correction"):
-        return event, build_position(args, state)
+    if event in POSITION_EVENTS:
+        position_ms = int(env("POSITION_MS", "0") or 0)
+        if state.get("track_id") and not state.get("delivered"):
+            log("earlier metadata never reached owntone; sending it again")
+            return event, track_items(args, state, position_ms), True
+        return event, progress_item(
+            position_ms, int(state.get("duration_ms") or 0), args.sample_rate), False
 
     if event in ("stopped", "end_of_track"):
+        prune_covers(state_dir, None)
         state.clear()
-        return event, flush_item()
+        return event, flush_item(), False
 
-    return event, b""
+    return event, b"", False
 
 
 # --- entry point -------------------------------------------------------------
@@ -387,20 +456,27 @@ def main(argv):
     state_dir = args.state_dir or default_state_dir()
     state = load_state(state_dir)
 
-    event, blob = build(args, state, log)
-    save_state(state_dir, state)
+    event, blob, carries_track = build(args, state, state_dir, log)
 
     if not blob:
+        save_state(state_dir, state)
         log("nothing to send for event %r" % (event or "<unset>"))
         return 0
 
     if args.dry_run:
+        save_state(state_dir, state)
         sys.stdout.write(blob.decode("utf-8", errors="replace"))
         sys.stdout.write("\n")
         return 0
 
     log("sending %d bytes for %s" % (len(blob), event))
-    write_blob(pipe_path, blob, args.write_timeout, log)
+    delivered = write_blob(pipe_path, blob, args.write_timeout, log)
+
+    # Only a confirmed write retires the track description. If nothing was
+    # reading, the next event picks it up again.
+    if delivered and carries_track:
+        state["delivered"] = True
+    save_state(state_dir, state)
 
     # A failed write is not a failed event: before playback there is deliberately
     # no reader, and librespot should not see this program fail for that.
