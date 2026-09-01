@@ -13,6 +13,12 @@
 #                           first minimal build omitted both and failed.
 #   mjpeg, png, scale       Cover art, not video. OwnTone decodes and
 #                           rescales artwork through libav.
+#   data (muxer)            Not a format anyone plays. OwnTone asks for it by
+#                           name to get the encoder's packets back unmuxed,
+#                           which is what both AirPlay paths stream
+#                           (src/transcode.c, XCODE_ALAC). Without it every
+#                           AirPlay device fails to start, and the only clue
+#                           is "ffmpeg has no ALAC encoder" in the log.
 #
 # Source and version are inherited from nixpkgs' ffmpeg so there is no
 # second hash to keep current: this follows whatever nixpkgs ships.
@@ -51,7 +57,7 @@ stdenv.mkDerivation {
     "--enable-demuxer=ogg,flac,wav,mp3,aac,mov,image2"
     "--enable-decoder=vorbis,flac,alac,aac,mp3,pcm_s16le,pcm_s16be,pcm_s24le,pcm_s32le,pcm_f32le,pcm_u8,mjpeg,png"
     "--enable-encoder=alac,pcm_s16le,pcm_s24le,pcm_s32le,mjpeg,png"
-    "--enable-muxer=wav,image2,mp4"
+    "--enable-muxer=data,wav,image2,mp4"
     "--enable-parser=aac,flac,mpegaudio,mjpeg,png"
     "--enable-filter=abuffer,abuffersink,aformat,aresample,anull,buffer,buffersink,format,scale"
     "--enable-protocol=file,pipe,http,tcp"
