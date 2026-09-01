@@ -107,13 +107,42 @@ signalled by the menu bar icon, which is where the system does it.
 
 ## Known gaps
 
+Ordered by what blocks playback first.
+
+- **The engine segfaults when an AirPlay session tears down.** Reproduced
+  every time a second speaker is selected while one is already playing, and
+  again when a selected speaker is dropped. Always the same stack:
+  `evrtsp_connection_free` from `session_free`, on the player thread, out of
+  a libevent callback. launchd restarts the agent, so the symptom a user sees
+  is a speaker that will not switch and a list that resets. This is upstream,
+  not our packaging -- see owntone-server issues #1509 and #1760 -- and it is
+  the single largest obstacle to shipping. Crash reports land in
+  `~/Library/Logs/DiagnosticReports/owntone-*.ips`.
+- **Device probes fail intermittently.** `airplay: device_probe: Error
+  sending GET /info (probe)` while a plain `curl` to the same speaker's
+  port 7000 answers 200 in tens of milliseconds. Suspected cause is a second
+  IPv4 interface on the machine -- a VM bridge alongside the LAN -- and
+  OwnTone choosing the wrong one. `bind_address` does not fix it: the option
+  also moves the HTTP API off localhost, where the app expects it. Needs a
+  read of how the AirPlay session picks its local address.
+- **AirPlay 2 runs without PTP.** Ports 319 and 320 are privileged and an
+  unprivileged agent cannot bind them, so the engine logs "AirPlay PTP daemon
+  unavailable, only NTP will be available" at every launch. Consequences for
+  multi-speaker sync are unmeasured.
+- **librespot's mDNS complains.** `libmdns: error sending packet ...
+  HostUnreachable` on every launch, almost certainly the same second
+  interface as above. It advertises successfully anyway.
+- **Playback is unverified.** Device activation now works and sticks; no
+  audio has been confirmed coming out of a speaker.
 - **No transport controls.** librespot streams into a fifo the engine drains,
   so pausing the engine stalls librespot's writes rather than pausing Spotify.
   Pause semantics need a spike before any play/pause button is honest.
 - **Track metadata is always nil against a live engine.** The bridge exists
   (`../bridge/librespot-metadata`) but is not wired into the helper's argv.
-- **Playback is unverified.** Discovery works; no audio has ever reached a
-  speaker from the native engine.
 - **Logs grow without bound.** Nothing rotates them.
 - **Rejoin-on-free is not implemented.** The store has no notion of an
   intended speaker set yet.
+- **The default Connect name collides with the hardware.** Shipping
+  "HomePods" as `Branding.defaultConnectName` puts a receiver named after
+  HomePods directly above a list of actual HomePods. The computer's name, or
+  the app's, would not.
