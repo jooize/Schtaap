@@ -47,7 +47,7 @@ struct EngineInstallation {
     /// identical bytes returns false, so an app launch that changes nothing
     /// does not interrupt playback.
     @discardableResult
-    func prepare(connectName: String) throws -> Bool {
+    func prepare(connectName: String, showsInSpotify: Bool) throws -> Bool {
         let manager = FileManager.default
         for directory in [root, libraryDirectory, cacheDirectory, logDirectory] {
             try manager.createDirectory(at: directory, withIntermediateDirectories: true)
@@ -56,7 +56,10 @@ struct EngineInstallation {
         try createAudioPipeIfNeeded()
 
         let configChanged = try write(owntoneConfig(), to: configFile)
-        let settingsChanged = try write(settingsJSON(connectName: connectName), to: settingsFile)
+        let settingsChanged = try write(
+            settingsJSON(connectName: connectName, showsInSpotify: showsInSpotify),
+            to: settingsFile
+        )
         return configChanged || settingsChanged
     }
 
@@ -125,13 +128,15 @@ struct EngineInstallation {
         """
     }
 
-    private func settingsJSON(connectName: String) -> String {
+    private func settingsJSON(connectName: String, showsInSpotify: Bool) -> String {
         // Hand-rolled rather than JSONEncoder so the file stays readable
         // and stably ordered: it is diffed against what is already on disk
         // to decide whether the agents need restarting.
         """
         {
           "connectName": \(quotedJSON(connectName)),
+          "deviceType": \(quotedJSON(SpotifyDeviceType.advertised.rawValue)),
+          "showsInSpotify": \(showsInSpotify),
           "audioPipe": \(quotedJSON(audioPipe.path)),
           "bitrate": 320
         }

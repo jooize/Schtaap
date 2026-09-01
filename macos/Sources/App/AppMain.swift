@@ -19,7 +19,10 @@ struct AppMain: App {
 
         // The engine first, so the agents are on their way up before anything
         // asks them a question. Both calls are no-ops under fixtures.
-        engine.apply(connectName: Preferences.connectName)
+        engine.apply(
+            connectName: Preferences.connectName,
+            showsInSpotify: Preferences.showsInSpotify
+        )
         store.start()
     }
 

@@ -76,12 +76,12 @@ final class EngineService {
     /// Safe to call on every app launch and after every settings edit: it
     /// only disturbs a running engine when something it depends on actually
     /// moved.
-    func apply(connectName: String) {
+    func apply(connectName: String, showsInSpotify: Bool) {
         guard !isOffline else { return }
-        Task { await install(connectName: connectName) }
+        Task { await install(connectName: connectName, showsInSpotify: showsInSpotify) }
     }
 
-    private func install(connectName: String) async {
+    private func install(connectName: String, showsInSpotify: Bool) async {
         guard hasPayload else {
             status = .missingPayload
             return
@@ -89,7 +89,9 @@ final class EngineService {
 
         let changed: Bool
         do {
-            changed = try installation.prepare(connectName: connectName)
+            changed = try installation.prepare(
+                connectName: connectName, showsInSpotify: showsInSpotify
+            )
         } catch {
             status = .failed(error.localizedDescription)
             return

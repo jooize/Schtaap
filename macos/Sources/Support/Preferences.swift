@@ -7,6 +7,9 @@ import Foundation
 enum PreferenceKey {
     /// How this Mac names itself in Spotify's device list.
     static let connectName = "connectName"
+
+    /// Whether to advertise this Mac in Spotify's device list at all.
+    static let showsInSpotify = "showsInSpotify"
 }
 
 /// Reads of the same defaults from outside a view.
@@ -21,5 +24,11 @@ enum Preferences {
             .trimmingCharacters(in: .whitespacesAndNewlines)
         guard let stored, !stored.isEmpty else { return Branding.defaultConnectName }
         return stored
+    }
+
+    /// Defaults to true, which `bool(forKey:)` cannot express on its own: an
+    /// unset key and a stored false both read as false.
+    static var showsInSpotify: Bool {
+        UserDefaults.standard.object(forKey: PreferenceKey.showsInSpotify) as? Bool ?? true
     }
 }

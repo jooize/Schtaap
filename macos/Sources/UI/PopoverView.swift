@@ -16,7 +16,7 @@ struct PopoverView: View {
     /// ever holds something that was asked for from the root.
     @State private var requestedPage: PopoverPage?
     @AppStorage(PreferenceKey.connectName) private var connectName: String = Branding.defaultConnectName
-    @FocusState private var isNameFocused: Bool
+    @AppStorage(PreferenceKey.showsInSpotify) private var showsInSpotify: Bool = true
 
     private static let collapsedRowTarget = 6
 
@@ -64,51 +64,64 @@ struct PopoverView: View {
             engine.refreshStatus()
         }
         .onDisappear { commitName() }
-        .onChange(of: isNameFocused) { _, focused in
-            if !focused { commitName() }
-        }
+        // Switching the receiver off has to reach the agent to mean anything:
+        // it is what stops librespot advertising.
+        .onChange(of: showsInSpotify) { _, _ in applySettings() }
     }
 
     // MARK: - Sections
 
+    @ViewBuilder
     private var header: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            if let title = page.title {
+        if let title = page.title {
+            VStack(alignment: .leading, spacing: 8) {
                 PageBar(title: title) { leavePage() }
-            } else {
-                connectNameLine
+                nowPlayingCardIfAny
             }
+            .padding(.horizontal, Metrics.horizontalInset)
+            .padding(.bottom, 10)
+        } else {
+            VStack(alignment: .leading, spacing: 2) {
+                SectionHeader(title: "Appears in Spotify as")
+                    .padding(.horizontal, Metrics.horizontalInset)
 
-            if let track = store.nowPlaying, track.hasMetadata {
-                nowPlayingCard(track)
+                ReceiverRow(
+                    name: $connectName,
+                    isEditing: $isEditingName,
+                    showsInSpotify: $showsInSpotify,
+                    subtitle: receiverSubtitle,
+                    symbolName: SymbolCatalog.name(SpotifyDeviceType.advertised.symbolName),
+                    onCommit: { commitName() }
+                )
+                .padding(.horizontal, Metrics.horizontalInset - 6)
+
+                nowPlayingCardIfAny
+                    .padding(.horizontal, Metrics.horizontalInset)
+                    .padding(.top, 6)
             }
+            .padding(.bottom, 10)
         }
-        .padding(.horizontal, Metrics.horizontalInset)
-        .padding(.bottom, 10)
     }
 
-    private var connectNameLine: some View {
-        HStack(spacing: 0) {
-            Text("Spotify \u{2192} ")
-                .font(.system(size: 13))
-                .foregroundStyle(.secondary)
-            if isEditingName {
-                TextField("HomePods", text: $connectName)
-                    .textFieldStyle(.plain)
-                    .font(.system(size: 13, weight: .medium))
-                    .focused($isNameFocused)
-                    .onSubmit { commitName() }
-                    .onExitCommand { commitName() }
-                Spacer(minLength: 4)
-            } else {
-                Button { isEditingName = true; isNameFocused = true } label: {
-                    Text(connectName)
-                        .font(.system(size: 13, weight: .medium))
-                }
-                .buttonStyle(.plain)
-                Spacer(minLength: 0)
-            }
+    @ViewBuilder
+    private var nowPlayingCardIfAny: some View {
+        if let track = store.nowPlaying, track.hasMetadata {
+            nowPlayingCard(track)
         }
+    }
+
+    /// Names the machine the receiver actually is, which is the fact the old
+    /// "Spotify -> name" arrow was hiding.
+    ///
+    /// Switched off, the section heading above is briefly a lie -- the name is
+    /// still there but nothing is advertising it -- so the subtitle is where
+    /// that gets said, in the line already spent on this.
+    private var receiverSubtitle: String {
+        guard showsInSpotify else { return "Not appearing in Spotify" }
+        guard let device = Host.current().localizedName, !device.isEmpty else {
+            return "on this Mac"
+        }
+        return "on \(device)"
     }
 
     @ViewBuilder
@@ -258,7 +271,7 @@ struct PopoverView: View {
                 EmptyView()
             } else {
                 Button("Try Again") {
-                    engine.apply(connectName: connectName)
+                    applySettings()
                     Task { await store.refreshAll() }
                 }
                 .controlSize(.small)
@@ -310,14 +323,20 @@ struct PopoverView: View {
     /// if the file actually changed, which is why this can be called on every
     /// dismissal, focus loss and tap outside the field.
     private func commitName() {
-        isNameFocused = false
         isEditingName = false
 
         let trimmed = connectName.trimmingCharacters(in: .whitespacesAndNewlines)
         // An empty name would leave librespot advertising nothing at all, so
         // clearing the field falls back rather than committing the blank.
         connectName = trimmed.isEmpty ? Branding.defaultConnectName : trimmed
-        engine.apply(connectName: connectName)
+        applySettings()
+    }
+
+    /// Hands everything the agents read at launch to the engine at once.
+    /// `apply` restarts them only when the file it writes actually changed,
+    /// so this is safe to call on every edit, dismissal and tap outside.
+    private func applySettings() {
+        engine.apply(connectName: connectName, showsInSpotify: showsInSpotify)
     }
 
     // MARK: - Derived values

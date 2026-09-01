@@ -30,6 +30,28 @@ private struct EngineSettings: Decodable {
     var connectName: String
     var audioPipe: String
     var bitrate: Int
+    /// What Spotify draws beside the name in its device list.
+    var deviceType: String
+    /// False once the user has switched off appearing in Spotify.
+    var showsInSpotify: Bool
+
+    /// The app owns this file and rewrites it at every launch, but launchd
+    /// starts the agents at login too, and nothing orders those two. A file
+    /// written by an older build is read here before the rewrite lands, so
+    /// keys added since then fall back rather than failing the launch.
+    // Writing init(from:) by hand is what withdraws the synthesized set.
+    private enum CodingKeys: String, CodingKey {
+        case connectName, audioPipe, bitrate, deviceType, showsInSpotify
+    }
+
+    init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        connectName = try container.decode(String.self, forKey: .connectName)
+        audioPipe = try container.decode(String.self, forKey: .audioPipe)
+        bitrate = try container.decode(Int.self, forKey: .bitrate)
+        deviceType = try container.decodeIfPresent(String.self, forKey: .deviceType) ?? "speaker"
+        showsInSpotify = try container.decodeIfPresent(Bool.self, forKey: .showsInSpotify) ?? true
+    }
 }
 
 private enum HelperError: Error, CustomStringConvertible {
@@ -207,6 +229,17 @@ private func supervise(_ executable: URL, _ arguments: [String]) -> Never {
     exit(terminatingSignal == 0 ? (status >> 8) & 0xFF : EXIT_FAILURE)
 }
 
+/// Stays loaded without starting anything, and waits to be restarted.
+///
+/// Exiting would be the obvious way to say "nothing to run here", but the
+/// plist's KeepAlive is unconditional, so launchd would spawn us straight
+/// back and we would spin. Parking keeps the job in the state the app's
+/// health check expects -- loaded and running -- and switching the setting
+/// back on is the same `launchctl kickstart -k` as any other config change.
+private func park() -> Never {
+    dispatchMain()
+}
+
 private func run() throws -> Never {
     let arguments = CommandLine.arguments.dropFirst()
     guard let which = arguments.first, arguments.count == 1 else {
@@ -235,10 +268,19 @@ private func run() throws -> Never {
         let settings = try layout.settings()
         // librespot has no logfile option: stderr is the only channel.
         redirectOutput(to: layout.logFile("librespot"))
+
+        guard settings.showsInSpotify else {
+            FileHandle.standardError.write(Data(
+                "not appearing in Spotify: switched off in the app\n".utf8
+            ))
+            park()
+        }
+
         // The pipe backend writes raw PCM into the named pipe OwnTone reads
         // as a library item. No audio device is opened here.
         supervise(layout.engineBin.appending(path: "librespot"), [
             "--name", settings.connectName,
+            "--device-type", settings.deviceType,
             "--backend", "pipe",
             "--device", settings.audioPipe,
             "--bitrate", String(settings.bitrate),
