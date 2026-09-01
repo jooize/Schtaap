@@ -62,6 +62,10 @@ struct SpeakerGroup: Identifiable {
     let memberSymbolName: String
     let groupName: String?
     let isPair: Bool
+    /// The AirPlay receiver built into the Mac this app is running on. Worth
+    /// saying, because its name is the computer's name and nothing else in the
+    /// list distinguishes "play here" from "play in that room".
+    var isThisMac: Bool = false
 
     /// Every member playing.
     var selected: Bool { !members.isEmpty && members.allSatisfy(\.selected) }

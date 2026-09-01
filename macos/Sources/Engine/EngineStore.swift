@@ -39,6 +39,16 @@ final class EngineStore {
     private(set) var verifying: Output?
     private(set) var verificationError: String?
 
+    /// Outputs the engine refused to start, by id, with what to tell the user.
+    ///
+    /// A refusal is answered by a refetch that puts the row back to off, so
+    /// without this the click looks like it did nothing at all.
+    private(set) var startFailures: [String: String] = [:]
+
+    /// This Mac's name, which is also the name of its own AirPlay receiver.
+    /// Read once: `Host.current().localizedName` goes to SystemConfiguration.
+    private let localDeviceName = Host.current().localizedName
+
     let client: EngineClient
 
     /// Bonjour lookup for device hardware, which the engine's API omits.
@@ -181,13 +191,34 @@ final class EngineStore {
 
     func setSelected(_ selected: Bool, for output: Output) {
         apply(to: output.id) { $0.selected = selected }
+        // Trying again clears the last complaint, whatever comes of this one.
+        startFailures[output.id] = nil
         guard !isOffline else { return }
 
         Task { [client] in
-            try? await client.setSelected(selected, forOutput: output.id)
+            do {
+                try await client.setSelected(selected, forOutput: output.id)
+            } catch {
+                self.startFailures[output.id] = Self.startFailureText(error, selecting: selected)
+            }
             await self.refreshOutputs()
             if selected { self.promptForVerificationIfNeeded(output.id) }
         }
+    }
+
+    /// What the engine's refusal is worth saying in a 300pt row.
+    ///
+    /// The engine answers a failed activation with a bare 400 -- the reason is
+    /// in its log and not in the response -- so the status code is all we have
+    /// to go on. Anything that is not an HTTP status is the network.
+    private static func startFailureText(_ error: Error, selecting: Bool) -> String {
+        guard case EngineError.http = error else { return error.localizedDescription }
+        return selecting ? "This speaker would not start" : "This speaker would not stop"
+    }
+
+    /// The complaint to show on a row, if any member of it has one.
+    func startFailure(for group: SpeakerGroup) -> String? {
+        group.members.lazy.compactMap { self.startFailures[$0.id] }.first
     }
 
     // MARK: - Device verification
@@ -371,7 +402,8 @@ final class EngineStore {
                 symbolName: symbolName(for: output),
                 memberSymbolName: unitSymbolName(for: output),
                 groupName: groupName(for: output),
-                isPair: false
+                isPair: false,
+                isThisMac: isThisMac(output)
             ))
         }
 
@@ -428,6 +460,17 @@ final class EngineStore {
     /// a HomePod pair belonging to an Apple TV's home theatre, say.
     func groupName(for output: Output) -> String? {
         directory.identity(forOutputNamed: output.name)?.groupName
+    }
+
+    /// Whether an output is this Mac's own AirPlay receiver.
+    ///
+    /// macOS names that receiver after the computer, and the engine reports it
+    /// like any other speaker on the network, so the name is the whole test.
+    /// Renaming the receiver away from the computer name is possible and costs
+    /// only the badge.
+    func isThisMac(_ output: Output) -> Bool {
+        guard let localDeviceName else { return false }
+        return output.name.compare(localDeviceName, options: .caseInsensitive) == .orderedSame
     }
 
     /// Starts the Bonjour browse.

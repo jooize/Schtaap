@@ -12,6 +12,10 @@ import SwiftUI
 struct OutputRow: View {
     let group: SpeakerGroup
     var isMuted: Bool = false
+    /// What the engine said when it refused to start this speaker. A refusal
+    /// leaves the row switched off, so without this the click reads as a
+    /// no-op.
+    var failure: String?
     @Binding var volume: Double
     let onToggle: () -> Void
     var onVolumeEditingChanged: (Bool) -> Void = { _ in }
@@ -33,6 +37,9 @@ struct OutputRow: View {
                                 .truncationMode(.tail)
                             if group.isPair {
                                 PairBadge(group: group)
+                            }
+                            if group.isThisMac {
+                                RowBadge(text: "This Mac", tint: .secondary)
                             }
                         }
                         subline
@@ -72,21 +79,15 @@ struct OutputRow: View {
         .onHover { isHovering = $0 }
     }
 
-    /// One line under the title. A half-playing pair is the more urgent thing to
-    /// say, so it displaces the group name while it lasts.
+    /// One line under the title. Trouble displaces the group name while it
+    /// lasts: a speaker that refused to start is the most urgent thing the row
+    /// can say, then a pair playing on one half.
     @ViewBuilder
     private var subline: some View {
-        if group.isPartial {
-            HStack(spacing: 3) {
-                Image(systemName: "exclamationmark.triangle.fill")
-                    .font(.system(size: 9))
-                    .foregroundStyle(.orange)
-                Text(partialText)
-                    .font(.system(size: 10))
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-                    .truncationMode(.tail)
-            }
+        if let failure {
+            warning(failure)
+        } else if group.isPartial {
+            warning(partialText)
         } else if let groupName = group.groupName {
             Text("\u{25B8} \(groupName)")
                 .font(.system(size: 10))
@@ -94,6 +95,20 @@ struct OutputRow: View {
                 .lineLimit(1)
                 .truncationMode(.tail)
         }
+    }
+
+    private func warning(_ text: String) -> some View {
+        HStack(spacing: 3) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .font(.system(size: 9))
+                .foregroundStyle(.orange)
+            Text(text)
+                .font(.system(size: 10))
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .truncationMode(.tail)
+        }
+        .help(text)
     }
 
     /// Names the silent speaker in full, rather than calling it L or R: which
@@ -114,15 +129,7 @@ private struct PairBadge: View {
     let group: SpeakerGroup
 
     var body: some View {
-        Text(label)
-            .font(.system(size: 9, weight: .medium))
-            .foregroundStyle(tint)
-            .padding(.horizontal, 4)
-            .padding(.vertical, 1)
-            .background(
-                RoundedRectangle(cornerRadius: 3, style: .continuous)
-                    .fill(tint.opacity(0.12))
-            )
+        RowBadge(text: label, tint: tint)
     }
 
     private var label: String {

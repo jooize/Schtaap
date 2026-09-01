@@ -187,6 +187,7 @@ struct PopoverView: View {
                 OutputRow(
                     group: group,
                     isMuted: store.isGroupMuted(group),
+                    failure: store.startFailure(for: group),
                     volume: groupVolume(for: group),
                     // Animated because selecting a speaker lifts its row to the
                     // top of the list; without it the row appears to teleport.

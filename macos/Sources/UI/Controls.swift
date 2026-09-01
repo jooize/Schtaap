@@ -146,6 +146,25 @@ extension MenuRow where Trailing == EmptyView {
     }
 }
 
+/// A small tinted capsule beside a row title, for the one thing about a speaker
+/// that its name does not already say.
+struct RowBadge: View {
+    let text: String
+    var tint: Color = .accentColor
+
+    var body: some View {
+        Text(text)
+            .font(.system(size: 9, weight: .medium))
+            .foregroundStyle(tint)
+            .padding(.horizontal, 4)
+            .padding(.vertical, 1)
+            .background(
+                RoundedRectangle(cornerRadius: 3, style: .continuous)
+                    .fill(tint.opacity(0.12))
+            )
+    }
+}
+
 struct SectionHeader: View {
     let title: String
 
