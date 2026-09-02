@@ -137,6 +137,11 @@ struct PlayerStatus: Decodable, Sendable, Equatable {
 /// its metadata mode on every librespot player event. Title and artist are
 /// nil for the moments between a track starting and the engine reading the
 /// pipe, and for as long as the bridge is not running.
+struct QueueResponse: Decodable, Sendable {
+    let items: [NowPlaying]
+}
+
+/// One queue item, as `/api/queue` lists them.
 struct NowPlaying: Decodable, Sendable, Equatable {
     let id: Int
     let title: String?

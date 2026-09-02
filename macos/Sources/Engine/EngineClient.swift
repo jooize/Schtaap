@@ -49,13 +49,19 @@ actor EngineClient {
         try await get("api/player")
     }
 
-    /// Nil when the queue is empty (the engine answers 204).
+    /// The queue item the player is on, or nil when it is on none.
+    ///
+    /// Two requests, because OwnTone 29.3 has no GET for
+    /// `/api/queue/items/now_playing` -- only PUT -- and answers the GET
+    /// with 400 and "Unrecognized JSON API request". So this reads the
+    /// player's `item_id` and asks the queue for that one item.
     func nowPlaying() async throws -> NowPlaying? {
-        let (data, response) = try await perform(request(.get, "api/queue/items/now_playing"))
-        if response.statusCode == 204 { return nil }
-        try check(response)
-        guard !data.isEmpty else { return nil }
-        return try decode(NowPlaying.self, from: data)
+        let status = try await player()
+        guard status.itemId > 0 else { return nil }
+        let response: QueueResponse = try await get("api/queue", query: [
+            URLQueryItem(name: "id", value: String(status.itemId))
+        ])
+        return response.items.first
     }
 
     // MARK: - Writes
@@ -129,8 +135,8 @@ actor EngineClient {
         return request
     }
 
-    private func get<T: Decodable>(_ path: String) async throws -> T {
-        let (data, response) = try await perform(request(.get, path))
+    private func get<T: Decodable>(_ path: String, query: [URLQueryItem] = []) async throws -> T {
+        let (data, response) = try await perform(request(.get, path, query: query))
         try check(response)
         return try decode(T.self, from: data)
     }
