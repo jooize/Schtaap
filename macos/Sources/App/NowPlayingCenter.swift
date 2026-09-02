@@ -5,19 +5,31 @@ import MediaPlayer
 /// Control Center, the menu bar's Now Playing item, and the keyboard's media
 /// keys' idea of what is on.
 ///
-/// Display only, for now. The remote commands are left disabled on purpose:
-/// librespot streams into a fifo the engine drains, so pausing the engine
-/// stalls librespot's writes and resumes into stale audio, and there is no
-/// track to skip to inside a pipe. Until pause semantics are settled (the
-/// candidate is pause == deselect every output, so the engine keeps draining
-/// but sends nowhere) a media key that did any of that would be lying about
-/// what it did. The slot is still worth holding for what it shows.
+/// Play and pause are the only commands, and they mute and unmute the master
+/// volume. librespot streams into a fifo the engine drains, so pausing the
+/// engine stalls librespot's writes and resumes into stale audio, and there
+/// is no track to skip to inside a pipe. A true pause needs the phone. Muting
+/// is what this app can honestly do from a media key: the speakers go quiet,
+/// the track keeps advancing, and play brings the level back.
+///
+/// The commands are registered even though they are modest because macOS
+/// only lists an app in Now Playing once it handles at least one remote
+/// command. Display alone, as this first shipped, never appeared.
 ///
 /// The slot is single and last-writer-wins across every app on the Mac, which
 /// is why holding it is a preference and not a given.
 @MainActor
 final class NowPlayingCenter {
     private let center = MPNowPlayingInfoCenter.default()
+
+    /// What a play or pause from the system does. Set by the store; a command
+    /// arriving before then is accepted and does nothing.
+    var onPlay: (() -> Void)?
+    var onPause: (() -> Void)?
+
+    /// The transport state last published, which is what the toggle command
+    /// decides on.
+    private var isPublishedAsPlaying = false
 
     /// The artwork last fetched, and the engine path it came from, so a
     /// progress update does not refetch the same cover.
@@ -30,28 +42,52 @@ final class NowPlayingCenter {
     init() {
         let commands = MPRemoteCommandCenter.shared()
         for command in [
-            commands.playCommand, commands.pauseCommand, commands.stopCommand,
-            commands.togglePlayPauseCommand, commands.nextTrackCommand,
+            commands.stopCommand, commands.nextTrackCommand,
             commands.previousTrackCommand, commands.changePlaybackPositionCommand,
             commands.seekForwardCommand, commands.seekBackwardCommand,
         ] {
             command.isEnabled = false
         }
+
+        // The handlers are not guaranteed the main thread, and everything
+        // they touch is main-actor state, so each hops there and answers
+        // success for having taken the request.
+        commands.playCommand.isEnabled = true
+        commands.playCommand.addTarget { [weak self] _ in
+            Task { @MainActor in self?.onPlay?() }
+            return .success
+        }
+        commands.pauseCommand.isEnabled = true
+        commands.pauseCommand.addTarget { [weak self] _ in
+            Task { @MainActor in self?.onPause?() }
+            return .success
+        }
+        commands.togglePlayPauseCommand.isEnabled = true
+        commands.togglePlayPauseCommand.addTarget { [weak self] _ in
+            Task { @MainActor in
+                guard let self else { return }
+                self.isPublishedAsPlaying ? self.onPause?() : self.onPlay?()
+            }
+            return .success
+        }
     }
 
     /// Reflects the engine's current track and transport state. `artworkURL`
     /// is where the engine serves the cover, or nil when it has none.
-    func publish(track: NowPlaying?, player: PlayerStatus?, artworkURL: URL?) {
+    /// `isMuted` is the app's own pause: the engine still reports `play`
+    /// while the speakers are silent, and the slot should say paused.
+    func publish(track: NowPlaying?, player: PlayerStatus?, artworkURL: URL?, isMuted: Bool) {
         guard let track, track.hasMetadata, let player, player.state != .stop else {
             clear()
             return
         }
 
+        let isPlaying = player.isPlaying && !isMuted
         var info: [String: Any] = [
             MPMediaItemPropertyTitle: track.title ?? "",
             MPNowPlayingInfoPropertyMediaType: MPNowPlayingInfoMediaType.audio.rawValue,
             MPNowPlayingInfoPropertyElapsedPlaybackTime: Double(player.itemProgressMs) / 1000,
-            MPNowPlayingInfoPropertyPlaybackRate: player.isPlaying ? 1.0 : 0.0,
+            MPNowPlayingInfoPropertyPlaybackRate: isPlaying ? 1.0 : 0.0,
         ]
         if let artist = track.artist, !artist.isEmpty {
             info[MPMediaItemPropertyArtist] = artist
@@ -67,7 +103,8 @@ final class NowPlayingCenter {
         }
 
         center.nowPlayingInfo = info
-        center.playbackState = player.isPlaying ? .playing : .paused
+        center.playbackState = isPlaying ? .playing : .paused
+        isPublishedAsPlaying = isPlaying
         isHolding = true
 
         if artworkPath != track.artworkUrl {
@@ -82,6 +119,7 @@ final class NowPlayingCenter {
         guard isHolding else { return }
         center.nowPlayingInfo = nil
         center.playbackState = .stopped
+        isPublishedAsPlaying = false
         isHolding = false
     }
 

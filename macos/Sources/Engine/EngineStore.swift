@@ -113,6 +113,18 @@ final class EngineStore {
         // the speakers already playing become the intent rather than an
         // empty set that would treat them as nobody's.
         self.intended = usesFixtures ? nil : IntendedOutputs.load(from: Self.intendedFile)
+
+        // A media key pauses by muting and plays by unmuting: the only
+        // transport this app can offer without stalling the engine. See
+        // NowPlayingCenter for why that is the deal.
+        nowPlayingCenter.onPause = { [weak self] in
+            guard let self, !self.isMasterMuted else { return }
+            self.toggleMasterMute()
+        }
+        nowPlayingCenter.onPlay = { [weak self] in
+            guard let self, self.isMasterMuted else { return }
+            self.toggleMasterMute()
+        }
     }
 
     private static var intendedFile: URL {
@@ -242,7 +254,9 @@ final class EngineStore {
             guard !path.isEmpty else { return nil }
             return client.artworkURL(for: path, maxPixels: 600)
         }
-        nowPlayingCenter.publish(track: nowPlaying, player: player, artworkURL: artwork)
+        nowPlayingCenter.publish(
+            track: nowPlaying, player: player, artworkURL: artwork, isMuted: isMasterMuted
+        )
     }
 
     // MARK: - Writes
@@ -407,6 +421,8 @@ final class EngineStore {
             isMasterMuted = true
             setMasterVolume(0)
         }
+        // The system's slot shows this as paused or playing.
+        publishNowPlaying()
     }
 
     func toggleGroupMute(_ group: SpeakerGroup) {
