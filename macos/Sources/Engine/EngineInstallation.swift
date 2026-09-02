@@ -126,7 +126,7 @@ struct EngineInstallation {
         \tuid = "\(escaped(NSUserName()))"
         \tdb_path = "\(escaped(databaseFile.path))"
         \tlogfile = "\(escaped(serverLogFile.path))"
-        \tloglevel = log
+        \tloglevel = \(Preferences.engineLogLevel)
         \tcache_dir = "\(escaped(cacheDirectory.path))"
         \ttrusted_networks = { "localhost" }
         \tipv6 = no

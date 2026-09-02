@@ -13,6 +13,15 @@ enum PreferenceKey {
 
     /// Whether to hold the system's Now Playing slot with the current track.
     static let showsInNowPlaying = "showsInNowPlaying"
+
+    /// OwnTone's `loglevel`, for diagnosing the engine. Not in the popover;
+    /// set from a terminal and cleared the same way:
+    ///
+    ///     defaults write bar.esko.Tutti EngineLogLevel debug
+    ///     defaults delete bar.esko.Tutti EngineLogLevel
+    ///
+    /// The app reads it at launch, and a changed value restarts the engine.
+    static let engineLogLevel = "EngineLogLevel"
 }
 
 /// Reads of the same defaults from outside a view.
@@ -37,5 +46,17 @@ enum Preferences {
 
     static var showsInNowPlaying: Bool {
         UserDefaults.standard.object(forKey: PreferenceKey.showsInNowPlaying) as? Bool ?? true
+    }
+
+    /// One of the names OwnTone's config parser accepts, or "log", its
+    /// default and ours. Anything else is ignored rather than written: an
+    /// unknown level makes the engine refuse its config and not start.
+    static var engineLogLevel: String {
+        let accepted = ["fatal", "log", "warning", "info", "debug", "spam"]
+        let stored = UserDefaults.standard.string(forKey: PreferenceKey.engineLogLevel)?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+        guard let stored, accepted.contains(stored) else { return "log" }
+        return stored
     }
 }
