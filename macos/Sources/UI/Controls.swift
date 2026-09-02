@@ -71,10 +71,14 @@ struct SpeakerGroupIcon: View {
 
 /// Native `Slider` with SF Symbol end caps. Deliberately not hand-drawn: this
 /// is where the system's own knob, keyboard handling and VoiceOver come from.
+/// The Control Center capsule is not a public control, so size is the one
+/// lever: the master slider is `.regular`, the per-speaker ones `.small`, and
+/// the end caps scale with it.
 struct VolumeSlider: View {
     @Binding var value: Double
     var leadingSymbol: String? = "speaker.fill"
     var trailingSymbol: String? = "speaker.wave.3.fill"
+    var controlSize: ControlSize = .small
     var isMuted: Bool = false
     var onEditingChanged: (Bool) -> Void = { _ in }
     var onMuteToggle: (() -> Void)?
@@ -86,23 +90,27 @@ struct VolumeSlider: View {
                     onMuteToggle?()
                 } label: {
                     Image(systemName: isMuted ? "speaker.slash.fill" : effectiveLeadingSymbol)
-                        .font(.system(size: 11))
+                        .font(.system(size: glyphSize))
                         .foregroundStyle(isMuted ? .tertiary : .secondary)
-                        .frame(width: 15)
+                        .frame(width: glyphSize + 4)
                 }
                 .buttonStyle(.plain)
                 .disabled(onMuteToggle == nil)
             }
             Slider(value: $value, in: 0...100, onEditingChanged: onEditingChanged)
-                .controlSize(.small)
+                .controlSize(controlSize)
                 .opacity(isMuted ? 0.4 : 1)
             if let trailingSymbol {
                 Image(systemName: trailingSymbol)
-                    .font(.system(size: 11))
+                    .font(.system(size: glyphSize))
                     .foregroundStyle(isMuted ? .tertiary : .secondary)
-                    .frame(width: 15)
+                    .frame(width: glyphSize + 4)
             }
         }
+    }
+
+    private var glyphSize: CGFloat {
+        controlSize == .small || controlSize == .mini ? 11 : 13
     }
 
     private var effectiveLeadingSymbol: String {

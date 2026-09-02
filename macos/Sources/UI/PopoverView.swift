@@ -34,6 +34,7 @@ struct PopoverView: View {
 
             VolumeSlider(
                 value: masterVolume,
+                controlSize: .regular,
                 isMuted: store.isMasterMuted,
                 onEditingChanged: { editing in
                     editing ? store.beginAdjustingMaster() : store.endAdjustingMaster()
@@ -75,10 +76,10 @@ struct PopoverView: View {
 
     @ViewBuilder
     private var header: some View {
-        if let title = page.title {
+        if page.title != nil {
             VStack(alignment: .leading, spacing: 8) {
-                PageBar(title: title) { leavePage() }
-                nowPlayingCardIfAny
+                PageBar(backTitle: "Speakers") { leavePage() }
+                nowPlayingSection
             }
             .padding(.horizontal, Metrics.horizontalInset)
             .padding(.bottom, 10)
@@ -97,7 +98,7 @@ struct PopoverView: View {
                 )
                 .padding(.horizontal, Metrics.horizontalInset - 6)
 
-                nowPlayingCardIfAny
+                nowPlayingSection
                     .padding(.horizontal, Metrics.horizontalInset)
                     .padding(.top, 6)
             }
@@ -105,10 +106,14 @@ struct PopoverView: View {
         }
     }
 
+    /// Always present, so the header does not change height when a track
+    /// starts or stops.
     @ViewBuilder
-    private var nowPlayingCardIfAny: some View {
+    private var nowPlayingSection: some View {
         if let track = store.nowPlaying, track.hasMetadata {
-            nowPlayingCard(track)
+            NowPlayingCard(track: track, artworkURL: artworkURL(for: track))
+        } else {
+            IdleCard(connectName: connectName, showsInSpotify: showsInSpotify)
         }
     }
 
@@ -138,58 +143,13 @@ struct PopoverView: View {
         case .verification(let output):
             VerificationPage(
                 output: output,
-                symbolName: store.symbolName(for: output),
                 errorMessage: store.verificationError,
-                onSubmit: { store.submitVerification(pin: $0) }
+                onSubmit: { store.submitVerification(pin: $0) },
+                onCancel: { leavePage() }
             )
             .padding(.horizontal, Metrics.horizontalInset)
             .padding(.bottom, 4)
         }
-    }
-
-    private func nowPlayingCard(_ track: NowPlaying) -> some View {
-        HStack(spacing: 10) {
-            RoundedRectangle(cornerRadius: 5, style: .continuous)
-                .fill(.quaternary)
-                .frame(width: 36, height: 36)
-                .overlay {
-                    if let url = artworkURL(for: track) {
-                        AsyncImage(url: url) { image in
-                            image.resizable().aspectRatio(contentMode: .fill)
-                        } placeholder: {
-                            Image(systemName: "music.note")
-                                .font(.system(size: 13))
-                                .foregroundStyle(.secondary)
-                        }
-                        .clipShape(RoundedRectangle(cornerRadius: 5, style: .continuous))
-                    } else {
-                        Image(systemName: "music.note")
-                            .font(.system(size: 13))
-                            .foregroundStyle(.secondary)
-                    }
-                }
-
-            VStack(alignment: .leading, spacing: 1) {
-                Text(track.title ?? "Unknown track")
-                    .font(.system(size: 13, weight: .medium))
-                    .lineLimit(1)
-                    .truncationMode(.tail)
-                if let subtitle = nowPlayingSubtitle(track) {
-                    Text(subtitle)
-                        .font(.system(size: 11))
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                        .truncationMode(.tail)
-                }
-            }
-
-            Spacer(minLength: 0)
-        }
-    }
-
-    private func nowPlayingSubtitle(_ track: NowPlaying) -> String? {
-        let parts = [track.artist, track.album].compactMap { $0 }.filter { !$0.isEmpty }
-        return parts.isEmpty ? nil : parts.joined(separator: " — ")
     }
 
     private var outputList: some View {
