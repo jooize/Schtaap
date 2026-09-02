@@ -124,8 +124,10 @@ struct PlayerStatus: Decodable, Sendable, Equatable {
 /// queue is empty, which the client maps to nil.
 ///
 /// Everything here originates in librespot and reaches the engine through the
-/// Shairport-format `.metadata` companion pipe. Until that bridge exists,
-/// expect title/artist to be nil on a live engine.
+/// Shairport-format `.metadata` companion pipe, which `EngineHelper` writes in
+/// its metadata mode on every librespot player event. Title and artist are
+/// nil for the moments between a track starting and the engine reading the
+/// pipe, and for as long as the bridge is not running.
 struct NowPlaying: Decodable, Sendable, Equatable {
     let id: Int
     let title: String?

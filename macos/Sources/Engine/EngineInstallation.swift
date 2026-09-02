@@ -33,6 +33,16 @@ struct EngineInstallation {
     var databaseFile: URL { root.appending(path: "songs3.db") }
     var audioPipe: URL { libraryDirectory.appending(path: "spotify.fifo") }
 
+    /// The companion pipe OwnTone watches for the current track's title,
+    /// artist, album and cover art, in the format shairport-sync writes. The
+    /// name is not ours to choose: OwnTone looks for the audio pipe's path
+    /// with `.metadata` appended and nowhere else.
+    ///
+    /// It sits inside the scanned library directory, which is safe because
+    /// `.metadata` is in OwnTone's default `filetypes_ignore`. A config that
+    /// overrode that key without it would index this as a bogus PCM16 track.
+    var metadataPipe: URL { audioPipe.appendingPathExtension("metadata") }
+
     /// owntone's own log. The helper separately captures the process's
     /// stdout and stderr to Logs/owntone.log, which is where a failure too
     /// early to have read this config shows up.
@@ -53,7 +63,8 @@ struct EngineInstallation {
             try manager.createDirectory(at: directory, withIntermediateDirectories: true)
         }
 
-        try createAudioPipeIfNeeded()
+        try createFIFOIfNeeded(at: audioPipe)
+        try createFIFOIfNeeded(at: metadataPipe)
 
         let configChanged = try write(owntoneConfig(), to: configFile)
         let settingsChanged = try write(
@@ -63,24 +74,24 @@ struct EngineInstallation {
         return configChanged || settingsChanged
     }
 
-    /// A named pipe, not a regular file. owntone identifies it by its file
-    /// type, so an ordinary empty file here would be scanned as a broken
-    /// track instead.
-    private func createAudioPipeIfNeeded() throws {
+    /// A named pipe, not a regular file. owntone identifies the audio pipe by
+    /// its file type, so an ordinary empty file there would be scanned as a
+    /// broken track instead.
+    private func createFIFOIfNeeded(at url: URL) throws {
         var status = stat()
-        if lstat(audioPipe.path, &status) == 0 {
+        if lstat(url.path, &status) == 0 {
             if status.st_mode & S_IFMT == S_IFIFO { return }
             // Something else is squatting on the path. Move it aside rather
             // than delete it: if this is the user's file, losing it silently
             // would be worse than an extra file on disk.
-            let aside = audioPipe.appendingPathExtension("displaced")
+            let aside = url.appendingPathExtension("displaced")
             try? FileManager.default.removeItem(at: aside)
-            try FileManager.default.moveItem(at: audioPipe, to: aside)
+            try FileManager.default.moveItem(at: url, to: aside)
         }
 
-        guard mkfifo(audioPipe.path, 0o600) == 0 else {
+        guard mkfifo(url.path, 0o600) == 0 else {
             throw EngineInstallationError.pipeCreationFailed(
-                audioPipe.path, String(cString: strerror(errno))
+                url.path, String(cString: strerror(errno))
             )
         }
     }

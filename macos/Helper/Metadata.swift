@@ -1,0 +1,453 @@
+import Foundation
+
+// Turns librespot's playback events into the metadata OwnTone reads beside a
+// pipe input.
+//
+// librespot runs a program on every player event (--onevent) and hands it the
+// event in the environment. OwnTone, reading PCM out of a named pipe, also
+// watches <pipe>.metadata for metadata in the format shairport-sync writes.
+// This turns the first into the second, which is the only way a pipe input
+// ever gets a title, an artist or cover art.
+//
+// This used to be bridge/librespot-metadata, a Python 3 script. It moved in
+// here because /usr/bin/python3 on a clean Mac is a stub that prompts to
+// install the Command Line Tools: shipping the script would have worked on
+// the machine it was written on and failed for a user. The helper already
+// runs at every boundary this needs, so it costs no new dependency.
+//
+// Nothing here talks to Spotify. Every field comes out of the environment,
+// except the cover image, which is fetched from the URL librespot supplies.
+//
+// Constraints this encodes, all read out of OwnTone's src/inputs/pipe.c:
+//
+// - Items are Shairport XML: type and code are the 8 hex digits of a DMAP
+//   four-char code, payload is base64. OwnTone acts on minm, asar, asal,
+//   asgn, prgr, pvol, PICT and pfls, and ignores everything else.
+// - prgr is measured in FRAMES, not milliseconds: OwnTone computes
+//   pos_ms = (pos - start) * 1000 / pipe_sample_rate. The rate here must match
+//   OwnTone's library.pipe_sample_rate.
+// - prgr is rejected outright if any of start/pos/end is zero, so the frame
+//   numbers here are 1-based.
+// - PICT carries raw image bytes, JPEG or PNG only, 2 bytes to 1 MiB.
+//   librespot gives cover URLs, so the image has to be fetched first.
+// - OwnTone only starts watching the metadata pipe once playback begins, so
+//   writing when nothing is reading is the normal case and not an error.
+//
+// Volume is deliberately not forwarded. Spotify's volume and the AirPlay
+// output volume are separate controls, and feeding one into the other invites
+// a loop.
+
+enum MetadataBridge {
+    /// OwnTone's PIPE_PICTURE_SIZE_MAX.
+    private static let pictureSizeMax = 1_048_576
+
+    /// Must match OwnTone's `library.pipe_sample_rate`, which the generated
+    /// owntone.conf leaves at its default.
+    private static let sampleRate = 44_100
+
+    private static let artworkTimeout: TimeInterval = 5
+    private static let writeTimeout: TimeInterval = 2
+
+    /// Position events all carry POSITION_MS and no track description.
+    private static let positionEvents: Set<String> = [
+        "playing", "paused", "seeked", "position_correction",
+    ]
+
+    /// Handles the event in the environment, and returns whether anything was
+    /// written. Never throws: a metadata failure is not a reason to disturb
+    /// playback, so everything here degrades to a line on stderr.
+    static func handleEvent(metadataPipe: URL, stateDirectory: URL) {
+        let environment = ProcessInfo.processInfo.environment
+        let event = environment["PLAYER_EVENT"] ?? ""
+
+        ensurePipe(metadataPipe)
+
+        var state = loadState(in: stateDirectory)
+        let blob: Data
+        var carriesTrack = false
+
+        switch event {
+        case "track_changed":
+            state = remember(environment, in: stateDirectory)
+            blob = trackItems(state, positionMs: 0)
+            carriesTrack = true
+
+        case let name where positionEvents.contains(name):
+            let position = Int(environment["POSITION_MS"] ?? "") ?? 0
+            if !state.trackID.isEmpty && !state.delivered {
+                // OwnTone only opens the metadata pipe once playback starts,
+                // so the track_changed that announced this track usually had
+                // nobody to read it. Every later event is another chance.
+                log("earlier metadata never reached the engine; sending it again")
+                blob = trackItems(state, positionMs: position)
+                carriesTrack = true
+            } else {
+                blob = progressItem(positionMs: position, durationMs: state.durationMs)
+            }
+
+        case "stopped", "end_of_track":
+            pruneCovers(in: stateDirectory, keeping: nil)
+            state = TrackState()
+            blob = item(.ssnc, "pfls")
+
+        default:
+            saveState(state, in: stateDirectory)
+            return
+        }
+
+        guard !blob.isEmpty else {
+            saveState(state, in: stateDirectory)
+            return
+        }
+
+        // Only a confirmed write retires the track description; otherwise the
+        // next event picks it up again.
+        if write(blob, to: metadataPipe), carriesTrack {
+            state.delivered = true
+        }
+        saveState(state, in: stateDirectory)
+    }
+
+    // MARK: - Items
+
+    /// The two DMAP type codes shairport-sync uses: "core" carries the track
+    /// text, "ssnc" the shairport extras.
+    private enum ItemType: String {
+        case core, ssnc
+    }
+
+    /// A DMAP four-char code as the 8 hex digits OwnTone parses with %8x.
+    private static func fourCC(_ code: String) -> String {
+        code.unicodeScalars.map { String(format: "%02x", $0.value) }.joined()
+    }
+
+    /// One Shairport metadata item.
+    ///
+    /// The newline before the base64 payload is part of the format shairport
+    /// emits; OwnTone's extractor splits on `</item>` either way.
+    private static func item(_ type: ItemType, _ code: String, payload: Data? = nil) -> Data {
+        let head = "<item><type>\(fourCC(type.rawValue))</type><code>\(fourCC(code))</code>"
+        guard let payload else {
+            return Data("\(head)<length>0</length></item>".utf8)
+        }
+        let encoded = payload.base64EncodedString()
+        return Data("""
+        \(head)<length>\(payload.count)</length>
+        <data encoding="base64">
+        \(encoded)</data></item>
+        """.utf8)
+    }
+
+    /// A text item, or nothing at all when the value is empty.
+    ///
+    /// OwnTone ignores an item with an empty payload, so sending one is noise
+    /// -- and it would not clear a stale value either. Skipping keeps the
+    /// intent honest: nothing is being said about this field.
+    private static func textItem(_ code: String, _ value: String) -> Data {
+        value.isEmpty ? Data() : item(.core, code, payload: Data(value.utf8))
+    }
+
+    /// A prgr item in frames, 1-based so no component is ever zero.
+    private static func progressItem(positionMs: Int, durationMs: Int) -> Data {
+        guard durationMs > 0 else { return Data() }
+        let start = 1
+        let position = start + frames(max(0, positionMs))
+        let end = start + frames(durationMs)
+        guard end > start else { return Data() }
+        return item(.ssnc, "prgr", payload: Data("\(start)/\(position)/\(end)".utf8))
+    }
+
+    private static func frames(_ milliseconds: Int) -> Int {
+        Int((Double(milliseconds) * Double(sampleRate) / 1000).rounded())
+    }
+
+    /// A PICT item, if the bytes are something OwnTone will accept. It sniffs
+    /// the format itself and rejects anything that is not JPEG or PNG.
+    private static func pictureItem(_ data: Data?) -> Data {
+        guard let data, data.count >= 2, data.count <= pictureSizeMax else { return Data() }
+        let magic = [data[data.startIndex], data[data.index(after: data.startIndex)]]
+        guard magic == [0xFF, 0xD8] || magic == [0x89, 0x50] else { return Data() }
+        return item(.ssnc, "PICT", payload: data)
+    }
+
+    /// Everything OwnTone needs in order to describe the current track.
+    private static func trackItems(_ state: TrackState, positionMs: Int) -> Data {
+        var blob = item(.ssnc, "pfls")
+        blob += textItem("minm", state.title)
+        blob += textItem("asar", state.artist)
+        blob += textItem("asal", state.album)
+        blob += pictureItem(loadCover(state.coverPath))
+        blob += progressItem(positionMs: positionMs, durationMs: state.durationMs)
+        return blob
+    }
+
+    // MARK: - Track state
+    //
+    // Only track_changed carries DURATION_MS, but every position event needs
+    // it to build a prgr item. This program runs once per event and keeps
+    // nothing in memory, so the duration is remembered on disk.
+
+    private struct TrackState: Codable {
+        var trackID = ""
+        var durationMs = 0
+        var title = ""
+        var artist = ""
+        var album = ""
+        var coverPath: String?
+        /// Set once the items have actually reached OwnTone. Until then every
+        /// later event is a chance to try again.
+        var delivered = false
+
+        init() {}
+
+        /// Written by hand so a file from an older build, or a half-written
+        /// one, degrades to defaults rather than failing the event.
+        init(from decoder: any Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            trackID = try container.decodeIfPresent(String.self, forKey: .trackID) ?? ""
+            durationMs = try container.decodeIfPresent(Int.self, forKey: .durationMs) ?? 0
+            title = try container.decodeIfPresent(String.self, forKey: .title) ?? ""
+            artist = try container.decodeIfPresent(String.self, forKey: .artist) ?? ""
+            album = try container.decodeIfPresent(String.self, forKey: .album) ?? ""
+            coverPath = try container.decodeIfPresent(String.self, forKey: .coverPath)
+            delivered = try container.decodeIfPresent(Bool.self, forKey: .delivered) ?? false
+        }
+    }
+
+    private static func stateFile(in directory: URL) -> URL {
+        directory.appending(path: "current-track.json")
+    }
+
+    private static func loadState(in directory: URL) -> TrackState {
+        guard
+            let data = try? Data(contentsOf: stateFile(in: directory)),
+            let state = try? JSONDecoder().decode(TrackState.self, from: data)
+        else { return TrackState() }
+        return state
+    }
+
+    /// Written via a temporary file so a concurrent reader never sees half of
+    /// one. Losing this costs a progress bar, so a failure is not reported.
+    private static func saveState(_ state: TrackState, in directory: URL) {
+        guard let data = try? JSONEncoder().encode(state) else { return }
+        try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let file = stateFile(in: directory)
+        let temporary = directory.appending(path: ".current-track.\(getpid()).json")
+        guard (try? data.write(to: temporary, options: .atomic)) != nil else { return }
+        if (try? FileManager.default.replaceItemAt(file, withItemAt: temporary)) == nil {
+            try? FileManager.default.removeItem(at: temporary)
+        }
+    }
+
+    private static func remember(
+        _ environment: [String: String], in directory: URL
+    ) -> TrackState {
+        var state = TrackState()
+        state.trackID = environment["TRACK_ID"] ?? ""
+        state.durationMs = Int(environment["DURATION_MS"] ?? "") ?? 0
+        state.title = environment["NAME"] ?? ""
+        state.album = environment["ALBUM"] ?? ""
+        state.artist = joined(environment["ARTISTS"])
+
+        // Podcasts carry no artists and no album; the show is the useful
+        // stand-in for both.
+        if environment["ITEM_TYPE"] == "Episode" {
+            let show = environment["SHOW_NAME"] ?? ""
+            if state.artist.isEmpty { state.artist = show }
+            if state.album.isEmpty { state.album = show }
+        }
+
+        let cover = fetchCover(environment["COVERS"] ?? "")
+        state.coverPath = cacheCover(cover, trackID: state.trackID, in: directory)
+        pruneCovers(in: directory, keeping: state.coverPath)
+        return state
+    }
+
+    /// librespot passes lists as newline-separated values.
+    private static func joined(_ value: String?) -> String {
+        (value ?? "")
+            .split(separator: "\n")
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+            .filter { !$0.isEmpty }
+            .joined(separator: ", ")
+    }
+
+    // MARK: - Cover art
+
+    /// The first cover librespot offered, fetched as bytes.
+    ///
+    /// COVERS is newline-separated and ordered largest first, which is what we
+    /// want: OwnTone scales for its clients, and a 640px JPEG is far below the
+    /// 1 MiB ceiling.
+    private static func fetchCover(_ covers: String) -> Data? {
+        let urls = covers
+            .split(separator: "\n")
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+            .compactMap { URL(string: $0) }
+            .filter { $0.scheme == "https" || $0.scheme == "http" }
+
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.timeoutIntervalForRequest = artworkTimeout
+        configuration.timeoutIntervalForResource = artworkTimeout
+        let session = URLSession(configuration: configuration)
+        defer { session.finishTasksAndInvalidate() }
+
+        for url in urls {
+            // This program is run once per event and exits, so there is no
+            // run loop to await on. The semaphore is what turns one request
+            // back into the straight line the rest of this file is written in.
+            let result = Box<Data?>(nil)
+            let semaphore = DispatchSemaphore(value: 0)
+            let task = session.dataTask(with: url) { data, response, error in
+                if let error {
+                    log("could not fetch cover \(url.absoluteString): \(error.localizedDescription)")
+                } else if let http = response as? HTTPURLResponse,
+                          (200..<300).contains(http.statusCode) {
+                    result.value = data
+                }
+                semaphore.signal()
+            }
+            task.resume()
+            if semaphore.wait(timeout: .now() + artworkTimeout + 1) == .timedOut {
+                task.cancel()
+                log("gave up fetching cover \(url.absoluteString)")
+                continue
+            }
+            if let data = result.value, data.count >= 2, data.count <= pictureSizeMax {
+                return data
+            }
+        }
+        return nil
+    }
+
+    /// Keeps the fetched cover on disk. A track's items may have to be sent
+    /// more than once, and re-fetching the same image each time would be
+    /// wasteful and could fail the second time round.
+    private static func cacheCover(_ data: Data?, trackID: String, in directory: URL) -> String? {
+        guard let data, !data.isEmpty else { return nil }
+        let file = coverFile(trackID: trackID, in: directory)
+        do {
+            try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+            try data.write(to: file, options: .atomic)
+            return file.path
+        } catch {
+            log("could not cache cover: \(error.localizedDescription)")
+            return nil
+        }
+    }
+
+    private static func coverFile(trackID: String, in directory: URL) -> URL {
+        let safe = trackID.filter(\.isLetterOrDigit)
+        return directory.appending(path: "cover-\(safe.isEmpty ? "current" : safe).img")
+    }
+
+    private static func loadCover(_ path: String?) -> Data? {
+        guard let path else { return nil }
+        return try? Data(contentsOf: URL(fileURLWithPath: path))
+    }
+
+    /// Drops every cached cover but the current one.
+    private static func pruneCovers(in directory: URL, keeping keep: String?) {
+        let manager = FileManager.default
+        guard let names = try? manager.contentsOfDirectory(atPath: directory.path) else { return }
+        for name in names where name.hasPrefix("cover-") {
+            let file = directory.appending(path: name)
+            guard file.path != keep else { continue }
+            try? manager.removeItem(at: file)
+        }
+    }
+
+    // MARK: - The pipe
+
+    /// The app creates this alongside the audio pipe, but launchd starts the
+    /// agents at login too and nothing orders those two, so an event can
+    /// arrive before the app has run. Making it here costs one lstat.
+    private static func ensurePipe(_ pipe: URL) {
+        var status = stat()
+        if lstat(pipe.path, &status) == 0 { return }
+        try? FileManager.default.createDirectory(
+            at: pipe.deletingLastPathComponent(), withIntermediateDirectories: true
+        )
+        if mkfifo(pipe.path, 0o600) != 0 {
+            log("could not create \(pipe.path): \(String(cString: strerror(errno)))")
+        }
+    }
+
+    /// Writes to the metadata pipe without ever blocking indefinitely.
+    ///
+    /// Opened O_NONBLOCK so a pipe with no reader fails immediately with ENXIO
+    /// rather than hanging. That is the normal state before playback starts,
+    /// and librespot waits on this program, so a blocking open here would
+    /// stall the player.
+    private static func write(_ blob: Data, to pipe: URL) -> Bool {
+        let descriptor = open(pipe.path, O_WRONLY | O_NONBLOCK)
+        guard descriptor >= 0 else {
+            if errno == ENXIO {
+                log("nothing reading \(pipe.path) yet; the engine watches it once playback starts")
+            } else {
+                log("could not open \(pipe.path): \(String(cString: strerror(errno)))")
+            }
+            return false
+        }
+        defer { close(descriptor) }
+
+        let bytes = [UInt8](blob)
+        let deadline = Date(timeIntervalSinceNow: writeTimeout)
+        var offset = 0
+
+        while offset < bytes.count {
+            let remaining = deadline.timeIntervalSinceNow
+            guard remaining > 0 else {
+                log("timed out writing to \(pipe.path)")
+                return false
+            }
+
+            var descriptors = pollfd(fd: descriptor, events: Int16(POLLOUT), revents: 0)
+            let ready = poll(&descriptors, 1, Int32(remaining * 1000))
+            if ready < 0 {
+                guard errno == EINTR else {
+                    log("could not wait on \(pipe.path): \(String(cString: strerror(errno)))")
+                    return false
+                }
+                continue
+            }
+            guard ready > 0 else { continue }
+
+            let written = bytes.withUnsafeBytes { buffer -> Int in
+                guard let base = buffer.baseAddress else { return 0 }
+                return Darwin.write(descriptor, base + offset, bytes.count - offset)
+            }
+            if written < 0 {
+                guard errno == EAGAIN || errno == EINTR else {
+                    log("the engine closed \(pipe.path) mid-write")
+                    return false
+                }
+                continue
+            }
+            offset += written
+        }
+        return true
+    }
+
+    private static func log(_ message: String) {
+        FileHandle.standardError.write(Data("metadata: \(message)\n".utf8))
+    }
+}
+
+/// One value behind a lock, so a completion handler can hand a result back to
+/// the thread waiting on it under strict concurrency.
+private final class Box<Value>: @unchecked Sendable {
+    private let lock = NSLock()
+    private var stored: Value
+
+    init(_ value: Value) { stored = value }
+
+    var value: Value {
+        get { lock.withLock { stored } }
+        set { lock.withLock { stored = newValue } }
+    }
+}
+
+private extension Character {
+    var isLetterOrDigit: Bool { isLetter || isNumber }
+}
