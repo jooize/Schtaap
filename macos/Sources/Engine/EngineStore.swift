@@ -17,7 +17,19 @@ final class EngineStore {
         var isOnline: Bool { self == .online }
     }
 
-    private(set) var connection: Connection = .connecting
+    private(set) var connection: Connection = .connecting {
+        didSet { if connection.isOnline { isAwaitingFirstContact = false } }
+    }
+
+    /// True from `start()` until the engine answers for the first time, or
+    /// the grace period runs out. launchd may still be spawning the agents
+    /// -- after a rebuild, up to about 35 s while the registration heals --
+    /// and the notify client retries throughout, so the honest thing to show
+    /// meanwhile is "starting", not "not running". The grace is generous
+    /// because a wrong "failed" costs more than a slow spinner.
+    private(set) var isAwaitingFirstContact = false
+    private var firstContactGrace: Task<Void, Never>?
+    private static let firstContactGracePeriod = Duration.seconds(60)
     private(set) var outputs: [Output] = []
     private(set) var player: PlayerStatus?
     private(set) var nowPlaying: NowPlaying?
@@ -117,6 +129,13 @@ final class EngineStore {
             return
         }
 
+        isAwaitingFirstContact = true
+        firstContactGrace = Task { [weak self] in
+            try? await Task.sleep(for: Self.firstContactGracePeriod)
+            guard !Task.isCancelled else { return }
+            self?.isAwaitingFirstContact = false
+        }
+
         lifecycle = Task { [weak self] in
             guard let self else { return }
             await self.refreshAll()
@@ -130,6 +149,9 @@ final class EngineStore {
         directory.stop()
         lifecycle?.cancel()
         lifecycle = nil
+        firstContactGrace?.cancel()
+        firstContactGrace = nil
+        isAwaitingFirstContact = false
         for task in volumeWrites.values { task.cancel() }
         volumeWrites.removeAll()
         for task in rejoinTasks.values { task.cancel() }

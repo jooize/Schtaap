@@ -214,7 +214,44 @@ struct PopoverView: View {
     /// Shown when there is no speaker list to show. What is wrong is usually
     /// the engine rather than the network, so this asks the engine first and
     /// only falls back to the connection when the agents are up.
+    @ViewBuilder
     private var emptyState: some View {
+        if isStartingUp {
+            startingState
+        } else {
+            failedState
+        }
+    }
+
+    /// The agents are registered and launchd is expected to bring them up,
+    /// but nothing has answered yet. Not a failure until the grace runs out.
+    private var isStartingUp: Bool {
+        guard store.isAwaitingFirstContact, !store.connection.isOnline else { return false }
+        switch engine.status {
+        case .running, .notRegistered: return true
+        case .missingPayload, .requiresApproval, .failed: return false
+        }
+    }
+
+    private var startingState: some View {
+        HStack(alignment: .top, spacing: 10) {
+            ProgressView()
+                .controlSize(.small)
+                .padding(.top, 1)
+            VStack(alignment: .leading, spacing: 3) {
+                Text("Starting the audio engine")
+                    .font(.system(size: 13, weight: .medium))
+                Text("Your speakers appear once it answers.")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .padding(.horizontal, Metrics.horizontalInset)
+        .padding(.bottom, 4)
+    }
+
+    private var failedState: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(emptyStateTitle)
                 .font(.system(size: 13, weight: .medium))
