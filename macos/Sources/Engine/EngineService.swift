@@ -1,4 +1,5 @@
 import Foundation
+import OSLog
 import Observation
 import ServiceManagement
 
@@ -39,6 +40,11 @@ final class EngineService {
     /// household's speakers. The guard lives here rather than at each call
     /// site so no future caller can forget it.
     private let isOffline: Bool
+
+    /// Registration and healing happen with no UI attached, so this is the
+    /// only witness when they go wrong: `log stream --predicate
+    /// 'subsystem == "bar.esko.Tutti"'`.
+    private static let log = Logger(subsystem: "bar.esko.Tutti", category: "engine")
 
     /// The two agents, addressed by the plist file names shipped in
     /// Contents/Library/LaunchAgents. Built from the bundle identifier so
@@ -100,7 +106,9 @@ final class EngineService {
         do {
             var registeredAnything = false
             for (service, label) in zip(services, labels) {
-                if service.status == .enabled && isLoaded(label) { continue }
+                let loaded = isLoaded(label)
+                Self.log.info("\(label, privacy: .public): status \(String(describing: service.status), privacy: .public), loaded \(loaded)")
+                if service.status == .enabled && loaded { continue }
                 // Registered on paper but absent from launchd. Clearing the
                 // record first is not optional: register() on top of a live
                 // one is a no-op, so the engine would stay missing forever.
@@ -108,15 +116,18 @@ final class EngineService {
                     await unregisterAndWait(service)
                 }
                 try service.register()
+                Self.log.info("\(label, privacy: .public): registered")
                 registeredAnything = true
             }
             // A fresh registration starts the agent with the config we just
             // wrote, so restarting on top of that would only interrupt it.
             if changed && !registeredAnything {
+                Self.log.info("config changed, restarting agents")
                 restart()
                 try await reregisterIfRestartFailed()
             }
         } catch {
+            Self.log.error("registration failed: \(String(describing: error), privacy: .public)")
             status = .failed(Self.describe(error))
             return
         }
@@ -134,14 +145,30 @@ final class EngineService {
     /// refuses the new binary against the code requirement it recorded from
     /// the old one. Without this the engine is down until the next launch.
     /// Under a stable signature this never fires.
+    ///
+    /// Polled rather than checked once: one second after the kickstart
+    /// launchd can still be tearing the old process down and has not yet
+    /// recorded the failed spawn, so a single early look passes and the
+    /// engine stays down until the popover is next opened and closed, or
+    /// Try Again is pressed. Seen on 2026-09-02: 14 failed spawns and the
+    /// app none the wiser.
     private func reregisterIfRestartFailed() async throws {
-        try? await Task.sleep(for: .seconds(1))
-        guard !labels.allSatisfy(isLoaded) else { return }
-        for service in services {
-            await unregisterAndWait(service)
-            try service.register()
+        for attempt in 1...Self.restartChecks {
+            try? await Task.sleep(for: Self.restartCheckInterval)
+            guard !labels.allSatisfy(isLoaded) else { continue }
+            Self.log.warning("agents failed to respawn (check \(attempt)), re-registering")
+            for (service, label) in zip(services, labels) {
+                await unregisterAndWait(service)
+                try service.register()
+                Self.log.info("\(label, privacy: .public): re-registered")
+            }
+            return
         }
+        Self.log.info("agents respawned after restart")
     }
+
+    private static let restartChecks = 12
+    private static let restartCheckInterval = Duration.seconds(1)
 
     /// Unregisters and waits for it to actually be gone.
     ///
@@ -151,7 +178,12 @@ final class EngineService {
     /// is really done.
     private func unregisterAndWait(_ service: SMAppService) async {
         await withCheckedContinuation { continuation in
-            service.unregister { _ in continuation.resume() }
+            service.unregister { error in
+                if let error {
+                    Self.log.error("unregister failed: \(String(describing: error), privacy: .public)")
+                }
+                continuation.resume()
+            }
         }
     }
 
@@ -239,6 +271,7 @@ final class EngineService {
             // refreshStatus() reports on its own terms.
             try? process.run()
             process.waitUntilExit()
+            Self.log.info("kickstart \(label, privacy: .public): exit \(process.terminationStatus)")
         }
     }
 

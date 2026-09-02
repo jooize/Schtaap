@@ -76,21 +76,21 @@
 		A30CD52F92CF6493D108B09E /* CopyFiles */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
-			dstPath = Contents/Helpers;
-			dstSubfolderSpec = 1;
+			dstPath = "";
+			dstSubfolderSpec = 7;
 			files = (
-				36447C4746A62F904E39DBDB /* bin in CopyFiles */,
-				E8DCCEF86151B73BCA8757B2 /* lib in CopyFiles */,
+				398F9DCB146BDAE5D659BF18 /* htdocs in CopyFiles */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		E78883BE35F7653E426B6C1A /* CopyFiles */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
-			dstPath = "";
-			dstSubfolderSpec = 7;
+			dstPath = Contents/Helpers;
+			dstSubfolderSpec = 1;
 			files = (
-				398F9DCB146BDAE5D659BF18 /* htdocs in CopyFiles */,
+				36447C4746A62F904E39DBDB /* bin in CopyFiles */,
+				E8DCCEF86151B73BCA8757B2 /* lib in CopyFiles */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -130,7 +130,7 @@
 		ECC56688451434FA1487CA40 /* ReceiverRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReceiverRow.swift; sourceTree = "<group>"; };
 		F3FD946E10AD3797BBDE65F3 /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 		FA32B1B5907D80AE1C4A9A62 /* bin */ = {isa = PBXFileReference; lastKnownFileType = folder; name = bin; path = Engine/bin; sourceTree = SOURCE_ROOT; };
-		"TEMP_99CF7175-B891-4181-9E24-93E41AE9C3A5" /* Version.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Version.xcconfig; sourceTree = "<group>"; };
+		"TEMP_20CF67FC-F139-4E49-9980-7F3364401252" /* Version.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Version.xcconfig; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -237,10 +237,10 @@
 			path = Support;
 			sourceTree = "<group>";
 		};
-		"TEMP_EA55AF89-614B-4F08-BD22-D006E71B368F" /* macos */ = {
+		"TEMP_C2D4C1B5-8E06-4061-9BDD-6A9C004A3391" /* macos */ = {
 			isa = PBXGroup;
 			children = (
-				"TEMP_99CF7175-B891-4181-9E24-93E41AE9C3A5" /* Version.xcconfig */,
+				"TEMP_20CF67FC-F139-4E49-9980-7F3364401252" /* Version.xcconfig */,
 			);
 			path = macos;
 			sourceTree = "<group>";
@@ -295,6 +295,16 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = YES;
 				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+					9B9D5A4BDF85F98661DB0BF7 = {
+						DevelopmentTeam = 75NVZ7W4W3;
+						ProvisioningStyle = Manual;
+					};
+					D72795794DE6CE3D52F1453F = {
+						DevelopmentTeam = 75NVZ7W4W3;
+						ProvisioningStyle = Manual;
+					};
+				};
 			};
 			buildConfigurationList = 1AB94D8A194F0A7B55DAAEE7 /* Build configuration list for PBXProject "Tutti" */;
 			compatibilityVersion = "Xcode 14.0";
@@ -371,7 +381,7 @@
 /* Begin XCBuildConfiguration section */
 		0897C94399D4433118D5CFF5 /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = "TEMP_99CF7175-B891-4181-9E24-93E41AE9C3A5" /* Version.xcconfig */;
+			baseConfigurationReference = "TEMP_20CF67FC-F139-4E49-9980-7F3364401252" /* Version.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				APP_PRODUCT_NAME = Tutti;
@@ -405,11 +415,13 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGNING_ALLOWED = YES;
-				CODE_SIGNING_REQUIRED = NO;
-				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGNING_REQUIRED = YES;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Manual;
 				COPY_PHASE_STRIP = NO;
 				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = 75NVZ7W4W3;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
@@ -490,7 +502,7 @@
 		};
 		D77CF51768ED944D8C0B0719 /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = "TEMP_99CF7175-B891-4181-9E24-93E41AE9C3A5" /* Version.xcconfig */;
+			baseConfigurationReference = "TEMP_20CF67FC-F139-4E49-9980-7F3364401252" /* Version.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				APP_PRODUCT_NAME = Tutti;
@@ -524,11 +536,13 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGNING_ALLOWED = YES;
-				CODE_SIGNING_REQUIRED = NO;
-				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGNING_REQUIRED = YES;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Manual;
 				COPY_PHASE_STRIP = NO;
 				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = 75NVZ7W4W3;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
