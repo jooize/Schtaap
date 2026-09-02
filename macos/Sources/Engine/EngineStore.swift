@@ -49,6 +49,30 @@ final class EngineStore {
     /// Read once: `Host.current().localizedName` goes to SystemConfiguration.
     private let localDeviceName = Host.current().localizedName
 
+    /// Speakers the user asked for and the engine has not got right now, by
+    /// output id. Each is being retried until it comes back. See
+    /// `IntendedOutputs` for why this exists.
+    private(set) var rejoining: Set<String> = []
+
+    /// What the user asked for, persisted so it outlives the app. Nil under
+    /// fixtures, where it must not be read or written.
+    private var intended: IntendedOutputs?
+    private var rejoinTasks: [String: Task<Void, Never>] = [:]
+
+    /// Seconds between attempts to win a speaker back. Capped at the last
+    /// entry: a speaker taken for a film should not be hammered all evening,
+    /// but it should still come back within the minute of being freed.
+    private static let rejoinBackoff: [Duration] = [
+        .seconds(5), .seconds(10), .seconds(20), .seconds(30), .seconds(60),
+    ]
+
+    /// Whether to hold the system's Now Playing slot. Off, the slot is left to
+    /// whatever else on this Mac wants it.
+    var publishesNowPlaying = true {
+        didSet { publishNowPlaying() }
+    }
+    private let nowPlayingCenter = NowPlayingCenter()
+
     let client: EngineClient
 
     /// Bonjour lookup for device hardware, which the engine's API omits.
@@ -73,6 +97,14 @@ final class EngineStore {
         self.client = EngineClient(endpoint: endpoint)
         self.notify = NotifyClient(endpoint: endpoint)
         self.usesFixtures = usesFixtures
+        // Left nil until the first live refresh when there is no file yet, so
+        // the speakers already playing become the intent rather than an
+        // empty set that would treat them as nobody's.
+        self.intended = usesFixtures ? nil : IntendedOutputs.load(from: Self.intendedFile)
+    }
+
+    private static var intendedFile: URL {
+        Branding.supportDirectory.appending(path: "intended-outputs.json")
     }
 
     // MARK: - Lifecycle
@@ -100,6 +132,10 @@ final class EngineStore {
         lifecycle = nil
         for task in volumeWrites.values { task.cancel() }
         volumeWrites.removeAll()
+        for task in rejoinTasks.values { task.cancel() }
+        rejoinTasks.removeAll()
+        rejoining.removeAll()
+        nowPlayingCenter.clear()
     }
 
     private func handle(_ message: NotifyMessage) async {
@@ -144,6 +180,8 @@ final class EngineStore {
                 return merged
             }
             connection = .online
+            adoptSelectionIfUnset()
+            reconcileRejoins()
         } catch {
             connection = .offline(error.localizedDescription)
         }
@@ -157,6 +195,7 @@ final class EngineStore {
             if !isAdjustingMaster {
                 masterVolume = Double(status.volume)
             }
+            publishNowPlaying()
         } catch {
             connection = .offline(error.localizedDescription)
         }
@@ -165,6 +204,23 @@ final class EngineStore {
     func refreshNowPlaying() async {
         guard !usesFixtures else { return }
         nowPlaying = try? await client.nowPlaying()
+        publishNowPlaying()
+    }
+
+    /// Hands the current track to the system's Now Playing slot, or lets go
+    /// of it. Fixtures never touch the slot: it is shared with every other
+    /// app on the Mac, which makes it as far from offline as the network.
+    private func publishNowPlaying() {
+        guard !usesFixtures else { return }
+        guard publishesNowPlaying, connection.isOnline else {
+            nowPlayingCenter.clear()
+            return
+        }
+        let artwork = nowPlaying?.artworkUrl.flatMap { path -> URL? in
+            guard !path.isEmpty else { return nil }
+            return client.artworkURL(for: path, maxPixels: 600)
+        }
+        nowPlayingCenter.publish(track: nowPlaying, player: player, artworkURL: artwork)
     }
 
     // MARK: - Writes
@@ -193,6 +249,10 @@ final class EngineStore {
         apply(to: output.id) { $0.selected = selected }
         // Trying again clears the last complaint, whatever comes of this one.
         startFailures[output.id] = nil
+        // This is the user speaking, which is the only thing that rewrites
+        // what they asked for. Switching a speaker off also calls off any
+        // attempt to win it back.
+        setIntended(selected, output)
         guard !isOffline else { return }
 
         Task { [client] in
@@ -249,6 +309,7 @@ final class EngineStore {
                 try await client.verify(pin: pin, forOutput: output.id)
                 await self.refreshOutputs()
                 if self.outputs.first(where: { $0.id == output.id })?.selected == true {
+                    self.setIntended(true, output)
                     self.cancelVerification()
                 } else {
                     self.verificationError = "That code was not accepted."
@@ -350,6 +411,83 @@ final class EngineStore {
         preMuteGroupVolumes[group.id] = Int(value.rounded())
     }
 
+    // MARK: - Rejoining speakers
+
+    private func setIntended(_ wanted: Bool, _ output: Output) {
+        guard var set = intended else { return }
+        if wanted { set.insert(output) } else { set.remove(output) }
+        guard set != intended else { return }
+        intended = set
+        set.save(to: Self.intendedFile)
+        if !wanted { endRejoin(output.id) }
+    }
+
+    /// The first live refresh on a Mac with no record yet takes whatever is
+    /// playing as what was asked for. Until then every speaker is nobody's.
+    private func adoptSelectionIfUnset() {
+        guard intended == nil, !usesFixtures else { return }
+        var set = IntendedOutputs()
+        for output in outputs where output.selected && output.isAirPlay {
+            set.insert(output)
+        }
+        intended = set
+        set.save(to: Self.intendedFile)
+    }
+
+    /// Lines the engine's selection up against the intent after every
+    /// refresh. An intended speaker that is not playing starts being won
+    /// back; one that is playing again, or was given up on, stops.
+    private func reconcileRejoins() {
+        guard let intended, !isOffline else { return }
+        var live: Set<String> = []
+        for output in outputs where output.isAirPlay {
+            let wanted = intended.contains(output)
+            // A device asking for its code is not busy, it is waiting on the
+            // user, and retrying would only make it show the code again.
+            if wanted, !output.selected, !output.needsVerification {
+                live.insert(output.id)
+                beginRejoin(output.id)
+            } else {
+                endRejoin(output.id)
+            }
+        }
+        for id in rejoining.subtracting(live) { endRejoin(id) }
+    }
+
+    private func beginRejoin(_ id: String) {
+        guard rejoinTasks[id] == nil else { return }
+        rejoining.insert(id)
+        rejoinTasks[id] = Task { [weak self] in
+            var attempt = 0
+            while !Task.isCancelled {
+                let delay = Self.rejoinBackoff[min(attempt, Self.rejoinBackoff.count - 1)]
+                attempt += 1
+                try? await Task.sleep(for: delay)
+                guard !Task.isCancelled, let self else { return }
+                // The engine answers a speaker that is still taken with a
+                // refusal, and that refusal is the probe: nothing else on the
+                // network says whether it is free.
+                let joined = (try? await self.client.setSelected(true, forOutput: id)) != nil
+                guard !Task.isCancelled else { return }
+                if joined { self.startFailures[id] = nil }
+                // Refreshing runs the reconcile, which ends this task once the
+                // speaker reports itself playing.
+                await self.refreshOutputs()
+            }
+        }
+    }
+
+    private func endRejoin(_ id: String) {
+        rejoinTasks[id]?.cancel()
+        rejoinTasks[id] = nil
+        rejoining.remove(id)
+    }
+
+    /// Whether any member of a row is being won back.
+    func isRejoining(_ group: SpeakerGroup) -> Bool {
+        group.members.contains { rejoining.contains($0.id) }
+    }
+
     // MARK: - Speaker groups
 
     /// Outputs merged into rows: stereo pairs become one entry with a shared
@@ -390,7 +528,8 @@ final class EngineStore {
                 symbolName: symbol,
                 memberSymbolName: unitSymbolName(for: sorted[0]),
                 groupName: identity?.groupName,
-                isPair: true
+                isPair: true,
+                isRejoining: sorted.contains { rejoining.contains($0.id) }
             ))
         }
 
@@ -403,12 +542,17 @@ final class EngineStore {
                 memberSymbolName: unitSymbolName(for: output),
                 groupName: groupName(for: output),
                 isPair: false,
-                isThisMac: isThisMac(output)
+                isThisMac: isThisMac(output),
+                isRejoining: rejoining.contains(output.id)
             ))
         }
 
+        // Playing first, then the ones on their way back, then the rest. A
+        // speaker being won back is still one of the user's, so it stays up
+        // with them rather than dropping into the silent alphabet below.
         groups.sort { left, right in
             if left.anySelected != right.anySelected { return left.anySelected }
+            if left.isRejoining != right.isRejoining { return left.isRejoining }
             return left.displayName.localizedCaseInsensitiveCompare(right.displayName) == .orderedAscending
         }
         return groups

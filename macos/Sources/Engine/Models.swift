@@ -67,12 +67,21 @@ struct SpeakerGroup: Identifiable {
     /// list distinguishes "play here" from "play in that room".
     var isThisMac: Bool = false
 
+    /// Some member the user asked for is not playing and is being won back.
+    /// The speaker was taken by another sender, and the app is retrying it
+    /// until it comes free. See `IntendedOutputs`.
+    var isRejoining: Bool = false
+
     /// Every member playing.
     var selected: Bool { !members.isEmpty && members.allSatisfy(\.selected) }
 
     /// At least one member playing. What the row's on/off appearance follows,
     /// so a half-playing pair never looks switched off.
     var anySelected: Bool { members.contains(where: \.selected) }
+
+    /// Playing or on its way back: the rows that belong to the user right now
+    /// and stay on screen when the list is collapsed.
+    var isEngaged: Bool { anySelected || isRejoining }
 
     /// Some but not all of a pair is playing. The row is on, but the stereo
     /// image its name promises is not what is coming out of the speakers.

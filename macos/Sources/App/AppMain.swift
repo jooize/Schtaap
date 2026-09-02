@@ -12,6 +12,7 @@ struct AppMain: App {
         let usesFixtures = EngineStore.fixturesRequested
 
         let store = EngineStore(usesFixtures: usesFixtures)
+        store.publishesNowPlaying = Preferences.showsInNowPlaying
         _store = State(initialValue: store)
 
         let engine = EngineService(usesFixtures: usesFixtures)

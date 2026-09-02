@@ -80,11 +80,14 @@ struct OutputRow: View {
     }
 
     /// One line under the title. Trouble displaces the group name while it
-    /// lasts: a speaker that refused to start is the most urgent thing the row
-    /// can say, then a pair playing on one half.
+    /// lasts: a speaker being won back is the most current thing the row can
+    /// say and the app is already dealing with it, then one that refused to
+    /// start, then a pair playing on one half.
     @ViewBuilder
     private var subline: some View {
-        if let failure {
+        if group.isRejoining {
+            rejoining
+        } else if let failure {
             warning(failure)
         } else if group.isPartial {
             warning(partialText)
@@ -95,6 +98,31 @@ struct OutputRow: View {
                 .lineLimit(1)
                 .truncationMode(.tail)
         }
+    }
+
+    /// Calm, not a warning: the speaker was taken by another sender and the
+    /// app is retrying it until it is free again. Nothing is asked of the
+    /// user except patience, or switching the speaker off to call it off.
+    private var rejoining: some View {
+        HStack(spacing: 3) {
+            Image(systemName: SymbolCatalog.name("arrow.trianglehead.2.clockwise.rotate.90", fallback: "arrow.clockwise"))
+                .font(.system(size: 9))
+                .foregroundStyle(.secondary)
+            Text(rejoiningText)
+                .font(.system(size: 10))
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .truncationMode(.tail)
+        }
+        .help("Another device is using this speaker. It rejoins when it is free.")
+    }
+
+    private var rejoiningText: String {
+        let silent = group.silentMemberNames
+        if group.isPair, silent.count == 1, let name = silent.first {
+            return "Rejoining \(name)\u{2026}"
+        }
+        return "Rejoining\u{2026}"
     }
 
     private func warning(_ text: String) -> some View {
@@ -189,6 +217,25 @@ private struct PairBadge: View {
             isPair: true
         ),
         volume: .constant(55),
+        onToggle: {}
+    )
+    .frame(width: Metrics.popoverWidth)
+    .padding()
+}
+
+#Preview("Taken by another sender, rejoining") {
+    OutputRow(
+        group: SpeakerGroup(
+            id: "7",
+            displayName: Fixtures.outputs[6].name,
+            members: [Fixtures.outputs[6]],
+            symbolName: DeviceIdentity(kind: .homePodMini).symbolName,
+            memberSymbolName: DeviceIdentity(kind: .homePodMini).unitSymbolName,
+            groupName: nil,
+            isPair: false,
+            isRejoining: true
+        ),
+        volume: .constant(40),
         onToggle: {}
     )
     .frame(width: Metrics.popoverWidth)

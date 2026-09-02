@@ -10,6 +10,9 @@ enum PreferenceKey {
 
     /// Whether to advertise this Mac in Spotify's device list at all.
     static let showsInSpotify = "showsInSpotify"
+
+    /// Whether to hold the system's Now Playing slot with the current track.
+    static let showsInNowPlaying = "showsInNowPlaying"
 }
 
 /// Reads of the same defaults from outside a view.
@@ -30,5 +33,9 @@ enum Preferences {
     /// unset key and a stored false both read as false.
     static var showsInSpotify: Bool {
         UserDefaults.standard.object(forKey: PreferenceKey.showsInSpotify) as? Bool ?? true
+    }
+
+    static var showsInNowPlaying: Bool {
+        UserDefaults.standard.object(forKey: PreferenceKey.showsInNowPlaying) as? Bool ?? true
     }
 }

@@ -50,13 +50,34 @@ ancestor and the permission prompt read "Allow librespot ...". Staying alive as
 the parent, with an embedded Info.plist carrying the app's name, makes it read
 "Tutti".
 
+The helper has a third mode, `metadata`, that librespot itself runs on every
+player event (`--onevent`). It turns the event in the environment into the
+Shairport-format items OwnTone reads from `<pipe>.metadata`: title, artist,
+album, progress in frames, and the cover, fetched from the URL librespot
+supplies. That is the only way a pipe input ever gets a title. OwnTone opens
+the metadata pipe only once playback starts, so the first send of a track is
+usually dropped; the helper remembers the track and resends it on the next
+event until a write succeeds. See `Helper/Metadata.swift` for the format's
+traps, all read out of OwnTone's `src/inputs/pipe.c`.
+
 State lives in `~/Library/Application Support/Tutti`:
 
-    owntone.conf       generated each launch; hand edits are overwritten
-    engine.json        connect name, pipe path, bitrate; read by the helper
-    Library/           owntone's media library -- holds the named pipe
-    Logs/              owntone.log, librespot.log, owntone-server.log
-    songs3.db, Cache/  owntone's database and caches
+    owntone.conf            generated each launch; hand edits are overwritten
+    engine.json             connect name, pipe path, bitrate, app build; read by
+                            the helper, and diffed to decide whether to restart
+                            the agents
+    intended-outputs.json   the speakers the user asked for, which the app wins
+                            back when another sender takes one
+    Library/                owntone's media library: the audio pipe and its
+                            .metadata companion
+    Logs/                   owntone.log, librespot.log, owntone-server.log
+    songs3.db, Cache/       owntone's database and caches; Cache/Metadata holds
+                            the current track and its cover for the bridge
+
+The app's own build number is written into `engine.json` so that any new
+build restarts the agents. launchd keeps a running job on whatever binary it
+started, so without that an update touching only the helper would never take
+effect until the next login.
 
 ### Ad-hoc signing and stale registrations
 
@@ -65,7 +86,10 @@ an ad-hoc signature changes on every build. After a rebuild launchd holds a
 job it will not spawn -- "Could not find and/or execute program" in the log,
 `EX_CONFIG`, crash-looping -- while `SMAppService.status` still reports
 `.enabled`. `EngineService` detects this by asking launchctl what state the
-job is actually in, and re-registers. If you are debugging it by hand:
+job is actually in, and re-registers -- both before deciding whether to
+register at launch and again after a restart, since the check at launch runs
+while the old processes are still up and passes. If you are debugging it by
+hand:
 
     launchctl print gui/$(id -u)/bar.esko.Tutti.owntone
     launchctl bootout gui/$(id -u)/bar.esko.Tutti.owntone
@@ -105,6 +129,20 @@ section of icon-well rows where selection is carried by an accent tint, native
 `Slider` controls, and a footer of menu rows. No status badge -- activity is
 signalled by the menu bar icon, which is where the system does it.
 
+The current track is also handed to the system's Now Playing slot, so it shows
+in Control Center and the menu bar's Now Playing item with its cover. The slot
+is one per Mac and last-writer-wins, so "Show in Now Playing" in the footer
+lets go of it. Display only: every remote command is left disabled until pause
+semantics are settled, because a media key that stalled the engine would be
+lying about what it did.
+
+A speaker the user selected that stops playing without the user switching it
+off -- Siri or an Apple TV took it -- shows "Rejoining..." and is retried with
+backoff (5, 10, 20, 30, then every 60 seconds) until the engine accepts it
+again. Nothing on the network says whether a speaker is busy, so the refusal is
+the probe. Switching the speaker off calls it off. The intended set is seeded
+from whatever was playing the first time the app sees a live engine.
+
 ## Known gaps
 
 Ordered by what blocks playback first.
@@ -134,14 +172,16 @@ Ordered by what blocks playback first.
   interface as above. It advertises successfully anyway.
 - **Playback is unverified.** Device activation now works and sticks; no
   audio has been confirmed coming out of a speaker.
-- **No transport controls.** librespot streams into a fifo the engine drains,
-  so pausing the engine stalls librespot's writes rather than pausing Spotify.
-  Pause semantics need a spike before any play/pause button is honest.
-- **Track metadata is always nil against a live engine.** The bridge exists
-  (`../bridge/librespot-metadata`) but is not wired into the helper's argv.
+- **No transport controls, and the media keys do nothing.** librespot
+  streams into a fifo the engine drains, so pausing the engine stalls
+  librespot's writes rather than pausing Spotify. Pause semantics need a
+  spike before any play/pause button, or any Now Playing remote command, is
+  honest. Candidate: pause == deselect every output.
+- **Track metadata and rejoin are unverified against real playback.** Both
+  are wired and tested offline (the bridge byte-for-byte against the Python
+  original, the state machine through every event), but playback itself has
+  never run here, so neither has been seen end to end.
 - **Logs grow without bound.** Nothing rotates them.
-- **Rejoin-on-free is not implemented.** The store has no notion of an
-  intended speaker set yet.
 - **The default Connect name collides with the hardware.** Shipping
   "HomePods" as `Branding.defaultConnectName` puts a receiver named after
   HomePods directly above a list of actual HomePods. The computer's name, or

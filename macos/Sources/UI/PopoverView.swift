@@ -17,6 +17,7 @@ struct PopoverView: View {
     @State private var requestedPage: PopoverPage?
     @AppStorage(PreferenceKey.connectName) private var connectName: String = Branding.defaultConnectName
     @AppStorage(PreferenceKey.showsInSpotify) private var showsInSpotify: Bool = true
+    @AppStorage(PreferenceKey.showsInNowPlaying) private var showsInNowPlaying: Bool = true
 
     private static let collapsedRowTarget = 6
 
@@ -67,6 +68,7 @@ struct PopoverView: View {
         // Switching the receiver off has to reach the agent to mean anything:
         // it is what stops librespot advertising.
         .onChange(of: showsInSpotify) { _, _ in applySettings() }
+        .onChange(of: showsInNowPlaying) { _, enabled in store.publishesNowPlaying = enabled }
     }
 
     // MARK: - Sections
@@ -227,18 +229,18 @@ struct PopoverView: View {
         }
     }
 
-    /// Collapsed, the list keeps every speaker that is playing -- those carry
-    /// sliders and are in use -- and fills the remainder with the rest in the
-    /// engine's own order, so nothing reorders when the list expands.
+    /// Collapsed, the list keeps every speaker that is playing or on its way
+    /// back -- those are in use -- and fills the remainder with the rest in
+    /// the engine's own order, so nothing reorders when the list expands.
     private var visibleGroups: [SpeakerGroup] {
         let allGroups = store.speakerGroups
         guard !showsAllOutputs else { return allGroups }
 
-        let playingCount = allGroups.count(where: \.anySelected)
-        var budget = max(0, Self.collapsedRowTarget - playingCount)
+        let engagedCount = allGroups.count(where: \.isEngaged)
+        var budget = max(0, Self.collapsedRowTarget - engagedCount)
 
         return allGroups.filter { group in
-            if group.anySelected { return true }
+            if group.isEngaged { return true }
             guard budget > 0 else { return false }
             budget -= 1
             return true
@@ -297,6 +299,16 @@ struct PopoverView: View {
                 } catch {
                     launchAtLogin = LoginItem.isEnabled
                 }
+            }
+
+            // The system's Now Playing slot is one per Mac and last-writer-
+            // wins, so holding it is offered rather than assumed.
+            MenuRow(title: "Show in Now Playing") {
+                showsInNowPlaying.toggle()
+            } trailing: {
+                Image(systemName: showsInNowPlaying ? "checkmark" : "")
+                    .font(.system(size: 11, weight: .semibold))
+                    .frame(width: 14)
             }
 
             MenuRow(title: "Quit \(Branding.appName)") {
