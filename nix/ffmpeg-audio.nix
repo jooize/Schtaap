@@ -13,6 +13,12 @@
 #                           first minimal build omitted both and failed.
 #   mjpeg, png, scale       Cover art, not video. OwnTone decodes and
 #                           rescales artwork through libav.
+#   image2pipe (muxer)      Also cover art: OwnTone writes the rescaled
+#                           picture back through it (src/artwork.c). Without
+#                           it every artwork request answers 204 and the log
+#                           says "could not find the 'image2pipe' output
+#                           format". The *_pipe demuxers are the matching
+#                           input side for pictures arriving in memory.
 #   data (muxer)            Not a format anyone plays. OwnTone asks for it by
 #                           name to get the encoder's packets back unmuxed,
 #                           which is what both AirPlay paths stream
@@ -54,10 +60,10 @@ stdenv.mkDerivation {
     "--disable-programs"
     "--disable-debug"
     "--disable-avdevice"
-    "--enable-demuxer=ogg,flac,wav,mp3,aac,mov,image2"
+    "--enable-demuxer=ogg,flac,wav,mp3,aac,mov,image2,image2pipe,png_pipe,jpeg_pipe"
     "--enable-decoder=vorbis,flac,alac,aac,mp3,pcm_s16le,pcm_s16be,pcm_s24le,pcm_s32le,pcm_f32le,pcm_u8,mjpeg,png"
     "--enable-encoder=alac,pcm_s16le,pcm_s24le,pcm_s32le,mjpeg,png"
-    "--enable-muxer=data,wav,image2,mp4"
+    "--enable-muxer=data,wav,image2,image2pipe,mp4"
     "--enable-parser=aac,flac,mpegaudio,mjpeg,png"
     "--enable-filter=abuffer,abuffersink,aformat,aresample,anull,buffer,buffersink,format,scale"
     "--enable-protocol=file,pipe,http,tcp"
