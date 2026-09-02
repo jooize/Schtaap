@@ -85,7 +85,15 @@ targets:
         CFBundleName: $(APP_PRODUCT_NAME)
         CFBundleIdentifier: $(PRODUCT_BUNDLE_IDENTIFIER)
         CFBundleShortVersionString: $(MARKETING_VERSION)
-        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        # The marketing version, not the build number, on purpose. The build
+        # number changes on every build, and anything in this plist is
+        # linked into the binary, so carrying it would make every build a
+        # new helper. The app decides whether to restart the engine by the
+        # helper's code directory hash (EngineInstallation.engineFingerprint),
+        # and that hash must only move when the helper's code does. The key
+        # stays because Apple lists it as required and the Local Network
+        # prompt names the process from this plist.
+        CFBundleVersion: $(MARKETING_VERSION)
         NSLocalNetworkUsageDescription: >-
           $(APP_PRODUCT_NAME) appears as a speaker in Spotify and plays to
           your AirPlay speakers.
@@ -129,6 +137,14 @@ targets:
             subpath: Contents/Helpers
       - path: Engine/htdocs
         type: folder
+        optional: true
+        buildPhase:
+          copyFiles:
+            destination: resources
+      # Which payload this is, by Nix store path. Read by the app to decide
+      # whether a rebuilt engine warrants restarting the agents. Data, so it
+      # lives in Resources beside htdocs rather than in Helpers.
+      - path: Engine/manifest.json
         optional: true
         buildPhase:
           copyFiles:

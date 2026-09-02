@@ -94,14 +94,20 @@ run cp -R -- "$owntone/share/owntone/htdocs" "$staged/htdocs"
 # under mktemp, so it cannot start with a dash.
 run chmod -R u+w "$staged/htdocs"
 
-# What the app shows when asked which engine it is running.
+# What the app shows when asked which engine it is running, and how it
+# tells one payload from another: a store path hashes the whole build
+# closure, so a payload rebuilt with a different ffmpeg has a different
+# path even at the same owntone version. The app restarts the engine when
+# these change and leaves it alone when they do not.
 if (( dry_run )); then
   printf 'DRY-RUN: write %s\n' "$staged/manifest.json"
 else
   cat > "$staged/manifest.json" <<EOF
 {
   "owntone": "$owntone_version",
-  "librespot": "$librespot_version"
+  "librespot": "$librespot_version",
+  "owntonePath": "$owntone",
+  "librespotPath": "$librespot"
 }
 EOF
 fi

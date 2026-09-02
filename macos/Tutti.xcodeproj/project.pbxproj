@@ -26,6 +26,7 @@
 		765424DD1E826234ACE7FB5D /* LaunchAgents in CopyFiles */ = {isa = PBXBuildFile; fileRef = E0C9B800B73A9498DA93A25A /* LaunchAgents */; };
 		7EFD3424C43382F1964BB3B8 /* EngineEndpoint.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E81F843E0CEA284C821265E /* EngineEndpoint.swift */; };
 		83885E4839B614316B99F5C1 /* Fixtures.swift in Sources */ = {isa = PBXBuildFile; fileRef = 88606BECBE85980E3D1DE5E4 /* Fixtures.swift */; };
+		96F3C119C300681A752F1B98 /* manifest.json in CopyFiles */ = {isa = PBXBuildFile; fileRef = 4485D1194C3543B29ADC6C32 /* manifest.json */; };
 		99CA8C8DE3FCBAA6BE966A9D /* SpotifyDevice.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8FD1EBB21857ADC931A5843D /* SpotifyDevice.swift */; };
 		ACBF801DEAF333A8AE1C254A /* MenuBarLabel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 07F7398340A23F82CEDA629C /* MenuBarLabel.swift */; };
 		ACC4CC004774AF5352D532B7 /* PopoverPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 120986F0B2623EF185B59679 /* PopoverPage.swift */; };
@@ -55,10 +56,11 @@
 		10CB1D5C86ADBACB7C8E7541 /* CopyFiles */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
-			dstPath = Contents/Library;
+			dstPath = Contents/Helpers;
 			dstSubfolderSpec = 1;
 			files = (
-				765424DD1E826234ACE7FB5D /* LaunchAgents in CopyFiles */,
+				36447C4746A62F904E39DBDB /* bin in CopyFiles */,
+				E8DCCEF86151B73BCA8757B2 /* lib in CopyFiles */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -80,17 +82,17 @@
 			dstSubfolderSpec = 7;
 			files = (
 				398F9DCB146BDAE5D659BF18 /* htdocs in CopyFiles */,
+				96F3C119C300681A752F1B98 /* manifest.json in CopyFiles */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		E78883BE35F7653E426B6C1A /* CopyFiles */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
-			dstPath = Contents/Helpers;
+			dstPath = Contents/Library;
 			dstSubfolderSpec = 1;
 			files = (
-				36447C4746A62F904E39DBDB /* bin in CopyFiles */,
-				E8DCCEF86151B73BCA8757B2 /* lib in CopyFiles */,
+				765424DD1E826234ACE7FB5D /* LaunchAgents in CopyFiles */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -101,6 +103,7 @@
 		120986F0B2623EF185B59679 /* PopoverPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PopoverPage.swift; sourceTree = "<group>"; };
 		13B4442ACD08E7EA0A44F114 /* VerificationPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VerificationPage.swift; sourceTree = "<group>"; };
 		365EBA8E6F488D74B05A8F13 /* NowPlayingCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NowPlayingCard.swift; sourceTree = "<group>"; };
+		4485D1194C3543B29ADC6C32 /* manifest.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = manifest.json; sourceTree = "<group>"; };
 		500F8F2133971779753162A1 /* OutputRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OutputRow.swift; sourceTree = "<group>"; };
 		51F5AA1B43A57D7652656F3F /* LoginItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginItem.swift; sourceTree = "<group>"; };
 		539FF4A7F9C121A522DCD8AA /* IntendedOutputs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IntendedOutputs.swift; sourceTree = "<group>"; };
@@ -130,7 +133,7 @@
 		ECC56688451434FA1487CA40 /* ReceiverRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReceiverRow.swift; sourceTree = "<group>"; };
 		F3FD946E10AD3797BBDE65F3 /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 		FA32B1B5907D80AE1C4A9A62 /* bin */ = {isa = PBXFileReference; lastKnownFileType = folder; name = bin; path = Engine/bin; sourceTree = SOURCE_ROOT; };
-		"TEMP_20CF67FC-F139-4E49-9980-7F3364401252" /* Version.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Version.xcconfig; sourceTree = "<group>"; };
+		"TEMP_E950A849-6290-4973-AA66-4C0CB11E95C8" /* Version.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Version.xcconfig; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -151,6 +154,7 @@
 				FA32B1B5907D80AE1C4A9A62 /* bin */,
 				87EB0E59C95A1FDD052A5B8E /* htdocs */,
 				5D0A1585567777DC529F39BB /* lib */,
+				4485D1194C3543B29ADC6C32 /* manifest.json */,
 			);
 			path = Engine;
 			sourceTree = "<group>";
@@ -237,10 +241,10 @@
 			path = Support;
 			sourceTree = "<group>";
 		};
-		"TEMP_C2D4C1B5-8E06-4061-9BDD-6A9C004A3391" /* macos */ = {
+		"TEMP_4D3BF7BA-F21B-4281-A495-C6BA2698700E" /* macos */ = {
 			isa = PBXGroup;
 			children = (
-				"TEMP_20CF67FC-F139-4E49-9980-7F3364401252" /* Version.xcconfig */,
+				"TEMP_E950A849-6290-4973-AA66-4C0CB11E95C8" /* Version.xcconfig */,
 			);
 			path = macos;
 			sourceTree = "<group>";
@@ -381,7 +385,7 @@
 /* Begin XCBuildConfiguration section */
 		0897C94399D4433118D5CFF5 /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = "TEMP_20CF67FC-F139-4E49-9980-7F3364401252" /* Version.xcconfig */;
+			baseConfigurationReference = "TEMP_E950A849-6290-4973-AA66-4C0CB11E95C8" /* Version.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				APP_PRODUCT_NAME = Tutti;
@@ -502,7 +506,7 @@
 		};
 		D77CF51768ED944D8C0B0719 /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = "TEMP_20CF67FC-F139-4E49-9980-7F3364401252" /* Version.xcconfig */;
+			baseConfigurationReference = "TEMP_E950A849-6290-4973-AA66-4C0CB11E95C8" /* Version.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				APP_PRODUCT_NAME = Tutti;
