@@ -132,8 +132,14 @@ struct EngineInstallation {
         // Hand-rolled rather than JSONEncoder so the file stays readable
         // and stably ordered: it is diffed against what is already on disk
         // to decide whether the agents need restarting.
+        //
+        // The app's own build is in here for that diff and nothing else. The
+        // agents run the helper out of the bundle, and launchd keeps a running
+        // job on the old binary until something stops it -- so an update
+        // that changed only the helper would otherwise never take effect.
         """
         {
+          "app": \(quotedJSON(Branding.build)),
           "connectName": \(quotedJSON(connectName)),
           "deviceType": \(quotedJSON(SpotifyDeviceType.advertised.rawValue)),
           "showsInSpotify": \(showsInSpotify),

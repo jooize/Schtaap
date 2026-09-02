@@ -19,4 +19,13 @@ enum Branding {
 
     /// Fallback name advertised to Spotify Connect before the user picks one.
     static let defaultConnectName = "HomePods"
+
+    /// Version and build, as "1.2.3 (45)". Both come from Version.xcconfig
+    /// by way of the Info.plist, and the build number changes on every build.
+    static var build: String {
+        let info = Bundle.main.infoDictionary ?? [:]
+        let version = info["CFBundleShortVersionString"] as? String ?? "0"
+        let number = info["CFBundleVersion"] as? String ?? "0"
+        return "\(version) (\(number))"
+    }
 }

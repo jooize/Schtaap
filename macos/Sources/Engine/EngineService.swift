@@ -114,6 +114,7 @@ final class EngineService {
             // wrote, so restarting on top of that would only interrupt it.
             if changed && !registeredAnything {
                 restart()
+                try await reregisterIfRestartFailed()
             }
         } catch {
             status = .failed(Self.describe(error))
@@ -124,6 +125,22 @@ final class EngineService {
         // asking immediately would report a failure that has not happened.
         try? await Task.sleep(for: .seconds(1))
         refreshStatus()
+    }
+
+    /// Re-registers the agents when a restart left them unable to spawn.
+    ///
+    /// The health check above runs while the old processes are still up, so
+    /// a rebuilt app passes it -- and then the restart kills them and launchd
+    /// refuses the new binary against the code requirement it recorded from
+    /// the old one. Without this the engine is down until the next launch.
+    /// Under a stable signature this never fires.
+    private func reregisterIfRestartFailed() async throws {
+        try? await Task.sleep(for: .seconds(1))
+        guard !labels.allSatisfy(isLoaded) else { return }
+        for service in services {
+            await unregisterAndWait(service)
+            try service.register()
+        }
     }
 
     /// Unregisters and waits for it to actually be gone.
