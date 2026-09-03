@@ -1,0 +1,31 @@
+websocket: allocate the per-vhost session list without PROTOCOL_INIT
+
+With libwebsockets 4.4.1 on macOS, LWS_CALLBACK_PROTOCOL_INIT is never
+delivered to the notify protocol: a session at loglevel spam shows
+reasons 71 (EVENT_WAIT_CANCELLED), 0 (ESTABLISHED), 6 (RECEIVE) and 4
+(CLOSED), never 27. The per-vhost storage is only allocated in that
+callback, so `vhd` stays NULL, ESTABLISHED never lists the session,
+EVENT_WAIT_CANCELLED has nobody to mark writeable, and not one
+notification is ever written. Clients connect, subscribe, and hear
+nothing forever.
+
+Allocate the storage on the first ESTABLISHED instead. PROTOCOL_INIT,
+when it does arrive, still allocates it as before.
+
+--- a/src/websocket.c
++++ b/src/websocket.c
+@@ -299,6 +299,14 @@
+ 
+     case LWS_CALLBACK_ESTABLISHED:
+       /* add ourselves to the list of live pss held in the vhd */
++#if LWS_LIBRARY_VERSION_MAJOR >= 3
++      /* libwebsockets 4.4 never delivered LWS_CALLBACK_PROTOCOL_INIT to this
++       * protocol (observed on macOS, 2026-09-03), so the per-vhost storage
++       * was never allocated, no session was ever listed, and no notification
++       * was ever written. Allocate it on first use instead. */
++      if (!vhd)
++        vhd = lws_protocol_vh_priv_zalloc(lws_get_vhost(wsi), lws_get_protocol(wsi), sizeof(struct per_vhost_data));
++#endif
+       if (vhd)
+       {
+ #if LWS_LIBRARY_VERSION_MAJOR >= 3

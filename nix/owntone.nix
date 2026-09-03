@@ -86,7 +86,15 @@ stdenv.mkDerivation (finalAttrs: {
   # access, so without this the engine died on every attempt to reach a
   # speaker while the permission was missing -- before the permission
   # prompt could even be drawn.
-  patches = [ ./owntone-evrtsp-connect-failure.patch ];
+  #
+  # And libwebsockets 4.4 never sends the notify protocol its PROTOCOL_INIT
+  # callback, which is the only place owntone allocated the list of
+  # connected clients: without it not one push notification was ever
+  # written, and the app only ever saw what it fetched at launch.
+  patches = [
+    ./owntone-evrtsp-connect-failure.patch
+    ./owntone-websocket-vhost-init.patch
+  ];
 
   configureFlags = [ "--without-avahi" ];
 
