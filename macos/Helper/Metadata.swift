@@ -33,9 +33,13 @@ import Foundation
 // - OwnTone only starts watching the metadata pipe once playback begins, so
 //   writing when nothing is reading is the normal case and not an error.
 //
-// Volume is deliberately not forwarded. Spotify's volume and the AirPlay
-// output volume are separate controls, and feeding one into the other invites
-// a loop.
+// Volume is forwarded as a pvol item, which OwnTone applies to its master
+// volume, the same control the app's top slider moves. librespot runs with
+// `--volume-ctrl fixed` so the phone's slider no longer attenuates the
+// samples: before this it did, on a 60 dB log curve, and 45% on the phone
+// arrived as -33 dBFS on top of whatever the AirPlay volume was, which the
+// user heard as silence. There is no loop: nothing tells librespot what the
+// engine's volume became, so the phone only ever pushes.
 
 enum MetadataBridge {
     /// OwnTone's PIPE_PICTURE_SIZE_MAX.
@@ -89,6 +93,16 @@ enum MetadataBridge {
             pruneCovers(in: stateDirectory, keeping: nil)
             state = TrackState()
             blob = item(.ssnc, "pfls")
+
+        case "volume_changed":
+            // librespot only emits this while a client is actively
+            // controlling the device, so the initial volume at startup
+            // never reaches here and never overrides the engine's own.
+            guard let volume = Int(environment["VOLUME"] ?? "") else {
+                saveState(state, in: stateDirectory)
+                return
+            }
+            blob = volumeItem(spotifyVolume: volume)
 
         default:
             saveState(state, in: stateDirectory)
@@ -155,6 +169,21 @@ enum MetadataBridge {
         let end = start + frames(durationMs)
         guard end > start else { return Data() }
         return item(.ssnc, "prgr", payload: Data("\(start)/\(position)/\(end)".utf8))
+    }
+
+    /// A pvol item for a Spotify volume (0...65535).
+    ///
+    /// shairport-sync writes "airplay_volume,volume,lowest,highest"; OwnTone
+    /// reads only the first, an AirPlay level in -30...0 dB, and maps it
+    /// linearly onto its 0...100 master volume (pipe.c, parse_volume). The
+    /// rest must be exactly ",0.00,0.00,0.00": anything else is read as
+    /// shairport-sync doing its own software volume, and the item is ignored.
+    private static func volumeItem(spotifyVolume: Int) -> Data {
+        let fraction = Double(min(max(spotifyVolume, 0), 65_535)) / 65_535
+        let airplayLevel = -30.0 + 30.0 * fraction
+        let payload = String(format: "%.2f,0.00,0.00,0.00", airplayLevel)
+        log("forwarding volume \(Int((fraction * 100).rounded()))%")
+        return item(.ssnc, "pvol", payload: Data(payload.utf8))
     }
 
     private static func frames(_ milliseconds: Int) -> Int {

@@ -325,6 +325,11 @@ private func run() throws -> Never {
             "--device", settings.audioPipe,
             "--bitrate", String(settings.bitrate),
             "--disable-audio-cache",
+            // The phone's volume slider does not scale the samples: the
+            // metadata bridge forwards it to the engine's master volume
+            // instead, so there is one volume, not two stacked ones. See
+            // Metadata.swift for what stacking sounded like.
+            "--volume-ctrl", "fixed",
         ]
         // Title, artist, album and cover art. Without this the pipe carries
         // audio and nothing else, and every track plays as "Unknown".
