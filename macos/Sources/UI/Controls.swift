@@ -80,6 +80,12 @@ struct VolumeSlider: View {
     var trailingSymbol: String? = "speaker.wave.3.fill"
     var controlSize: ControlSize = .small
     var isMuted: Bool = false
+    /// The master's level, when this slider is one speaker under it. A speaker
+    /// below the master gets a tick at the master's level and the headroom in
+    /// between filled, so its share of the master is visible on the row; the
+    /// speaker at the master's level draws nothing, because it is the master.
+    /// See `MasterMark`.
+    var markerValue: Double?
     var onEditingChanged: (Bool) -> Void = { _ in }
     var onMuteToggle: (() -> Void)?
 
@@ -100,6 +106,11 @@ struct VolumeSlider: View {
             Slider(value: $value, in: 0...100, onEditingChanged: onEditingChanged)
                 .controlSize(controlSize)
                 .opacity(isMuted ? 0.4 : 1)
+                .overlay {
+                    if let markerValue, !isMuted, markerValue > value {
+                        MasterMark(value: value, marker: markerValue, controlSize: controlSize)
+                    }
+                }
             if let trailingSymbol {
                 Image(systemName: trailingSymbol)
                     .font(.system(size: glyphSize))
@@ -115,6 +126,58 @@ struct VolumeSlider: View {
 
     private var effectiveLeadingSymbol: String {
         leadingSymbol ?? "speaker.fill"
+    }
+}
+
+/// The master's level drawn onto a speaker's slider: a tick where the master
+/// sits and the track between this speaker's knob and that tick filled in the
+/// paler accent. Together they show what a master drag will do to the row: the
+/// knob keeps its share of the distance to the tick.
+///
+/// Drawn only when the speaker is below the master. The loudest speaker is the
+/// master by the engine's definition, so its knob would cover the tick anyway;
+/// and a lone playing speaker never gets one, because then its slider and the
+/// master say the same number twice.
+///
+/// Laid over the native `Slider`, so the knob geometry is a guess at
+/// AppKit's: the knob centre runs from one knob radius in to one radius short
+/// of the far end.
+private struct MasterMark: View {
+    let value: Double
+    let marker: Double
+    let controlSize: ControlSize
+
+    var body: some View {
+        GeometryReader { proxy in
+            let usable = proxy.size.width - 2 * knobRadius
+            let knobX = knobRadius + usable * value / 100
+            let markX = knobRadius + usable * marker / 100
+            let start = knobX + knobRadius
+            let midY = proxy.size.height / 2
+
+            ZStack(alignment: .leading) {
+                if markX > start {
+                    Rectangle()
+                        .fill(Color.accentColor.opacity(0.28))
+                        .frame(width: markX - start, height: trackHeight)
+                        .position(x: (start + markX) / 2, y: midY)
+                }
+                Capsule()
+                    .fill(Color.accentColor.opacity(0.4))
+                    .frame(width: 2, height: 9)
+                    .position(x: markX, y: midY)
+            }
+        }
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
+    }
+
+    private var knobRadius: CGFloat {
+        controlSize == .small || controlSize == .mini ? 7.5 : 10
+    }
+
+    private var trackHeight: CGFloat {
+        controlSize == .small || controlSize == .mini ? 3 : 4
     }
 }
 

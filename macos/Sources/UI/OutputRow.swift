@@ -17,6 +17,9 @@ struct OutputRow: View {
     /// no-op.
     var failure: String?
     @Binding var volume: Double
+    /// The master's level while more than one row plays, for the tick on
+    /// this slider when the speaker sits below it. See `VolumeSlider`.
+    var masterLevel: Double?
     let onToggle: () -> Void
     var onVolumeEditingChanged: (Bool) -> Void = { _ in }
     var onMuteToggle: (() -> Void)?
@@ -62,6 +65,7 @@ struct OutputRow: View {
                 VolumeSlider(
                     value: $volume,
                     isMuted: isMuted,
+                    markerValue: masterLevel,
                     onEditingChanged: onVolumeEditingChanged,
                     onMuteToggle: onMuteToggle
                 )
@@ -181,6 +185,25 @@ private struct PairBadge: View {
             isPair: false
         ),
         volume: .constant(62),
+        onToggle: {}
+    )
+    .frame(width: Metrics.popoverWidth)
+    .padding()
+}
+
+#Preview("Below the master") {
+    OutputRow(
+        group: SpeakerGroup(
+            id: "1",
+            displayName: Fixtures.outputs[0].name,
+            members: [Fixtures.outputs[0]],
+            symbolName: DeviceIdentity(kind: .homePod).symbolName,
+            memberSymbolName: DeviceIdentity(kind: .homePod).unitSymbolName,
+            groupName: nil,
+            isPair: false
+        ),
+        volume: .constant(31),
+        masterLevel: 62,
         onToggle: {}
     )
     .frame(width: Metrics.popoverWidth)

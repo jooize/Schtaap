@@ -164,6 +164,7 @@ struct PopoverView: View {
                     isMuted: store.isGroupMuted(group),
                     failure: store.startFailure(for: group),
                     volume: groupVolume(for: group),
+                    masterLevel: masterLevel,
                     // Animated because selecting a speaker lifts its row to the
                     // top of the list; without it the row appears to teleport.
                     onToggle: { withAnimation(.snappy(duration: 0.2)) { store.toggle(group) } },
@@ -389,6 +390,25 @@ struct PopoverView: View {
                 }
             }
         )
+    }
+
+    /// The master's level for the marks on the speaker rows, nil while fewer
+    /// than two rows play: a lone speaker is the master, and marking it would
+    /// say so twice.
+    ///
+    /// Derived from the outputs rather than read back from the engine, which
+    /// defines master as the loudest selected output: a row being dragged past
+    /// the master moves the marks on the other rows at once, where the engine's
+    /// own number only arrives after the write.
+    private var masterLevel: Double? {
+        let playing = store.speakerGroups.filter(\.anySelected)
+        guard playing.count > 1 else { return nil }
+        let loudest = playing
+            .flatMap(\.members)
+            .filter(\.selected)
+            .map(\.volume)
+            .max()
+        return loudest.map(Double.init)
     }
 
     private func groupVolume(for group: SpeakerGroup) -> Binding<Double> {
