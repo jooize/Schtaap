@@ -91,9 +91,16 @@ stdenv.mkDerivation (finalAttrs: {
   # callback, which is the only place owntone allocated the list of
   # connected clients: without it not one push notification was ever
   # written, and the app only ever saw what it fetched at launch.
+  #
+  # And a speaker's own volume buttons come back over DACP, which the
+  # server only accepts from a trusted peer: with trusted_networks kept to
+  # localhost, every such request was refused. Requests carrying a known
+  # output's Active-Remote from that output's address are accepted now,
+  # so the speaker needs no entry in trusted_networks.
   patches = [
     ./owntone-evrtsp-connect-failure.patch
     ./owntone-websocket-vhost-init.patch
+    ./owntone-dacp-speaker-authorize.patch
   ];
 
   configureFlags = [ "--without-avahi" ];
