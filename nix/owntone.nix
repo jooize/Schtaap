@@ -80,6 +80,14 @@ stdenv.mkDerivation (finalAttrs: {
     zlib
   ];
 
+  # A connect() that fails synchronously left a freed request queued on
+  # the RTSP connection and crashed the player thread on the next cleanup.
+  # macOS produces exactly that failure when it denies local network
+  # access, so without this the engine died on every attempt to reach a
+  # speaker while the permission was missing -- before the permission
+  # prompt could even be drawn.
+  patches = [ ./owntone-evrtsp-connect-failure.patch ];
+
   configureFlags = [ "--without-avahi" ];
 
   enableParallelBuilding = true;

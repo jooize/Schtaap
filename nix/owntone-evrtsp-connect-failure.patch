@@ -1,0 +1,53 @@
+evrtsp: survive a connect() that fails synchronously
+
+evrtsp_make_request() queues the request on the connection before it
+calls evrtsp_connection_connect(). When connect() fails at once, which
+on macOS is what a Local Network denial looks like (EHOSTUNREACH), the
+request stays queued while the caller (airplay.c's sequence_continue)
+frees it. The deferred session_failure() then runs
+evrtsp_connection_free(), which walks the queue into freed memory and
+segfaults on the player thread. Seen five times in one night as
+"device_start: Error sending GET /info to '...'" followed by SIGSEGV in
+evrtsp_connection_free.
+
+Take the request back off the queue on a failed connect, and say why
+the connect failed while at it -- the error was otherwise silent.
+
+Upstream (owntone-server master, checked 2026-09-03) has the same code.
+
+--- a/src/evrtsp/rtsp.c
++++ b/src/evrtsp/rtsp.c
+@@ -1483,8 +1483,22 @@
+ 	TAILQ_INSERT_TAIL(&evcon->requests, req, next);
+ 
+ 	/* If the connection object is not connected; make it so */
+-	if (!evrtsp_connected(evcon))
+-		return (evrtsp_connection_connect(evcon));
++	if (!evrtsp_connected(evcon)) {
++		int ret = evrtsp_connection_connect(evcon);
++		if (ret < 0) {
++			/*
++			 * connect() failed synchronously (e.g. EHOSTUNREACH,
++			 * which is what macOS returns when local network
++			 * access is denied). Hand the request back to the
++			 * caller: it frees it on error, and leaving it queued
++			 * here made evrtsp_connection_free() walk a freed
++			 * request later and crash.
++			 */
++			TAILQ_REMOVE(&evcon->requests, req, next);
++			req->evcon = NULL;
++		}
++		return (ret);
++	}
+ 
+ 	/*
+ 	 * If it's connected already and we are the first in the queue,
+@@ -1810,6 +1824,8 @@
+ 		}
+ #else
+ 		if (errno != EINPROGRESS) {
++			event_warnx("%s: connect to \"%s:%d\" failed: %s",
++			    __func__, address, port, strerror(errno));
+ 			goto out;
+ 		}
+ #endif
