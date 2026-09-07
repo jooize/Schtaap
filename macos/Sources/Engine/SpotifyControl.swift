@@ -80,7 +80,17 @@ struct SpotifyControl: Sendable {
         // Info, not debug: a handful of lines per session, and the only
         // record of what Spotify was told when the phone disagrees.
         Self.log.info("\(command, privacy: .public) -> \(reply, privacy: .public)")
+        return try Self.detail(of: reply)
+    }
 
+    /// The same exchange for a caller with no run loop to await on: the
+    /// event bridge, which is a process per event. Blocks up to the socket
+    /// timeout.
+    func exchangeBlocking(_ command: String) throws -> String {
+        try Self.detail(of: Self.exchange(command, at: socket.path))
+    }
+
+    private static func detail(of reply: String) throws -> String {
         if reply == "ok" { return "" }
         if reply.hasPrefix("ok ") { return String(reply.dropFirst(3)) }
         if reply.hasPrefix("error ") { throw Failure.refused(String(reply.dropFirst(6))) }

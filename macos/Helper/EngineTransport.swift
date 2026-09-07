@@ -1,0 +1,132 @@
+import Foundation
+
+/// Keeps the engine's transport in step with Spotify's, from the one place
+/// that hears every change: the event bridge librespot runs.
+///
+/// Left alone, the engine learns of a pause by running dry. librespot stops
+/// writing, the engine streams silence through its read deficit, then
+/// suspends and flushes the speakers: about two seconds after the pause,
+/// wherever it came from. And when playback resumes, librespot carries on
+/// from its own position, which is ahead of the last sound the speakers
+/// made by everything that was buffered between them, so those seconds are
+/// never heard.
+///
+/// So on `paused` this pauses the engine at once, which flushes the
+/// speakers, and seeks Spotify back to where the sound actually stopped.
+/// On `playing` it starts the engine again, and librespot is already
+/// writing from that position. The phone's slider shows the same place.
+/// The app's own pause and play only ever tell Spotify, and come through
+/// here like the phone's, so there is exactly one path.
+///
+/// The order on a pause matters: librespot closes its end of the pipe
+/// before it reports `paused`, and the engine's pause closes and reopens
+/// its end. With both ends closed for a moment the pipe's leftover bytes
+/// go with it, and there is no writer for the close to break.
+struct EngineTransport {
+    /// The engine's JSON API. Localhost is in its trusted networks.
+    let engine: URL
+    /// librespot's control socket, for the seek.
+    let socket: URL
+
+    /// How far the speakers trail the position the engine reports: owntone's
+    /// `start_buffer_ms`, 2250 by default, which is the RAOP sync delay plus
+    /// the receiver's own latency. Some receivers use this much whatever
+    /// they are told, so it is not worth configuring down.
+    static let outputBufferMs = 2250
+
+    private static let timeout: TimeInterval = 1.5
+
+    /// The engine's player state and position, from `GET /api/player`.
+    private struct PlayerState: Decodable {
+        let state: String
+        let itemProgressMs: Int
+
+        private enum CodingKeys: String, CodingKey {
+            case state
+            case itemProgressMs = "item_progress_ms"
+        }
+    }
+
+    /// Spotify paused. Pause the engine, then put Spotify where the sound is.
+    func paused() {
+        guard let before = player() else { return }
+        guard before.state == "play" else {
+            log("engine is \(before.state), nothing to pause")
+            return
+        }
+        guard put("api/player/pause") else { return }
+
+        // Read the position after the pause: the engine may have moved it.
+        let fed = player()?.itemProgressMs ?? before.itemProgressMs
+        let heard = max(fed - Self.outputBufferMs, 0)
+        do {
+            let control = SpotifyControl(socket: socket)
+            _ = try control.exchangeBlocking("seek \(heard)")
+            log("paused the engine at \(fed) ms, Spotify back to \(heard) ms")
+        } catch {
+            log("paused the engine at \(fed) ms, but could not seek Spotify: \(error.localizedDescription)")
+        }
+    }
+
+    /// Spotify plays. Start the engine if it was waiting.
+    func playing() {
+        guard let state = player() else { return }
+        guard state.state == "pause" else { return }
+        if put("api/player/play") {
+            log("resumed the engine")
+        }
+    }
+
+    // MARK: - Engine API
+
+    private func player() -> PlayerState? {
+        var request = URLRequest(url: engine.appending(path: "api/player"))
+        request.httpMethod = "GET"
+        guard let data = perform(request) else { return nil }
+        do {
+            return try JSONDecoder().decode(PlayerState.self, from: data)
+        } catch {
+            log("could not read the engine's player state: \(error.localizedDescription)")
+            return nil
+        }
+    }
+
+    private func put(_ path: String) -> Bool {
+        var request = URLRequest(url: engine.appending(path: path))
+        request.httpMethod = "PUT"
+        return perform(request) != nil
+    }
+
+    /// Synchronous on purpose: this program handles one event and exits,
+    /// and the next event waits for it. See `MetadataBridge.fetchCover`.
+    private func perform(_ request: URLRequest) -> Data? {
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.timeoutIntervalForRequest = Self.timeout
+        configuration.timeoutIntervalForResource = Self.timeout
+        let session = URLSession(configuration: configuration)
+        defer { session.finishTasksAndInvalidate() }
+
+        let result = Box<Data?>(nil)
+        let semaphore = DispatchSemaphore(value: 0)
+        let task = session.dataTask(with: request) { data, response, error in
+            if let error {
+                log("\(request.httpMethod ?? "") \(request.url?.path ?? ""): \(error.localizedDescription)")
+            } else if let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) {
+                result.value = data ?? Data()
+            } else if let http = response as? HTTPURLResponse {
+                log("\(request.httpMethod ?? "") \(request.url?.path ?? ""): HTTP \(http.statusCode)")
+            }
+            semaphore.signal()
+        }
+        task.resume()
+        if semaphore.wait(timeout: .now() + Self.timeout + 0.5) == .timedOut {
+            task.cancel()
+            log("\(request.httpMethod ?? "") \(request.url?.path ?? ""): no answer")
+        }
+        return result.value
+    }
+
+    private func log(_ message: String) {
+        FileHandle.standardError.write(Data("transport: \(message)\n".utf8))
+    }
+}

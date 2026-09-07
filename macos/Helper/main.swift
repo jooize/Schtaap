@@ -139,6 +139,11 @@ private struct Layout {
     /// side; see `EngineInstallation.controlSocket`.
     var controlSocket: URL { support.appending(path: "librespot.sock") }
 
+    /// The engine's JSON API, on the port the app writes into owntone.conf
+    /// (`EngineInstallation.owntoneConfig`) and `EngineEndpoint.default`
+    /// reads. Localhost is in the engine's trusted networks.
+    var engineAPI: URL { URL(string: "http://localhost:3689/")! }
+
     /// Where the metadata bridge remembers the current track between the
     /// events it is run for, and caches the cover it fetched.
     var metadataState: URL {
@@ -353,7 +358,8 @@ private func run() throws -> Never {
         let settings = try layout.settings()
         MetadataBridge.handleEvent(
             metadataPipe: URL(fileURLWithPath: settings.audioPipe + ".metadata"),
-            stateDirectory: layout.metadataState
+            stateDirectory: layout.metadataState,
+            transport: EngineTransport(engine: layout.engineAPI, socket: layout.controlSocket)
         )
         exit(EXIT_SUCCESS)
 

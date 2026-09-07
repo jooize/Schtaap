@@ -44,13 +44,10 @@ final class EngineStore {
     /// before it, and its readings are not yet about the new position.
     private var seekSettlingUntil: Date?
 
-    /// How far the engine's reading may sit from the card's own clock before
-    /// the card follows it. The engine reports the position it is feeding
-    /// the speakers, which trails the phone by the pipe and the engine's
-    /// read-ahead, and at a pause rewinds by what the speakers had not yet
-    /// played: about two seconds at most, with the read-ahead patched down.
-    /// A seek or a track change is far more than this.
-    private static let progressTolerance = 2_500
+    /// How far a reading may be from a seek's target, plus what has played
+    /// since, and still count as the engine having caught up with it: the
+    /// pipe and the engine's read-ahead between them, with margin.
+    private static let seekSettleTolerance = 2_500
 
     /// What the user just asked Spotify to do, shown until the engine agrees
     /// or a few seconds pass. A pause takes a second or two to reach the
@@ -321,28 +318,28 @@ final class EngineStore {
         return min(progressAnchor.ms + max(elapsed, 0), length)
     }
 
-    /// Follows the engine's reading only when it disagrees with the card's
-    /// own clock by more than the buffers explain, so a seek that has not
-    /// reached the speakers yet, or a pause that rewound by the AirPlay
-    /// buffer, does not drag the knob back and forth.
+    /// The engine's reading is the card's clock, with one exception: for a
+    /// few seconds after a seek the engine is still playing out the audio
+    /// from before it, and its readings describe that, not the target. Those
+    /// are skipped until one lands near the target; a track change ends the
+    /// wait at once.
     private func adoptProgress(from status: PlayerStatus, previousItem: Int?) {
         let now = Date.now
         let reading = status.itemProgressMs
         let sameItem = progressAnchor != nil && status.itemId == previousItem
-        let agrees = sameItem && abs(reading - progressMs(at: now)) <= Self.progressTolerance
-        let settling = seekSettlingUntil.map { now < $0 } ?? false
-
-        if agrees || (sameItem && settling && !agrees) {
-            if agrees { seekSettlingUntil = nil }
+        if sameItem, let until = seekSettlingUntil, now < until,
+           abs(reading - progressMs(at: now)) > Self.seekSettleTolerance {
             return
         }
         progressAnchor = (reading, now)
         seekSettlingUntil = nil
     }
 
-    /// Pauses Spotify itself. librespot stops writing, the engine runs dry
-    /// and reports `pause`, and the phone shows the track paused. Not a mute:
-    /// the track stops advancing. The popover's speaker icon stays a mute.
+    /// Pauses Spotify itself. The event bridge then pauses the engine, which
+    /// flushes the speakers, and seeks Spotify back to where the sound
+    /// stopped (`EngineTransport` in the helper), so the phone, the engine
+    /// and the speakers agree. Not a mute: the track stops advancing. The
+    /// popover's speaker icon stays a mute.
     func pausePlayback() {
         expect(.pause)
         tellSpotify("pause") { try await $0.pause() }

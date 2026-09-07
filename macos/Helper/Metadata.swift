@@ -60,11 +60,27 @@ enum MetadataBridge {
     /// Handles the event in the environment, and returns whether anything was
     /// written. Never throws: a metadata failure is not a reason to disturb
     /// playback, so everything here degrades to a line on stderr.
-    static func handleEvent(metadataPipe: URL, stateDirectory: URL) {
+    static func handleEvent(metadataPipe: URL, stateDirectory: URL, transport: EngineTransport) {
         let environment = ProcessInfo.processInfo.environment
         let event = environment["PLAYER_EVENT"] ?? ""
 
         ensurePipe(metadataPipe)
+
+        // Transport first, before any metadata: a pause should silence the
+        // speakers now, not after a pipe write. The seek it ends with makes
+        // librespot report the corrected position in its own event, so the
+        // progress item written below for this event is the stale one and
+        // is skipped. See EngineTransport for the whole arrangement.
+        switch event {
+        case "paused":
+            transport.paused()
+            saveState(loadState(in: stateDirectory), in: stateDirectory)
+            return
+        case "playing":
+            transport.playing()
+        default:
+            break
+        }
 
         var state = loadState(in: stateDirectory)
         let blob: Data
@@ -473,7 +489,7 @@ enum MetadataBridge {
 
 /// One value behind a lock, so a completion handler can hand a result back to
 /// the thread waiting on it under strict concurrency.
-private final class Box<Value>: @unchecked Sendable {
+final class Box<Value>: @unchecked Sendable {
     private let lock = NSLock()
     private var stored: Value
 
