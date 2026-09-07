@@ -123,6 +123,16 @@ final class NowPlayingCenter {
         isHolding = false
     }
 
+    /// MediaPlayer calls the artwork request handler on its own queue, so the
+    /// closure must not be main-actor isolated: formed inside a main-actor
+    /// method it would be, and the runtime traps on the first call (seen as
+    /// EXC_BREAKPOINT in `-[MPMediaItemArtwork jpegDataWithSize:]`). Built
+    /// here, outside the actor, from the bytes rather than an `NSImage`, so
+    /// nothing captured needs to be thread-confined.
+    nonisolated private static func artworkPiece(from data: Data, size: CGSize) -> MPMediaItemArtwork {
+        MPMediaItemArtwork(boundsSize: size) { _ in NSImage(data: data) ?? NSImage() }
+    }
+
     /// Fetches the cover once per track and folds it into the published info
     /// when it arrives. Artwork is never worth an error: a failed fetch leaves
     /// the text up and the picture blank.
@@ -138,7 +148,7 @@ final class NowPlayingCenter {
                 !Task.isCancelled,
                 let image = NSImage(data: data)
             else { return }
-            let piece = MPMediaItemArtwork(boundsSize: image.size) { _ in image }
+            let piece = Self.artworkPiece(from: data, size: image.size)
             guard let self, self.artworkPath == track.artworkUrl else { return }
             self.artwork = piece
             if self.isHolding, var info = self.center.nowPlayingInfo {

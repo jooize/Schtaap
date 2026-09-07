@@ -1,0 +1,32 @@
+airplay: drop transport commands from the speaker's event channel
+
+A HomePod's touch surface sends play, pause, next and previous over
+the AirPlay event channel as sendMediaRemoteCommand, and owntone
+applied them to its player. With a pipe as the source that is
+destructive: pause closes and reopens the pipe, the process writing
+it (librespot) gets EPIPE and exits, and play then restarts the item
+at position 0. Next and previous mean nothing inside a pipe.
+
+Drop them, at INFO, and leave it to the client driving this server to
+decide what the speaker's controls should do.
+
+--- a/src/outputs/airplay_events.c
++++ b/src/outputs/airplay_events.c
+@@ -333,6 +333,17 @@
+ {
+   struct player_status status;
+ 
++  // The player's source is a pipe fed by another process. Pausing closes and
++  // reopens the pipe, which the writer sees as EPIPE and dies of, and playing
++  // again restarts the item from position 0. Next and previous mean nothing
++  // inside a pipe. So the speaker's own transport controls are dropped here,
++  // and the client driving this server decides what they should do.
++  if (event != AIRPLAY_EVENT_UNKNOWN)
++    {
++      DPRINTF(E_INFO, L_AIRPLAY, "Dropping media remote command from speaker (event %d)\n", event);
++      return;
++    }
++
+   player_get_status(&status);
+ 
+   switch (event)

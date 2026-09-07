@@ -97,10 +97,16 @@ stdenv.mkDerivation (finalAttrs: {
   # localhost, every such request was refused. Requests carrying a known
   # output's Active-Remote from that output's address are accepted now,
   # so the speaker needs no entry in trusted_networks.
+  #
+  # And a HomePod's touch surface sends play/pause/next/previous over the
+  # AirPlay event channel, which owntone applied to its player: a pause
+  # closes and reopens the pipe, librespot dies of EPIPE, and play restarts
+  # the item at 0. Those commands are dropped; the app decides what they do.
   patches = [
     ./owntone-evrtsp-connect-failure.patch
     ./owntone-websocket-vhost-init.patch
     ./owntone-dacp-speaker-authorize.patch
+    ./owntone-airplay-events-drop-transport.patch
   ];
 
   configureFlags = [ "--without-avahi" ];

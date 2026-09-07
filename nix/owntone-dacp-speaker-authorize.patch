@@ -1,152 +1,90 @@
 dacp: authorize a speaker's own requests without trusted_networks
 
 An AirPlay 2 receiver reports its physical volume buttons back to the
-sender over DACP (/ctrl-int/1/setproperty?dmcp.device-volume=...),
-identifying itself with the Active-Remote the sender put in the RTSP
-session. dacp_request_authorize() only accepted a trusted peer or a
-DAAP session, so with `trusted_networks = { "localhost" }` every such
+sender over DACP (/ctrl-int/1/setproperty?dmcp.device-volume=...).
+dacp_request_authorize() only accepted a trusted peer or a DAAP
+session, so with `trusted_networks = { "localhost" }` every such
 request was refused with 403 and the speaker's buttons never reached
 the player. The workaround, listing the speaker's address in
 trusted_networks, also opens the JSON API and DAAP to that address,
 and goes stale whenever the address changes.
 
-Accept a DACP request when its Active-Remote names a known output and
-the request comes from that output's address. The player already
-knows both, so nothing has to be configured and an address change is
-picked up with the next mDNS resolve. The exposure is the same as
-trusting the address, minus everything that is not DACP.
+Accept a DACP request when it comes from a known output's address.
+The player already knows every output's address, so nothing has to be
+configured and an address change is picked up with the next mDNS
+resolve. The exposure is the same as trusting the address, minus
+everything that is not DACP.
 
---- a/src/player.h
-+++ b/src/player.h
-@@ -106,6 +106,9 @@
- player_speaker_get_byactiveremote(struct player_speaker_info *spk, uint32_t active_remote);
- 
- int
-+player_speaker_get_byactiveremote_address(struct player_speaker_info *spk, uint32_t active_remote, const char *address);
-+
-+int
- player_speaker_get_byaddress(struct player_speaker_info *spk, const char *address);
- 
- int
---- a/src/player.c
-+++ b/src/player.c
-@@ -2632,9 +2632,44 @@
-   // No output device found with matching id
-   *retval = -1;
-   return COMMAND_END;
-+}
-+
-+static bool
-+device_has_address(struct output_device *device, const char *address)
-+{
-+  if (device->v4_address && strcmp(address, device->v4_address) == 0)
-+    return true;
-+  if (device->v6_address && strcmp(address, device->v6_address) == 0)
-+    return true;
-+
-+  return false;
- }
- 
-+// Like speaker_get_byactiveremote(), but only matches a speaker that also has
-+// the given address, so that a request carrying a speaker's Active-Remote can
-+// be checked to actually come from that speaker
- static enum command_state
-+speaker_get_byactiveremote_address(void *arg, int *retval)
-+{
-+  struct speaker_get_param *spk_param = arg;
-+  struct output_device *device;
-+  int i;
-+
-+  for (device = outputs_list(), i = 0; device; device = device->next, i++)
-+    {
-+      if ((uint32_t)device->id == spk_param->active_remote && device_has_address(device, spk_param->address))
-+	{
-+	  device_to_speaker_info(spk_param->spk_info, device, i);
-+	  *retval = 0;
-+	  return COMMAND_END;
-+	}
-+    }
-+
-+  *retval = -1;
-+  return COMMAND_END;
-+}
-+
-+static enum command_state
- speaker_get_byaddress(void *arg, int *retval)
- {
-   struct speaker_get_param *spk_param = arg;
-@@ -3552,6 +3587,20 @@
-   param.spk_info = spk;
- 
-   ret = commands_exec_sync(cmdbase, speaker_get_byactiveremote, NULL, &param);
-+  return ret;
-+}
-+
-+int
-+player_speaker_get_byactiveremote_address(struct player_speaker_info *spk, uint32_t active_remote, const char *address)
-+{
-+  struct speaker_get_param param;
-+  int ret;
-+
-+  param.active_remote = active_remote;
-+  param.address = address;
-+  param.spk_info = spk;
-+
-+  ret = commands_exec_sync(cmdbase, speaker_get_byactiveremote_address, NULL, &param);
-   return ret;
- }
- 
+A HomePod has also been seen sending its volume with an Active-Remote
+that belongs to no session of ours (2037839826 for a device whose id
+gives 3310982810), which made speaker_get() fail even when the
+request was authorized. When the Active-Remote names no speaker, the
+speaker at the request's own address is used.
+
 --- a/src/httpd_dacp.c
 +++ b/src/httpd_dacp.c
-@@ -591,6 +591,41 @@
-   ret = player_playback_start();
-   if (ret < 0)
-     DPRINTF(E_LOG, L_DACP, "Player returned an error for start after seek\n");
-+}
+@@ -548,13 +548,21 @@
+     }
+ 
+   ret = player_speaker_get_byactiveremote(speaker_info, active_remote);
+-  if (ret < 0)
++  if (ret == 0)
++    return 0;
 +
-+// A speaker we stream to reports its own volume buttons over DACP, identifying
-+// itself with the Active-Remote we gave it in the RTSP session. Accept such a
-+// request when it comes from that speaker's address, so the speaker needs no
-+// entry in trusted_networks: that would also open the JSON API and DAAP to
++  // A HomePod has been seen reporting its volume buttons with an Active-Remote
++  // that belongs to no session of ours. The request still comes from the
++  // speaker's own address, and that is the speaker it is about.
++  ret = (hreq->peer_address) ? player_speaker_get_byaddress(speaker_info, hreq->peer_address) : -1;
++  if (ret == 0)
+     {
+-      DPRINTF(E_LOG, L_DACP, "'%s' request from '%s' has unknown Active-Remote: '%s'\n", req_name, hreq->peer_address, remote);
+-      return -1;
++      DPRINTF(E_DBG, L_DACP, "'%s' request from '%s' has Active-Remote '%s', which is no session; using the speaker at that address, '%s'\n", req_name, hreq->peer_address, remote, speaker_info->name);
++      return 0;
+     }
+ 
+-  return 0;
++  DPRINTF(E_LOG, L_DACP, "'%s' request from '%s' has unknown Active-Remote: '%s'\n", req_name, hreq->peer_address, remote);
++  return -1;
+ }
+ 
+ static int
+@@ -593,6 +601,28 @@
+     DPRINTF(E_LOG, L_DACP, "Player returned an error for start after seek\n");
+ }
+ 
++// A speaker we stream to reports its own volume buttons over DACP. Accept such
++// a request when it comes from a known speaker's address, so the speaker needs
++// no entry in trusted_networks: that would also open the JSON API and DAAP to
 +// it, and go stale when its address changes.
 +static bool
 +dacp_request_is_from_speaker(struct httpd_request *hreq)
 +{
 +  struct player_speaker_info speaker_info;
-+  const char *remote;
-+  uint32_t active_remote;
 +  int ret;
 +
 +  if (!hreq->peer_address)
 +    return false;
 +
-+  remote = httpd_header_find(hreq->in_headers, "Active-Remote");
-+  if (!remote || (safe_atou32(remote, &active_remote) < 0))
-+    {
-+      DPRINTF(E_LOG, L_DACP, "Request '%s' from '%s' has no usable Active-Remote: '%s'\n", hreq->uri, hreq->peer_address, remote);
-+      return false;
-+    }
-+
-+  ret = player_speaker_get_byactiveremote_address(&speaker_info, active_remote, hreq->peer_address);
++  ret = player_speaker_get_byaddress(&speaker_info, hreq->peer_address);
 +  if (ret < 0)
-+    {
-+      DPRINTF(E_LOG, L_DACP, "Request '%s' from '%s' has Active-Remote %" PRIu32 ", which is no speaker at that address\n", hreq->uri, hreq->peer_address, active_remote);
-+      return false;
-+    }
++    return false;
 +
 +  DPRINTF(E_DBG, L_DACP, "Request '%s' is from speaker '%s' at '%s'\n", hreq->uri, speaker_info.name, hreq->peer_address);
 +
 +  return true;
- }
- 
++}
++
  static int
-@@ -603,6 +638,9 @@
-   if (httpd_request_is_trusted(hreq))
-     return 0;
+ dacp_request_authorize(struct httpd_request *hreq)
+ {
+@@ -601,6 +631,9 @@
+   int ret;
  
-+  if (dacp_request_is_from_speaker(hreq))
+   if (httpd_request_is_trusted(hreq))
 +    return 0;
 +
++  if (dacp_request_is_from_speaker(hreq))
+     return 0;
+ 
    param = httpd_query_value_find(hreq->query, "session-id");
-   if (!param)
-     {
