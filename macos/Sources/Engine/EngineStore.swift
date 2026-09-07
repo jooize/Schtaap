@@ -88,6 +88,11 @@ final class EngineStore {
 
     let client: EngineClient
 
+    /// The other direction: what the app tells Spotify. Nil under fixtures,
+    /// which must never reach a socket.
+    private let spotify: SpotifyControl?
+    private var spotifyVolumeSync: Task<Void, Never>?
+
     /// Bonjour lookup for device hardware, which the engine's API omits.
     let directory = AirPlayDirectory()
 
@@ -115,18 +120,12 @@ final class EngineStore {
         // the speakers already playing become the intent rather than an
         // empty set that would treat them as nobody's.
         self.intended = usesFixtures ? nil : IntendedOutputs.load(from: Self.intendedFile)
+        self.spotify = usesFixtures ? nil : SpotifyControl(socket: EngineInstallation().controlSocket)
 
-        // A media key pauses by muting and plays by unmuting: the only
-        // transport this app can offer without stalling the engine. See
-        // NowPlayingCenter for why that is the deal.
-        nowPlayingCenter.onPause = { [weak self] in
-            guard let self, !self.isMasterMuted else { return }
-            self.toggleMasterMute()
-        }
-        nowPlayingCenter.onPlay = { [weak self] in
-            guard let self, self.isMasterMuted else { return }
-            self.toggleMasterMute()
-        }
+        // A media key pauses and plays Spotify itself, through librespot's
+        // control socket, so the phone shows the same state.
+        nowPlayingCenter.onPause = { [weak self] in self?.pausePlayback() }
+        nowPlayingCenter.onPlay = { [weak self] in self?.resumePlayback() }
     }
 
     private static var intendedFile: URL {
@@ -168,6 +167,8 @@ final class EngineStore {
         isAwaitingFirstContact = false
         for task in volumeWrites.values { task.cancel() }
         volumeWrites.removeAll()
+        spotifyVolumeSync?.cancel()
+        spotifyVolumeSync = nil
         for task in rejoinTasks.values { task.cancel() }
         rejoinTasks.removeAll()
         rejoining.removeAll()
@@ -183,12 +184,12 @@ final class EngineStore {
             connection = .offline(reason)
         case .events(let events):
             // A tap on a speaker's top means the same as a media key here:
-            // mute and unmute. See NowPlayingCenter for why not a real pause.
-            if events.contains(.remotePause), !isMasterMuted {
-                toggleMasterMute()
+            // Spotify pauses and plays, and the phone shows it.
+            if events.contains(.remotePause) {
+                pausePlayback()
             }
-            if events.contains(.remotePlay), isMasterMuted {
-                toggleMasterMute()
+            if events.contains(.remotePlay) {
+                resumePlayback()
             }
             if events.contains(.outputs) || events.contains(.volume) {
                 await refreshOutputs()
@@ -242,6 +243,7 @@ final class EngineStore {
             player = status
             if !isAdjustingMaster {
                 masterVolume = Double(status.volume)
+                syncSpotifyVolume(status.volume)
             }
             publishNowPlaying()
         } catch {
@@ -268,9 +270,53 @@ final class EngineStore {
             guard !path.isEmpty else { return nil }
             return client.artworkURL(for: path, maxPixels: 600)
         }
-        nowPlayingCenter.publish(
-            track: nowPlaying, player: player, artworkURL: artwork, isMuted: isMasterMuted
-        )
+        nowPlayingCenter.publish(track: nowPlaying, player: player, artworkURL: artwork)
+    }
+
+    // MARK: - Spotify
+
+    /// Pauses Spotify itself. librespot stops writing, the engine runs dry
+    /// and reports `pause`, and the phone shows the track paused. Not a mute:
+    /// the track stops advancing. The popover's speaker icon stays a mute.
+    func pausePlayback() {
+        guard let spotify else { return }
+        Task {
+            do { try await spotify.pause() } catch { Self.log.error("pause: \(error.localizedDescription, privacy: .public)") }
+        }
+    }
+
+    func resumePlayback() {
+        guard let spotify else { return }
+        Task {
+            do { try await spotify.play() } catch { Self.log.error("play: \(error.localizedDescription, privacy: .public)") }
+        }
+    }
+
+    /// Makes the phone's slider follow the engine's master, wherever the
+    /// master's change came from: this slider, a HomePod's buttons, a mute.
+    ///
+    /// Skipped when Spotify already sits on a level that maps to the same
+    /// percent. That is what stops the echo: a level set from the phone
+    /// comes in through the metadata bridge as a percent, which maps back
+    /// to a slightly different level, and pushing that would nudge the
+    /// phone's slider by a hair and emit another volume event. Sequential
+    /// on purpose, so a burst of presses reaches Spotify in order.
+    private func syncSpotifyVolume(_ percent: Int) {
+        guard let spotify else { return }
+        let previous = spotifyVolumeSync
+        spotifyVolumeSync = Task {
+            await previous?.value
+            guard !Task.isCancelled else { return }
+            do {
+                let current = try await spotify.volume()
+                guard SpotifyControl.percent(spotifyLevel: current) != percent else { return }
+                try await spotify.setVolume(SpotifyControl.spotifyLevel(percent: percent))
+            } catch {
+                // librespot down or unpatched: the phone keeps its own level,
+                // which is what it did before there was a socket.
+                Self.log.info("volume sync: \(error.localizedDescription, privacy: .public)")
+            }
+        }
     }
 
     // MARK: - Writes
@@ -435,8 +481,6 @@ final class EngineStore {
             isMasterMuted = true
             setMasterVolume(0)
         }
-        // The system's slot shows this as paused or playing.
-        publishNowPlaying()
     }
 
     func toggleGroupMute(_ group: SpeakerGroup) {

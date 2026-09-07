@@ -19,7 +19,7 @@
         owntone = pkgs.callPackage ./nix/owntone.nix {
           ffmpeg = self.packages.${system}.ffmpeg-audio;
         };
-        librespot = pkgs.librespot;
+        librespot = pkgs.callPackage ./nix/librespot.nix { };
 
         # Not in nixpkgs. Runs as root via sudo (vmnet requires it), so it
         # must live at a root-only-writable path -- the Nix store qualifies.

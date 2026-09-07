@@ -2,12 +2,11 @@ import SwiftUI
 
 /// What is currently coming out of the speakers.
 ///
-/// Read-only on purpose. In this architecture librespot streams into a fifo
-/// that the engine drains, so pausing the engine does not pause Spotify -- it
-/// just stalls librespot's writes and resumes into stale audio. Until the
-/// pause-semantics spike settles that (candidate: pause == deselect every
-/// output, so the engine keeps draining but sends nowhere), there is no
-/// transport control here. You drive playback from the phone.
+/// Read-only for now. Transport goes through the system's Now Playing slot
+/// and the media keys (`NowPlayingCenter`), which pause and resume Spotify
+/// itself over librespot's control socket. Buttons here would call the
+/// same `EngineStore.pausePlayback` and `resumePlayback`; nothing stops
+/// them but the design.
 struct NowPlayingCard: View {
     let track: NowPlaying
     let artworkURL: URL?

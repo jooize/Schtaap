@@ -1,0 +1,269 @@
+diff -ruN a/src/control.rs b/src/control.rs
+--- a/src/control.rs
++++ b/src/control.rs
+@@ -0,0 +1,168 @@
++//! A Unix socket on which a local supervisor drives playback.
++//!
++//! librespot is a Spotify Connect receiver: the phone tells it what to do,
++//! and it reports back with `--onevent`. Nothing local can tell it anything.
++//! An app that fronts this process with its own transport controls and
++//! volume slider needs that direction too, and it needs the change to go
++//! through Spirc, so the phone sees it as well.
++//!
++//! One command per line, ASCII, answered with one line: `ok`, `ok <detail>`
++//! or `error <reason>`. Several commands may follow each other on one
++//! connection.
++//!
++//!   play, pause, play_pause, next, prev
++//!   volume <0..65535>       the same scale as the VOLUME event variable
++//!   status                  answers `ok volume <0..65535>`
++//!
++//! The socket file is created mode 0600. Whoever can open it can control
++//! playback on the account that is connected, which is exactly the trust
++//! the owning user already has over this process.
++
++use librespot::{connect::Spirc, playback::mixer::Mixer};
++use log::{debug, warn};
++use std::{
++    fs, io,
++    os::unix::fs::{FileTypeExt, PermissionsExt},
++    path::Path,
++    time::Duration,
++};
++use tokio::{
++    io::{AsyncBufReadExt, AsyncWriteExt, BufReader},
++    net::{UnixListener, UnixStream},
++    sync::{mpsc, oneshot},
++};
++
++pub enum Command {
++    Play,
++    Pause,
++    PlayPause,
++    Next,
++    Prev,
++    SetVolume(u16),
++    Status,
++}
++
++/// One parsed command and where its answer goes. Handled on the main task,
++/// which is where the current Spirc lives.
++pub struct Request {
++    pub command: Command,
++    pub reply: oneshot::Sender<Result<String, String>>,
++}
++
++impl Command {
++    fn parse(line: &str) -> Result<Command, String> {
++        let mut words = line.split_whitespace();
++        let name = words.next().ok_or_else(|| "empty command".to_string())?;
++        let argument = words.next();
++        if words.next().is_some() {
++            return Err(format!("too many arguments for '{name}'"));
++        }
++        match (name, argument) {
++            ("play", None) => Ok(Command::Play),
++            ("pause", None) => Ok(Command::Pause),
++            ("play_pause", None) => Ok(Command::PlayPause),
++            ("next", None) => Ok(Command::Next),
++            ("prev", None) => Ok(Command::Prev),
++            ("status", None) => Ok(Command::Status),
++            ("volume", Some(value)) => value
++                .parse::<u16>()
++                .map(Command::SetVolume)
++                .map_err(|_| format!("volume must be 0..65535, not '{value}'")),
++            ("volume", None) => Err("volume needs a value".to_string()),
++            ("play" | "pause" | "play_pause" | "next" | "prev" | "status", Some(_)) => {
++                Err(format!("'{name}' takes no argument"))
++            }
++            _ => Err(format!("unknown command '{name}'")),
++        }
++    }
++
++    /// Applies the command. `spirc` is None between sessions, when nothing
++    /// but `status` can be answered.
++    pub fn apply(&self, spirc: Option<&Spirc>, mixer: &dyn Mixer) -> Result<String, String> {
++        if let Command::Status = self {
++            return Ok(format!("volume {}", mixer.volume()));
++        }
++        let spirc = spirc.ok_or_else(|| "not connected to Spotify".to_string())?;
++        let sent = match self {
++            Command::Play => spirc.play(),
++            Command::Pause => spirc.pause(),
++            Command::PlayPause => spirc.play_pause(),
++            Command::Next => spirc.next(),
++            Command::Prev => spirc.prev(),
++            Command::SetVolume(volume) => spirc.set_volume(*volume),
++            Command::Status => unreachable!(),
++        };
++        sent.map(|()| String::new()).map_err(|e| e.to_string())
++    }
++}
++
++/// Binds `path` and serves it for the life of the process. A socket file a
++/// previous run left behind is replaced; anything else in the way is an
++/// error.
++pub fn listen(path: &Path, requests: mpsc::UnboundedSender<Request>) -> io::Result<()> {
++    match fs::symlink_metadata(path) {
++        Ok(meta) if meta.file_type().is_socket() => fs::remove_file(path)?,
++        Ok(_) => {
++            return Err(io::Error::new(
++                io::ErrorKind::AlreadyExists,
++                "exists and is not a socket",
++            ));
++        }
++        Err(e) if e.kind() == io::ErrorKind::NotFound => {}
++        Err(e) => return Err(e),
++    }
++
++    let listener = UnixListener::bind(path)?;
++    fs::set_permissions(path, fs::Permissions::from_mode(0o600))?;
++
++    tokio::spawn(async move {
++        loop {
++            match listener.accept().await {
++                Ok((stream, _)) => {
++                    tokio::spawn(serve(stream, requests.clone()));
++                }
++                Err(e) => {
++                    warn!("control socket: accept failed: {e}");
++                    tokio::time::sleep(Duration::from_millis(100)).await;
++                }
++            }
++        }
++    });
++    Ok(())
++}
++
++async fn serve(stream: UnixStream, requests: mpsc::UnboundedSender<Request>) {
++    let (reader, mut writer) = stream.into_split();
++    let mut lines = BufReader::new(reader).lines();
++    loop {
++        let line = match lines.next_line().await {
++            Ok(Some(line)) => line,
++            Ok(None) => return,
++            Err(e) => {
++                debug!("control socket: read failed: {e}");
++                return;
++            }
++        };
++
++        let response = match Command::parse(&line) {
++            Err(reason) => format!("error {reason}"),
++            Ok(command) => {
++                let (reply, answer) = oneshot::channel();
++                if requests.send(Request { command, reply }).is_err() {
++                    "error shutting down".to_string()
++                } else {
++                    match answer.await {
++                        Ok(Ok(detail)) if detail.is_empty() => "ok".to_string(),
++                        Ok(Ok(detail)) => format!("ok {detail}"),
++                        Ok(Err(reason)) => format!("error {reason}"),
++                        Err(_) => "error shutting down".to_string(),
++                    }
++                }
++            }
++        };
++        debug!("control socket: '{line}' -> '{response}'");
++        if writer.write_all(format!("{response}\n").as_bytes()).await.is_err() {
++            return;
++        }
++    }
++}
+diff -ruN a/src/main.rs b/src/main.rs
+--- a/src/main.rs
++++ b/src/main.rs
+@@ -38,6 +38,7 @@
+ use tokio::sync::Semaphore;
+ use url::Url;
+ 
++mod control;
+ mod player_event_handler;
+ use player_event_handler::{EventHandler, run_program_on_sink_events};
+ 
+@@ -218,6 +219,7 @@
+     oauth_port: Option<u16>,
+     zeroconf_port: u16,
+     player_event_program: Option<String>,
++    control_socket: Option<PathBuf>,
+     emit_sink_events: bool,
+     zeroconf_ip: Vec<std::net::IpAddr>,
+     zeroconf_backend: Option<DnsSdServiceBuilder>,
+@@ -267,6 +269,7 @@
+     const NORMALISATION_THRESHOLD: &str = "normalisation-threshold";
+     const OAUTH_PORT: &str = "oauth-port";
+     const ONEVENT: &str = "onevent";
++    const CONTROL_SOCKET: &str = "control-socket";
+     #[cfg(feature = "passthrough-decoder")]
+     const PASSTHROUGH: &str = "passthrough";
+     const PASSWORD: &str = "password";
+@@ -313,6 +316,7 @@
+     const NAME_SHORT: &str = "n";
+     const DISABLE_DISCOVERY_SHORT: &str = "O";
+     const ONEVENT_SHORT: &str = "o";
++    const CONTROL_SOCKET_SHORT: &str = ""; // no short flag
+     #[cfg(feature = "passthrough-decoder")]
+     const PASSTHROUGH_SHORT: &str = "P";
+     const PASSWORD_SHORT: &str = "p";
+@@ -532,6 +536,12 @@
+         "PROGRAM",
+     )
+     .optopt(
++        CONTROL_SOCKET_SHORT,
++        CONTROL_SOCKET,
++        "Accept playback commands (play, pause, next, prev, volume) on a Unix socket at PATH.",
++        "PATH",
++    )
++    .optopt(
+         ALSA_MIXER_CONTROL_SHORT,
+         ALSA_MIXER_CONTROL,
+         ALSA_MIXER_CONTROL_DESC,
+@@ -1837,6 +1847,7 @@
+     };
+ 
+     let player_event_program = opt_str(ONEVENT);
++    let control_socket = opt_str(CONTROL_SOCKET).map(PathBuf::from);
+     let emit_sink_events = opt_present(EMIT_SINK_EVENTS);
+ 
+     Setup {
+@@ -1854,6 +1865,7 @@
+         oauth_port,
+         zeroconf_port,
+         player_event_program,
++        control_socket,
+         emit_sink_events,
+         zeroconf_ip,
+         zeroconf_backend,
+@@ -2005,6 +2017,18 @@
+         }
+     }
+ 
++    // Commands from the control socket are applied here, on the task that
++    // owns the current Spirc. The sender is kept so that with no socket
++    // configured the receiver waits forever rather than closing at once.
++    let (control_tx, mut control_rx) = tokio::sync::mpsc::unbounded_channel::<control::Request>();
++    if let Some(path) = setup.control_socket.as_deref() {
++        if let Err(e) = control::listen(path, control_tx.clone()) {
++            error!("could not listen on control socket {}: {e}", path.display());
++            exit(1);
++        }
++        info!("Control socket at {}", path.display());
++    }
++
+     loop {
+         tokio::select! {
+             credentials = async {
+@@ -2091,6 +2115,13 @@
+             _ = async {}, if player.is_invalid() => {
+                 error!("Player shut down unexpectedly");
+                 exit(1);
++            },
++            request = control_rx.recv() => {
++                if let Some(request) = request {
++                    let outcome = request.command.apply(spirc.as_ref(), mixer.as_ref());
++                    // The client may have gone away; nothing to do about it.
++                    let _ = request.reply.send(outcome);
++                }
+             },
+             _ = tokio::signal::ctrl_c() => {
+                 break;

@@ -132,9 +132,13 @@ signalled by the menu bar icon, which is where the system does it.
 The current track is also handed to the system's Now Playing slot, so it shows
 in Control Center and the menu bar's Now Playing item with its cover. The slot
 is one per Mac and last-writer-wins, so "Show in Now Playing" in the footer
-lets go of it. Display only: every remote command is left disabled until pause
-semantics are settled, because a media key that stalled the engine would be
-lying about what it did.
+lets go of it. Its play and pause commands, and a tap on a HomePod's top,
+pause and resume Spotify itself: librespot carries a patch that adds
+`--control-socket`, a Unix socket under Application Support that takes play,
+pause, next, prev and volume and routes them through Spotify Connect, so the
+phone shows the same state. The master slider is pushed through the same
+socket, which is what keeps the phone's slider in step with the popover and
+with a HomePod's own volume buttons.
 
 A speaker the user selected that stops playing without the user switching it
 off -- Siri or an Apple TV took it -- shows "Rejoining..." and is retried with
@@ -172,11 +176,10 @@ Ordered by what blocks playback first.
   interface as above. It advertises successfully anyway.
 - **Playback is unverified.** Device activation now works and sticks; no
   audio has been confirmed coming out of a speaker.
-- **No transport controls, and the media keys do nothing.** librespot
-  streams into a fifo the engine drains, so pausing the engine stalls
-  librespot's writes rather than pausing Spotify. Pause semantics need a
-  spike before any play/pause button, or any Now Playing remote command, is
-  honest. Candidate: pause == deselect every output.
+- **No transport buttons in the popover.** The media keys and a HomePod's
+  top pause and resume Spotify through librespot's control socket; the
+  popover itself only offers a mute. Pausing the engine is never an option:
+  it stalls librespot's writes and resumes into stale audio.
 - **Track metadata and rejoin are unverified against real playback.** Both
   are wired and tested offline (the bridge byte-for-byte against the Python
   original, the state machine through every event), but playback itself has

@@ -35,6 +35,12 @@ struct EngineInstallation {
     var databaseFile: URL { root.appending(path: "songs3.db") }
     var audioPipe: URL { libraryDirectory.appending(path: "spotify.fifo") }
 
+    /// librespot's control socket, which the helper names on its command
+    /// line from the same directory (`Layout.controlSocket`). A Unix socket
+    /// path is limited to 103 bytes on macOS, which this one is well inside
+    /// for any ordinary user name.
+    var controlSocket: URL { root.appending(path: "librespot.sock") }
+
     /// The companion pipe OwnTone watches for the current track's title,
     /// artist, album and cover art, in the format shairport-sync writes. The
     /// name is not ours to choose: OwnTone looks for the audio pipe's path

@@ -178,11 +178,19 @@ enum MetadataBridge {
     /// linearly onto its 0...100 master volume (pipe.c, parse_volume). The
     /// rest must be exactly ",0.00,0.00,0.00": anything else is read as
     /// shairport-sync doing its own software volume, and the item is ignored.
+    ///
+    /// OwnTone truncates the level to a whole percent, so the level sent is
+    /// the middle of the rounded percent's band rather than the exact
+    /// fraction: the engine then lands on `round(volume / 655.35)` every
+    /// time, which is the mapping the app inverts when it pushes its own
+    /// level back to Spotify. Off by a float's width, a truncation would
+    /// otherwise turn 45 into 44 and start the two sides chasing each other.
     private static func volumeItem(spotifyVolume: Int) -> Data {
         let fraction = Double(min(max(spotifyVolume, 0), 65_535)) / 65_535
-        let airplayLevel = -30.0 + 30.0 * fraction
+        let percent = Int((fraction * 100).rounded())
+        let airplayLevel = -30.0 + 30.0 * (Double(percent) + 0.5) / 100
         let payload = String(format: "%.2f,0.00,0.00,0.00", airplayLevel)
-        log("forwarding volume \(Int((fraction * 100).rounded()))%")
+        log("forwarding volume \(percent)%")
         return item(.ssnc, "pvol", payload: Data(payload.utf8))
     }
 

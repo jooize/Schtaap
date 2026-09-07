@@ -134,6 +134,11 @@ private struct Layout {
     var settingsFile: URL { support.appending(path: "engine.json") }
     var owntoneConfig: URL { support.appending(path: "owntone.conf") }
 
+    /// Where librespot takes commands from the app (our patch:
+    /// `--control-socket`). The app computes the same path from its own
+    /// side; see `EngineInstallation.controlSocket`.
+    var controlSocket: URL { support.appending(path: "librespot.sock") }
+
     /// Where the metadata bridge remembers the current track between the
     /// events it is run for, and caches the cover it fetched.
     var metadataState: URL {
@@ -330,6 +335,9 @@ private func run() throws -> Never {
             // instead, so there is one volume, not two stacked ones. See
             // Metadata.swift for what stacking sounded like.
             "--volume-ctrl", "fixed",
+            // The other direction: the app's play, pause and volume go in
+            // here and through Spotify Connect, so the phone follows.
+            "--control-socket", layout.controlSocket.path,
         ]
         // Title, artist, album and cover art. Without this the pipe carries
         // audio and nothing else, and every track plays as "Unknown".

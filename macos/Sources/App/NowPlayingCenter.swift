@@ -5,16 +5,14 @@ import MediaPlayer
 /// Control Center, the menu bar's Now Playing item, and the keyboard's media
 /// keys' idea of what is on.
 ///
-/// Play and pause are the only commands, and they mute and unmute the master
-/// volume. librespot streams into a fifo the engine drains, so pausing the
-/// engine stalls librespot's writes and resumes into stale audio, and there
-/// is no track to skip to inside a pipe. A true pause needs the phone. Muting
-/// is what this app can honestly do from a media key: the speakers go quiet,
-/// the track keeps advancing, and play brings the level back.
+/// Play and pause are the only commands, and they pause and resume Spotify
+/// itself through librespot's control socket (`SpotifyControl`), so the
+/// phone shows the same state. Pausing the engine instead would stall
+/// librespot's writes and resume into stale audio, which is why the store
+/// never does that. Skipping is not offered yet; the socket could do it.
 ///
-/// The commands are registered even though they are modest because macOS
-/// only lists an app in Now Playing once it handles at least one remote
-/// command. Display alone, as this first shipped, never appeared.
+/// macOS only lists an app in Now Playing once it handles at least one
+/// remote command. Display alone, as this first shipped, never appeared.
 ///
 /// The slot is single and last-writer-wins across every app on the Mac, which
 /// is why holding it is a preference and not a given.
@@ -73,16 +71,16 @@ final class NowPlayingCenter {
     }
 
     /// Reflects the engine's current track and transport state. `artworkURL`
-    /// is where the engine serves the cover, or nil when it has none.
-    /// `isMuted` is the app's own pause: the engine still reports `play`
-    /// while the speakers are silent, and the slot should say paused.
-    func publish(track: NowPlaying?, player: PlayerStatus?, artworkURL: URL?, isMuted: Bool) {
+    /// is where the engine serves the cover, or nil when it has none. A
+    /// muted master still counts as playing: the track is advancing, and
+    /// the toggle command should pause it, not unmute it.
+    func publish(track: NowPlaying?, player: PlayerStatus?, artworkURL: URL?) {
         guard let track, track.hasMetadata, let player, player.state != .stop else {
             clear()
             return
         }
 
-        let isPlaying = player.isPlaying && !isMuted
+        let isPlaying = player.isPlaying
         var info: [String: Any] = [
             MPMediaItemPropertyTitle: track.title ?? "",
             MPNowPlayingInfoPropertyMediaType: MPNowPlayingInfoMediaType.audio.rawValue,
