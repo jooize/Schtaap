@@ -1,0 +1,24 @@
+Ten seconds into a pause (or a stop) the outputs are stopped: TEARDOWN
+to every AirPlay device, the event channel closed. A HomePod whose
+sender has gone treats its next tap as "play something" and starts the
+household's own library, and the sender's resume then finds the speaker
+busy. Kept, the session stays the HomePod's current one, a tap comes
+back over the event channel as a play command, and resume is a restart
+of the stream, not a fresh connect.
+
+So the sessions are kept until something real ends them: the user
+switching the speaker off, or another sender taking it, which the app
+already handles by rejoining once it is free. A year stands in for
+never; the timer wants a number.
+
+--- a/src/outputs.c
++++ b/src/outputs.c
+@@ -86,7 +86,7 @@
+ // actually just restarting. This timeout determines how long we wait before
+ // full stop.
+ // (value is in seconds)
+-#define OUTPUTS_STOP_TIMEOUT 10
++#define OUTPUTS_STOP_TIMEOUT (365 * 24 * 3600)
+ 
+ #define OUTPUTS_MAX_CALLBACKS 64
+ 

@@ -112,6 +112,10 @@ stdenv.mkDerivation (finalAttrs: {
   # And the input thread reads 2.2 s ahead, which is 2.2 s between a seek
   # or a pause on the phone and the speakers, on top of what AirPlay
   # buffers. A quarter of a second now.
+  #
+  # And ten seconds into a pause the AirPlay sessions were torn down, after
+  # which a HomePod's tap plays its own library instead of resuming ours.
+  # Kept now until the user or another sender ends them.
   patches = [
     ./owntone-evrtsp-connect-failure.patch
     ./owntone-websocket-vhost-init.patch
@@ -119,6 +123,7 @@ stdenv.mkDerivation (finalAttrs: {
     ./owntone-airplay-events-to-listener.patch
     ./owntone-mdns-linklocal-address.patch
     ./owntone-input-readahead.patch
+    ./owntone-outputs-stop-timeout.patch
   ];
 
   configureFlags = [ "--without-avahi" ];

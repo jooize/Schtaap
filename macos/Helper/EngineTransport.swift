@@ -56,8 +56,9 @@ struct EngineTransport {
         }
         guard put("api/player/pause") else { return }
 
-        // Read the position after the pause: the engine may have moved it.
-        let fed = player()?.itemProgressMs ?? before.itemProgressMs
+        // The position from before the pause: pausing reopens the pipe as a
+        // fresh input, which reports 0 until it has read something.
+        let fed = before.itemProgressMs
         let heard = max(fed - Self.outputBufferMs, 0)
         do {
             let control = SpotifyControl(socket: socket)

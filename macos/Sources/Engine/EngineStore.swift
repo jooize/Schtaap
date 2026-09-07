@@ -56,6 +56,14 @@ final class EngineStore {
     private(set) var pendingTransport: PlayerStatus.State?
     private var pendingTransportExpiry: Task<Void, Never>?
 
+    /// One more read of the player a few seconds after it starts playing.
+    /// The engine reports `play` and then fills the AirPlay buffer in a
+    /// burst, so the position read on that event is behind by the buffer
+    /// for the rest of the track. The engine pushes nothing later to
+    /// correct it; this does.
+    private var settleRead: Task<Void, Never>?
+    private static let settleReadDelay = Duration.seconds(4)
+
     var isPlaying: Bool { (pendingTransport ?? player?.state) == .play }
 
     /// Master volume in 0...100. Written straight through by the slider.
@@ -197,6 +205,8 @@ final class EngineStore {
         spotifyVolumeSync = nil
         pendingTransportExpiry?.cancel()
         pendingTransport = nil
+        settleRead?.cancel()
+        settleRead = nil
         for task in rejoinTasks.values { task.cancel() }
         rejoinTasks.removeAll()
         rejoining.removeAll()
@@ -269,7 +279,16 @@ final class EngineStore {
         do {
             let status = try await client.player()
             adoptProgress(from: status, previousItem: player?.itemId)
+            let startedPlaying = status.state == .play && player?.state != .play
             player = status
+            if startedPlaying {
+                settleRead?.cancel()
+                settleRead = Task { [weak self] in
+                    try? await Task.sleep(for: Self.settleReadDelay)
+                    guard !Task.isCancelled else { return }
+                    await self?.refreshPlayer()
+                }
+            }
             if status.state == pendingTransport {
                 pendingTransportExpiry?.cancel()
                 pendingTransport = nil
