@@ -16,11 +16,12 @@ import Foundation
 /// On `playing` it starts the engine again, and librespot is already
 /// writing from that position. The phone's slider shows the same place.
 /// The app's own pause and play only ever tell Spotify, and come through
-/// here like the phone's, so there is exactly one path. And on `stopped`
-/// or a lost session it stops the engine, which is what lets the AirPlay
-/// sessions go: a pause keeps them (our owntone patch), so that a
-/// HomePod's tap still reaches us, and a stop is the one thing that ends
-/// them.
+/// here like the phone's, so there is exactly one path. A `stopped` (the
+/// end of a playlist) is a pause too: the phone still names this device,
+/// so the speakers stay taken. Only a lost session stops the engine,
+/// which is what lets the AirPlay sessions go: a pause keeps them (our
+/// owntone patch), so that a HomePod's tap still reaches us, and a stop
+/// is the one thing that ends them.
 ///
 /// The order on a pause matters: librespot closes its end of the pipe
 /// before it reports `paused`, and the engine's pause closes and reopens
@@ -67,9 +68,25 @@ struct EngineTransport {
         }
     }
 
-    /// Spotify stopped, or its session went. Stop the engine; the speakers
-    /// are released after its own timeout.
+    /// Spotify stopped: the end of a playlist, or nothing left to play. The
+    /// phone still shows this device as its speaker, so the speakers stay
+    /// ours: a pause silences them and keeps the sessions, and the next
+    /// play, on whatever comes next, is a resume rather than a reconnect.
     func stopped() {
+        guard let state = player() else { return }
+        guard state.state == "play" else {
+            log("engine is \(state.state), nothing to stop")
+            return
+        }
+        if put("api/player/pause") {
+            log("paused the engine for Spotify's stop")
+        }
+    }
+
+    /// Spotify's session went: the phone picked another device, or Spotify
+    /// disconnected. Stop the engine; the speakers are released after its
+    /// own timeout, for whoever wants them next.
+    func sessionEnded() {
         guard let state = player() else { return }
         guard state.state != "stop" else { return }
         if put("api/player/stop") {
