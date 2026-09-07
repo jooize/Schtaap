@@ -117,6 +117,11 @@ stdenv.mkDerivation (finalAttrs: {
   # which a HomePod's tap plays its own library instead of resuming ours.
   # A pause keeps them now; only a stop lets them go. The same patch makes
   # a paused pipe report the position it was paused at instead of 0.
+  #
+  # And a pause, which stops and restarts the pipe input, left a third of
+  # a second of pre-pause audio queued in the pipe to be heard first on
+  # resume, and deleted the cover art the metadata pipe had delivered.
+  # The input now empties the pipe when it stops, and the cover stays.
   patches = [
     ./owntone-evrtsp-connect-failure.patch
     ./owntone-websocket-vhost-init.patch
@@ -125,6 +130,8 @@ stdenv.mkDerivation (finalAttrs: {
     ./owntone-mdns-linklocal-address.patch
     ./owntone-input-readahead.patch
     ./owntone-pause-keeps-sessions.patch
+    ./owntone-pipe-drain-on-stop.patch
+    ./owntone-pipe-artwork-survives-pause.patch
   ];
 
   configureFlags = [ "--without-avahi" ];

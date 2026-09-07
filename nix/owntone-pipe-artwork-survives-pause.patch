@@ -1,0 +1,36 @@
+A pipe input's cover art survives a pause.
+
+The cover that arrives through the metadata pipe is kept in a temporary
+file the queue item's artwork_url points at, and the file was removed
+whenever the metadata pipe stopped being watched. That happens on every
+pause, because a pause stops the input and sets it up again. From then on
+the artwork API answered 404 for the item, the speakers were sent nothing,
+and the next PICT only comes with the next track. The file now lives
+until the next picture replaces it or the input module deinitialises.
+
+--- a/src/inputs/pipe.c	2026-09-08 01:15:38
++++ b/src/inputs/pipe.c	2026-09-08 01:16:04
+@@ -839,8 +839,11 @@
+   pipe_free(pipe_metadata.pipe);
+   pipe_metadata.pipe = NULL;
+ 
+-  pict_tmpfile_close(pipe_metadata.prepared.pict_tmpfile_fd, pipe_metadata.prepared.pict_tmpfile_path);
+-  pipe_metadata.prepared.pict_tmpfile_fd = -1;
++  // The artwork file stays. The queue item points at it, and the input is
++  // stopped and set up again on every pause, which would otherwise delete
++  // the cover mid-track: the speakers and the clients then had none until
++  // the next PICT, which only comes with the next track. parse_picture()
++  // replaces it, and deinit() removes it.
+ }
+ 
+ // Some metadata arrived on a pipe we watch
+@@ -1185,6 +1188,9 @@
+       listener_remove(pipe_listener_cb);
+       pipe_thread_stop();
+     }
++
++  pict_tmpfile_close(pipe_metadata.prepared.pict_tmpfile_fd, pipe_metadata.prepared.pict_tmpfile_path);
++  pipe_metadata.prepared.pict_tmpfile_fd = -1;
+ 
+   CHECK_ERR(L_PLAYER, pthread_mutex_destroy(&pipe_metadata.prepared.lock));
+ }

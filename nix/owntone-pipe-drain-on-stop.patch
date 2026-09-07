@@ -1,0 +1,51 @@
+A pipe input's stop empties the pipe before closing it.
+
+The engine keeps a second read descriptor on every pipe it watches for
+autostart, so closing the input's descriptor never drops what the pipe
+still holds: up to 64 KB, a third of a second of audio the writer sent
+before it stopped. On a pause the input is stopped and set up again at
+once, and that audio was the first thing read, and the first thing heard
+on resume, from ahead of where the sound had stopped, followed by the
+resume proper from the right place. It sounded like a crackle. The writer
+has always stopped before we get here (librespot closes its end before it
+reports paused), and what it writes next begins where its own metadata
+says, so what is queued at a stop is never wanted.
+
+--- a/src/inputs/pipe.c	2026-09-08 01:15:38
++++ b/src/inputs/pipe.c	2026-09-08 01:16:04
+@@ -238,6 +238,27 @@
+ {
+   if (fd >= 0)
+     close(fd);
++}
++
++// Reads and discards whatever the pipe still holds. Used when an input
++// stops: the writer has stopped by then, and what it writes next begins at
++// the position its own metadata names, so anything still queued is audio
++// from before the stop. Closing our fd does not drop it, because the watch
++// keeps another fd on the same pipe open, and it would be the first thing
++// read at the next start and heard out of order: after a pause, a third of
++// a second from ahead of the pause point, then the resume proper.
++static void
++pipe_drain(int fd)
++{
++  char buf[PIPE_READ_MAX];
++  ssize_t ret;
++
++  if (fd < 0)
++    return;
++
++  do
++    ret = read(fd, buf, sizeof(buf));
++  while (ret > 0);
+ }
+ 
+ static int
+@@ -1074,6 +1095,7 @@
+   if (source->evbuf)
+     evbuffer_free(source->evbuf);
+ 
++  pipe_drain(pipe->fd);
+   pipe_close(pipe->fd);
+ 
+   // Reset the pipe and start watching it again for new data. Must be async or
