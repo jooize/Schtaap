@@ -114,6 +114,12 @@ struct EngineInstallation {
     // MARK: - Contents
 
     private func owntoneConfig() -> String {
+        // ipv6 is on because this Mac's name resolves to IPv6 addresses on
+        // the LAN before its IPv4 one, and a HomePod reporting its volume
+        // buttons over DACP connects to whichever it picks: with the engine
+        // bound to IPv4 only, some presses vanished into a refused connect
+        // (2026-09-07). trusted_networks maps "localhost" to ::1 as well.
+        //
         // trusted_networks is localhost only, deliberately. owntone's HTTP
         // interface is an unauthenticated control API for every speaker in
         // the house; the spike widened it to the LAN to reach the web UI
@@ -129,7 +135,7 @@ struct EngineInstallation {
         \tloglevel = \(Preferences.engineLogLevel)
         \tcache_dir = "\(escaped(cacheDirectory.path))"
         \ttrusted_networks = { "localhost" }
-        \tipv6 = no
+        \tipv6 = yes
         }
 
         library {

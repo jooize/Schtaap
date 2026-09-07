@@ -3,6 +3,11 @@ import Foundation
 /// Event categories the engine pushes over its websocket.
 enum NotifyEvent: String, Sendable, Decodable, CaseIterable {
     case update, database, outputs, player, options, volume, queue
+    /// A speaker's own play/pause control was used. The engine does not act
+    /// on it (our patch: a pause would close the pipe under librespot), it
+    /// only tells us, and the app decides what a speaker's pause means.
+    case remotePause = "remote_pause"
+    case remotePlay = "remote_play"
 }
 
 enum NotifyMessage: Sendable, Equatable {
@@ -23,7 +28,7 @@ final class NotifyClient: Sendable {
 
     init(
         endpoint: EngineEndpoint = .default,
-        subscriptions: Set<NotifyEvent> = [.outputs, .player, .volume, .queue]
+        subscriptions: Set<NotifyEvent> = [.outputs, .player, .volume, .queue, .remotePause, .remotePlay]
     ) {
         self.endpoint = endpoint
         self.subscriptions = subscriptions

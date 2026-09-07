@@ -1,0 +1,110 @@
+airplay: hand the speaker's play/pause to listeners instead of the player
+
+A HomePod's touch surface sends play, pause, next and previous over
+the AirPlay event channel as sendMediaRemoteCommand, and owntone
+applied them to its player. With a pipe as the source that is
+destructive: pause closes and reopens the pipe, the process writing
+it (librespot) gets EPIPE and exits, and play then restarts the item
+at position 0. Next and previous mean nothing inside a pipe.
+
+Pause and play become listener events, LISTENER_REMOTE_PAUSE and
+LISTENER_REMOTE_PLAY, which the websocket carries as "remote_pause"
+and "remote_play" to any client that subscribed to them, so the
+client driving this server decides what a speaker's pause should do.
+Next and previous are dropped at INFO.
+
+--- a/src/listener.h
++++ b/src/listener.h
+@@ -28,6 +28,9 @@
+   LISTENER_LASTFM = (1 << 10),
+   /* Song rating changes */
+   LISTENER_RATING = (1 << 11),
++  /* A speaker asked, over its own controls, for playback to pause or play */
++  LISTENER_REMOTE_PAUSE = (1 << 12),
++  LISTENER_REMOTE_PLAY = (1 << 13),
+ };
+ 
+ typedef void (*notify)(short event_mask, void *ctx);
+--- a/src/websocket.c
++++ b/src/websocket.c
+@@ -173,6 +173,14 @@
+ 		{
+ 		  *requested_events |= LISTENER_QUEUE;
+ 		}
++	      else if (0 == strcmp(event_type, "remote_pause"))
++		{
++		  *requested_events |= LISTENER_REMOTE_PAUSE;
++		}
++	      else if (0 == strcmp(event_type, "remote_play"))
++		{
++		  *requested_events |= LISTENER_REMOTE_PLAY;
++		}
+ 	    }
+ 	}
+     }
+@@ -242,6 +250,14 @@
+   if (events & LISTENER_QUEUE)
+     {
+       json_object_array_add(notify, json_object_new_string("queue"));
++    }
++  if (events & LISTENER_REMOTE_PAUSE)
++    {
++      json_object_array_add(notify, json_object_new_string("remote_pause"));
++    }
++  if (events & LISTENER_REMOTE_PLAY)
++    {
++      json_object_array_add(notify, json_object_new_string("remote_play"));
+     }
+ 
+   reply = json_object_new_object();
+@@ -416,7 +432,7 @@
+   thread_setname("websocket");
+ 
+   listener_add(listener_cb, LISTENER_UPDATE | LISTENER_DATABASE | LISTENER_PAIRING | LISTENER_SPOTIFY | LISTENER_LASTFM | LISTENER_SPEAKER
+-               | LISTENER_PLAYER | LISTENER_OPTIONS | LISTENER_VOLUME | LISTENER_QUEUE, NULL);
++               | LISTENER_PLAYER | LISTENER_OPTIONS | LISTENER_VOLUME | LISTENER_QUEUE | LISTENER_REMOTE_PAUSE | LISTENER_REMOTE_PLAY, NULL);
+ 
+   while(!websocket_exit)
+   {
+--- a/src/outputs/airplay_events.c
++++ b/src/outputs/airplay_events.c
+@@ -38,6 +38,7 @@
+ #include "misc.h"
+ #include "logger.h"
+ #include "player.h"
++#include "listener.h"
+ #include "pair_ap/pair.h"
+ 
+ #define RTSP_VERSION "RTSP/1.0"
+@@ -332,6 +333,31 @@
+ handle_event(enum airplay_events event)
+ {
+   struct player_status status;
++
++  // The player's source is a pipe fed by another process. Pausing closes and
++  // reopens the pipe, which the writer sees as EPIPE and dies of, and playing
++  // again restarts the item from position 0. Next and previous mean nothing
++  // inside a pipe. So the speaker's own transport controls are not applied
++  // here: pause and play are handed to listeners (the websocket carries them
++  // as "remote_pause" and "remote_play") for the client driving this server
++  // to act on, and next and previous are dropped.
++  switch (event)
++    {
++      case AIRPLAY_EVENT_PAUSE:
++	DPRINTF(E_INFO, L_AIRPLAY, "Speaker asked to pause, notifying listeners\n");
++	listener_notify(LISTENER_REMOTE_PAUSE);
++	return;
++      case AIRPLAY_EVENT_PLAY:
++	DPRINTF(E_INFO, L_AIRPLAY, "Speaker asked to play, notifying listeners\n");
++	listener_notify(LISTENER_REMOTE_PLAY);
++	return;
++      case AIRPLAY_EVENT_NEXT:
++      case AIRPLAY_EVENT_PREV:
++	DPRINTF(E_INFO, L_AIRPLAY, "Dropping next/previous from speaker, the source is a pipe\n");
++	return;
++      default:
++	break;
++    }
+ 
+   player_get_status(&status);
+ 

@@ -182,6 +182,14 @@ final class EngineStore {
         case .disconnected(let reason):
             connection = .offline(reason)
         case .events(let events):
+            // A tap on a speaker's top means the same as a media key here:
+            // mute and unmute. See NowPlayingCenter for why not a real pause.
+            if events.contains(.remotePause), !isMasterMuted {
+                toggleMasterMute()
+            }
+            if events.contains(.remotePlay), isMasterMuted {
+                toggleMasterMute()
+            }
             if events.contains(.outputs) || events.contains(.volume) {
                 await refreshOutputs()
             }

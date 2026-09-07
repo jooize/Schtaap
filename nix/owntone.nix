@@ -101,12 +101,14 @@ stdenv.mkDerivation (finalAttrs: {
   # And a HomePod's touch surface sends play/pause/next/previous over the
   # AirPlay event channel, which owntone applied to its player: a pause
   # closes and reopens the pipe, librespot dies of EPIPE, and play restarts
-  # the item at 0. Those commands are dropped; the app decides what they do.
+  # the item at 0. Pause and play go out as websocket notifications
+  # ("remote_pause", "remote_play") for the app to act on; next and
+  # previous are dropped.
   patches = [
     ./owntone-evrtsp-connect-failure.patch
     ./owntone-websocket-vhost-init.patch
     ./owntone-dacp-speaker-authorize.patch
-    ./owntone-airplay-events-drop-transport.patch
+    ./owntone-airplay-events-to-listener.patch
   ];
 
   configureFlags = [ "--without-avahi" ];
