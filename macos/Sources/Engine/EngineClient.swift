@@ -102,14 +102,24 @@ actor EngineClient {
         if let absolute = URL(string: path), absolute.scheme != nil {
             return absolute
         }
-        var components = URLComponents(
-            url: endpoint.api(path.hasPrefix("/") ? String(path.dropFirst()) : path),
-            resolvingAgainstBaseURL: false
-        )
-        components?.queryItems = [
+        // The engine hands back "./artwork/item/1?v=287": a path relative to
+        // its own root, dot-slash and all, with a cache-busting query. The
+        // dot-slash has to go, or the request misses the artwork API and lands
+        // in the static file handler (seen in the engine log as "Could not
+        // dereference .../htdocs/./artwork/item/1"), and the query has to be
+        // split off before the path is appended, or it is percent-encoded
+        // into the path.
+        let parts = path.split(separator: "?", maxSplits: 1, omittingEmptySubsequences: false)
+        var relative = String(parts[0])
+        while relative.hasPrefix("./") { relative.removeFirst(2) }
+        while relative.hasPrefix("/") { relative.removeFirst() }
+        var components = URLComponents(url: endpoint.api(relative), resolvingAgainstBaseURL: false)
+        var query = parts.count > 1 ? URLComponents(string: "?" + parts[1])?.queryItems ?? [] : []
+        query += [
             URLQueryItem(name: "maxwidth", value: String(maxPixels)),
             URLQueryItem(name: "maxheight", value: String(maxPixels)),
         ]
+        components?.queryItems = query
         return components?.url
     }
 

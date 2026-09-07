@@ -151,7 +151,16 @@ struct NowPlaying: Decodable, Sendable, Equatable {
     let artworkUrl: String?
     let dataKind: String?
 
+    /// True while the engine plays the pipe but Spotify's metadata has not
+    /// arrived: the engine then titles the item with the pipe's file name,
+    /// which is not a track. Every consumer treats this as no track at all;
+    /// the popover shows a connecting state instead.
+    var isPlaceholder: Bool {
+        dataKind == "pipe" && (artist ?? "").isEmpty && (album ?? "").isEmpty
+    }
+
     var hasMetadata: Bool {
-        !(title ?? "").isEmpty || !(artist ?? "").isEmpty
+        guard !isPlaceholder else { return false }
+        return !(title ?? "").isEmpty || !(artist ?? "").isEmpty
     }
 }

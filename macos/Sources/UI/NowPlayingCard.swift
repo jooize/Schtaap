@@ -80,7 +80,27 @@ struct IdleCard: View {
         guard showsInSpotify else {
             return "Not appearing in Spotify. Switch it on above to play here."
         }
-        return "In Spotify on your phone, choose \u{201C}\(connectName)\u{201D} from the device list."
+        return "In Spotify, choose \u{201C}\(connectName)\u{201D} from the device list."
+    }
+}
+
+/// The slot while the engine is already streaming the pipe but Spotify has
+/// not yet said what is in it. Without this the header shows the pipe's file
+/// name as a title, which is the plumbing showing through.
+struct ConnectingCard: View {
+    var body: some View {
+        HStack(spacing: 10) {
+            ArtworkWell { ArtworkPlaceholder() }
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Connecting to Spotify\u{2026}")
+                    .font(.system(size: 13, weight: .medium))
+                Text("Sound and track details are on their way.")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer(minLength: 0)
+        }
     }
 }
 

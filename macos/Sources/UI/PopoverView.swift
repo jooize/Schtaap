@@ -112,6 +112,8 @@ struct PopoverView: View {
     private var nowPlayingSection: some View {
         if let track = store.nowPlaying, track.hasMetadata {
             NowPlayingCard(track: track, artworkURL: artworkURL(for: track))
+        } else if store.nowPlaying?.isPlaceholder == true, store.player?.state == .play {
+            ConnectingCard()
         } else {
             IdleCard(connectName: connectName, showsInSpotify: showsInSpotify)
         }
