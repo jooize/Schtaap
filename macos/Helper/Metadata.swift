@@ -52,6 +52,18 @@ enum MetadataBridge {
     private static let artworkTimeout: TimeInterval = 5
     private static let writeTimeout: TimeInterval = 2
 
+    /// How long a track description waits for the engine to start reading.
+    ///
+    /// OwnTone opens the metadata pipe only once audio arrives on the audio
+    /// pipe and playback has started, which is a moment after librespot
+    /// reports `playing`. Without this wait the description written on that
+    /// event misses, and the next chance is the next seek or pause, which
+    /// can be a whole track away. librespot runs these handlers one after
+    /// another on a thread of its own, so the wait delays the next event's
+    /// handling by at most this, and never the audio.
+    private static let readerPatience: TimeInterval = 1.5
+    private static let readerPollMicroseconds: UInt32 = 50_000
+
     /// Position events all carry POSITION_MS and no track description.
     private static let positionEvents: Set<String> = [
         "playing", "paused", "seeked", "position_correction",
@@ -134,7 +146,8 @@ enum MetadataBridge {
 
         // Only a confirmed write retires the track description; otherwise the
         // next event picks it up again.
-        if write(blob, to: metadataPipe), carriesTrack {
+        let patience = carriesTrack ? readerPatience : 0
+        if write(blob, to: metadataPipe, waitingForReader: patience), carriesTrack {
             state.delivered = true
         }
         saveState(state, in: stateDirectory)
@@ -433,17 +446,10 @@ enum MetadataBridge {
     /// Opened O_NONBLOCK so a pipe with no reader fails immediately with ENXIO
     /// rather than hanging. That is the normal state before playback starts,
     /// and librespot waits on this program, so a blocking open here would
-    /// stall the player.
-    private static func write(_ blob: Data, to pipe: URL) -> Bool {
-        let descriptor = open(pipe.path, O_WRONLY | O_NONBLOCK)
-        guard descriptor >= 0 else {
-            if errno == ENXIO {
-                log("nothing reading \(pipe.path) yet; the engine watches it once playback starts")
-            } else {
-                log("could not open \(pipe.path): \(String(cString: strerror(errno)))")
-            }
-            return false
-        }
+    /// stall the events behind it. `patience` is how long to keep trying for
+    /// a reader before giving up, for the writes worth it.
+    private static func write(_ blob: Data, to pipe: URL, waitingForReader patience: TimeInterval) -> Bool {
+        guard let descriptor = openForWriting(pipe, patience: patience) else { return false }
         defer { close(descriptor) }
 
         let bytes = [UInt8](blob)
@@ -482,6 +488,27 @@ enum MetadataBridge {
             offset += written
         }
         return true
+    }
+
+    /// Opens the pipe for writing without blocking on it. ENXIO means no
+    /// reader, which is retried until `patience` runs out; anything else is
+    /// an error and reported at once.
+    private static func openForWriting(_ pipe: URL, patience: TimeInterval) -> Int32? {
+        let deadline = Date(timeIntervalSinceNow: patience)
+        while true {
+            let descriptor = open(pipe.path, O_WRONLY | O_NONBLOCK)
+            if descriptor >= 0 { return descriptor }
+            guard errno == ENXIO else {
+                log("could not open \(pipe.path): \(String(cString: strerror(errno)))")
+                return nil
+            }
+            guard deadline.timeIntervalSinceNow > 0 else {
+                let waited = patience > 0 ? " after \(patience) s" : ""
+                log("nothing reading \(pipe.path)\(waited); the engine watches it once playback starts")
+                return nil
+            }
+            usleep(readerPollMicroseconds)
+        }
     }
 
     private static func log(_ message: String) {

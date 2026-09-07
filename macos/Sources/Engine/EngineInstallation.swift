@@ -33,7 +33,14 @@ struct EngineInstallation {
     var logDirectory: URL { root.appending(path: "Logs", directoryHint: .isDirectory) }
 
     var databaseFile: URL { root.appending(path: "songs3.db") }
-    var audioPipe: URL { libraryDirectory.appending(path: "spotify.fifo") }
+
+    /// The pipe librespot writes PCM into. Its file name is what OwnTone
+    /// titles the item with until the track's own title arrives through the
+    /// metadata pipe, and that title is what a speaker, the Home app and
+    /// Control Center show meanwhile. So it is a word a listener can read,
+    /// not a file name; OwnTone recognises a pipe by its type, not by an
+    /// extension.
+    var audioPipe: URL { libraryDirectory.appending(path: "Spotify") }
 
     /// librespot's control socket, which the helper names on its command
     /// line from the same directory (`Layout.controlSocket`). A Unix socket
