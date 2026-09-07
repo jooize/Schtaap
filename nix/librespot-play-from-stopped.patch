@@ -1,0 +1,54 @@
+A play command while stopped starts the context again from the top.
+
+At the end of a context with autoplay off the player is stopped and a
+plain play (SpircCommand::Play, which our control socket and a
+speaker's tap send) returned without doing anything: only a Connect
+load can start a context, and remotes cannot send one. Spotify's own
+play button there plays the same context again from its first track;
+now a plain play does the same. A stopped player with no context still
+does nothing.
+
+Applies on top of librespot-control-socket.patch and
+librespot-session-loss-reconnect.patch.
+
+--- a/connect/src/spirc.rs	2026-09-08 01:49:10
++++ b/connect/src/spirc.rs	2026-09-08 01:49:10
+@@ -666,7 +666,7 @@
+                 }
+                 return self.handle_disconnect().await;
+             }
+-            SpircCommand::Play => self.handle_play(),
++            SpircCommand::Play => self.handle_play_or_restart().await?,
+             SpircCommand::PlayPause => self.handle_play_pause(),
+             SpircCommand::Pause => self.handle_pause(),
+             SpircCommand::Prev => self.handle_prev()?,
+@@ -1463,6 +1463,29 @@
+         self.set_volume(current_volume);
+     }
+ 
++    /// A play with nothing loaded, which is where a context ends with
++    /// autoplay off, does what Spotify's own play button does there: the
++    /// context again from the top. Only a Connect load can start one, so
++    /// a plain play from a remote (a speaker's tap, our control socket)
++    /// did nothing at all in that state.
++    async fn handle_play_or_restart(&mut self) -> Result<(), Error> {
++        if !matches!(self.play_status, SpircPlayStatus::Stopped) {
++            self.handle_play();
++            return Ok(());
++        }
++        let context_uri = self.connect_state.context_uri().clone();
++        if context_uri.is_empty() {
++            return Ok(());
++        }
++        info!("play while stopped: starting <{context_uri}> again from the top");
++        let options = LoadRequestOptions {
++            start_playing: true,
++            ..Default::default()
++        };
++        self.handle_load(LoadRequest::from_context_uri(context_uri, options), None, None)
++            .await
++    }
++
+     fn handle_play_pause(&mut self) {
+         match self.play_status {
+             SpircPlayStatus::Paused { .. } | SpircPlayStatus::LoadingPause { .. } => {

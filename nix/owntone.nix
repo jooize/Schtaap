@@ -122,6 +122,9 @@ stdenv.mkDerivation (finalAttrs: {
   # a second of pre-pause audio queued in the pipe to be heard first on
   # resume, and deleted the cover art the metadata pipe had delivered.
   # The input now empties the pipe when it stops, and the cover stays.
+  #
+  # And a pipe item is titled by `library { pipe_title }` rather than its
+  # file name, which is what the speakers showed until the track arrived.
   patches = [
     ./owntone-evrtsp-connect-failure.patch
     ./owntone-websocket-vhost-init.patch
@@ -132,6 +135,7 @@ stdenv.mkDerivation (finalAttrs: {
     ./owntone-pause-keeps-sessions.patch
     ./owntone-pipe-drain-on-stop.patch
     ./owntone-pipe-artwork-survives-pause.patch
+    ./owntone-pipe-title.patch
   ];
 
   configureFlags = [ "--without-avahi" ];

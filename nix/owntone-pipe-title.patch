@@ -1,0 +1,42 @@
+A pipe item's title comes from the config, when it names one.
+
+A pipe has no tags of its own, so the fixup titles it with its file
+name, and that is what the speakers, the Home app and Control Center
+show until the writer's metadata arrives: "spotify.fifo". The new
+library option `pipe_title` gives every pipe item that title instead,
+unset by default, so the file can keep a file name and the listener
+still reads a word.
+
+--- a/src/conffile.c	2026-09-08 01:16:32
++++ b/src/conffile.c	2026-09-08 01:49:10
+@@ -107,6 +107,7 @@
+     CFG_STR("name_unknown_album", "Unknown album", CFGF_NONE),
+     CFG_STR("name_unknown_genre", "Unknown genre", CFGF_NONE),
+     CFG_STR("name_unknown_composer", "Unknown composer", CFGF_NONE),
++    CFG_STR("pipe_title", NULL, CFGF_NONE),
+     CFG_STR_LIST("artwork_basenames", "{artwork,cover,Folder}", CFGF_NONE),
+     CFG_BOOL("artwork_individual", cfg_false, CFGF_NONE),
+     CFG_STR_LIST("artwork_online_sources", NULL, CFGF_NONE),
+--- a/src/library/filescanner.c	2026-09-08 01:16:32
++++ b/src/library/filescanner.c	2026-09-08 01:49:10
+@@ -604,11 +604,20 @@
+ 
+   if (S_ISFIFO(sb->st_mode))
+     {
++      const char *pipe_title = cfg_getstr(cfg_getsec(cfg, "library"), "pipe_title");
++
+       mfi.data_kind = DATA_KIND_PIPE;
+       mfi.type = strdup("wav");
+       mfi.codectype = strdup("wav");
+       mfi.description = strdup("PCM16 pipe");
+       mfi.media_kind = MEDIA_KIND_MUSIC;
++
++      // A pipe has no tags of its own, and without a title the fixup uses
++      // the file name, which is what every client and speaker then shows
++      // until the writer's metadata arrives. The config may give it a
++      // title a listener can read instead.
++      if (pipe_title && *pipe_title)
++	mfi.title = strdup(pipe_title);
+     }
+   else
+     {
