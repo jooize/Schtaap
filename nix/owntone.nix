@@ -115,7 +115,8 @@ stdenv.mkDerivation (finalAttrs: {
   #
   # And ten seconds into a pause the AirPlay sessions were torn down, after
   # which a HomePod's tap plays its own library instead of resuming ours.
-  # Kept now until the user or another sender ends them.
+  # A pause keeps them now; only a stop lets them go. The same patch makes
+  # a paused pipe report the position it was paused at instead of 0.
   patches = [
     ./owntone-evrtsp-connect-failure.patch
     ./owntone-websocket-vhost-init.patch
@@ -123,7 +124,7 @@ stdenv.mkDerivation (finalAttrs: {
     ./owntone-airplay-events-to-listener.patch
     ./owntone-mdns-linklocal-address.patch
     ./owntone-input-readahead.patch
-    ./owntone-outputs-stop-timeout.patch
+    ./owntone-pause-keeps-sessions.patch
   ];
 
   configureFlags = [ "--without-avahi" ];

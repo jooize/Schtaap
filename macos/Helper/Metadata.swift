@@ -78,6 +78,8 @@ enum MetadataBridge {
             return
         case "playing":
             transport.playing()
+        case "stopped", "session_disconnected":
+            transport.stopped()
         default:
             break
         }

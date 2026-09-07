@@ -1,0 +1,60 @@
+Every flush, whether for a pause or a stop, armed a timer that tore
+the AirPlay sessions down ten seconds later. A HomePod whose sender has
+gone treats its next tap as "play something" and starts the household's
+own library, and the sender's resume then finds the speaker busy. Now
+only a stop arms it: a pause keeps the session, the HomePod's tap comes
+back over the event channel as a play command, and resume restarts the
+stream instead of reconnecting. The event bridge stops the engine when
+Spotify stops or disconnects, so the sessions still end when there is
+nothing left to play.
+
+And a pipe input asked to start at a position answered 0, so a paused
+pipe reported 0:00 until it was read again. It answers with the
+position it was given: the writer's metadata is what set it.
+
+--- a/src/player.c
++++ b/src/player.c
+@@ -1589,7 +1589,14 @@
+ 	input_buffer_full_cb(player_playback_start);
+     }
+ 
+-  outputs_device_stop_delayed(device, device_streaming_cb);
++  // Only a stop lets the device go, after the timeout. A pause keeps the
++  // session: the device stays ours, its own controls still reach us, and
++  // resuming is a restart of the stream rather than a fresh connect.
++  // playback_stop() sets PLAY_STOPPED before the flush callbacks arrive;
++  // a pause sets PLAY_PAUSED after them, and a suspend sets it before,
++  // so neither is PLAY_STOPPED here.
++  if (player_state == PLAY_STOPPED)
++    outputs_device_stop_delayed(device, device_streaming_cb);
+ 
+  out:
+   commands_exec_end(cmdbase, 0);
+--- a/src/inputs/pipe.c
++++ b/src/inputs/pipe.c
+@@ -1053,7 +1053,17 @@
+   return 0;
+ }
+ 
++// A pipe cannot seek, but the writer on the other end can, and it reports
++// where it stands through the metadata pipe. When the player restarts this
++// input at a position (a pause does that), the position it names is the
++// one to count from; answering 0 here made every paused pipe read 0:00.
+ static int
++seek(struct input_source *source, int seek_ms)
++{
++  return seek_ms;
++}
++
++static int
+ stop(struct input_source *source)
+ {
+   struct pipe *pipe = source->input_ctx;
+@@ -1187,6 +1197,7 @@
+   .setup = setup,
+   .play = play,
+   .stop = stop,
++  .seek = seek,
+   .metadata_get = metadata_get,
+   .init = init,
+   .deinit = deinit,

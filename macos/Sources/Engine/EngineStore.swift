@@ -49,6 +49,17 @@ final class EngineStore {
     /// pipe and the engine's read-ahead between them, with margin.
     private static let seekSettleTolerance = 2_500
 
+    /// The engine reports what the speakers have played. Spotify shows what
+    /// it has written, which is ahead by everything in between: the pipe
+    /// (64 KB, 371 ms of 44.1 kHz stereo), the engine's read-ahead (250 ms,
+    /// our patch) and the AirPlay buffer (2250 ms, owntone's default,
+    /// which some receivers insist on). The card shows Spotify's clock,
+    /// because that is the other clock a person compares it with; the
+    /// speakers are this much behind both. Only while playing: a paused
+    /// engine has played everything it was fed, and Spotify is seeked to
+    /// that same place by the bridge.
+    private static let pipelineLeadMs = 2250 + 371 + 250
+
     /// What the user just asked Spotify to do, shown until the engine agrees
     /// or a few seconds pass. A pause takes a second or two to reach the
     /// engine (librespot stops writing, the engine runs dry), and the
@@ -344,8 +355,14 @@ final class EngineStore {
     /// wait at once.
     private func adoptProgress(from status: PlayerStatus, previousItem: Int?) {
         let now = Date.now
-        let reading = status.itemProgressMs
         let sameItem = progressAnchor != nil && status.itemId == previousItem
+        // Between a play and the engine reporting it, the engine is filling
+        // the AirPlay buffer and reports "pause" at the position it resumed
+        // from. Spotify is already running; so is the card's own clock.
+        if sameItem, pendingTransport == .play, status.state != .play {
+            return
+        }
+        let reading = status.itemProgressMs + (status.state == .play ? Self.pipelineLeadMs : 0)
         if sameItem, let until = seekSettlingUntil, now < until,
            abs(reading - progressMs(at: now)) > Self.seekSettleTolerance {
             return
@@ -364,8 +381,16 @@ final class EngineStore {
         tellSpotify("pause") { try await $0.pause() }
     }
 
+    /// Resumes, and starts the card's clock from the paused position at
+    /// once, as Spotify does: the engine's own position stands still for
+    /// the seconds it takes to refill the AirPlay buffer, and readings from
+    /// that stretch are held off like the ones after a seek.
     func resumePlayback() {
         expect(.play)
+        if let progressAnchor {
+            self.progressAnchor = (progressAnchor.ms, .now)
+            seekSettlingUntil = .now.addingTimeInterval(8)
+        }
         tellSpotify("play") { try await $0.play() }
     }
 
