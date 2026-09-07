@@ -1,0 +1,139 @@
+mdns: keep a device's IPv6 link-local address as a secondary address
+
+A HomePod reports its volume buttons over DACP from its IPv6
+link-local address (fe80::...%en0), while the only IPv6 address the
+server knew for it was the routable one from the same mDNS
+announcement: mdns_dnssd.c ignored link-local addresses outright. So
+a request that plainly came from the speaker could not be matched to
+it, and player_speaker_get_byaddress() found nothing.
+
+Pass IPv6 link-local addresses through with their scope, file them in
+a new output_device.v6_address_ll that nothing ever connects to, and
+match against it in speaker_get_byaddress(), comparing addresses
+without their scope since the peer address from the HTTP backend
+carries one and other sources may not.
+
+--- a/src/mdns_dnssd.c
++++ b/src/mdns_dnssd.c
+@@ -537,7 +537,7 @@
+ mdns_browse_call_cb(struct mdns_addr_lookup *lu, const char *hostname,
+                     const struct sockaddr *address)
+ {
+-  char addr_str[INET6_ADDRSTRLEN];
++  char addr_str[INET6_ADDRSTRLEN + 1 + IF_NAMESIZE];
+ 
+   if (address->sa_family == AF_INET)
+     {
+@@ -586,10 +586,19 @@
+         }
+       else if (is_v6ll(&addr6->sin6_addr))
+         {
+-          DPRINTF(E_WARN, L_MDNS,
+-                  "Ignoring announcement from %s, address %s is link-local\n",
++          // Passed on with its scope, so the outputs layer can tell it from a
++          // routable address: a speaker may talk back to us from it (a HomePod
++          // sends its DACP volume reports from its link-local address), and
++          // we want to recognise it, without ever connecting to it.
++          char ifname[IF_NAMESIZE];
++          size_t len = strlen(addr_str);
++
++          if (lu->rs->interface > 0 && if_indextoname(lu->rs->interface, ifname))
++            snprintf(addr_str + len, sizeof(addr_str) - len, "%%%s", ifname);
++
++          DPRINTF(E_DBG, L_MDNS,
++                  "Announcement from %s, address %s is link-local, keeping it as a secondary address\n",
+                   hostname, addr_str);
+-          return;
+         }
+     }
+ 
+--- a/src/outputs.h
++++ b/src/outputs.h
+@@ -140,6 +140,9 @@
+   // Address
+   char *v4_address;
+   char *v6_address;
++  // IPv6 link-local address (with scope), never connected to, only used to
++  // recognise the device when it talks to us from that address
++  char *v6_address_ll;
+   short v4_port;
+   short v6_port;
+ 
+--- a/src/outputs.c
++++ b/src/outputs.c
+@@ -780,6 +780,14 @@
+   char *keep_name;
+   int keep_offset_ms;
+   int ret;
++
++  // A link-local announcement is not an address to connect to
++  if (add->v6_address && strncasecmp(add->v6_address, "fe80:", 5) == 0)
++    {
++      free(add->v6_address_ll);
++      add->v6_address_ll = add->v6_address;
++      add->v6_address = NULL;
++    }
+ 
+   for (device = outputs_device_list; device; device = device->next)
+     {
+@@ -856,6 +864,14 @@
+ 	  add->v6_address = NULL;
+ 	}
+ 
++      if (add->v6_address_ll)
++	{
++	  free(device->v6_address_ll);
++
++	  device->v6_address_ll = add->v6_address_ll;
++	  add->v6_address_ll = NULL;
++	}
++
+       free(device->name);
+       device->name = add->name;
+       add->name = NULL;
+@@ -1112,6 +1128,7 @@
+   free(device->auth_key);
+   free(device->v4_address);
+   free(device->v6_address);
++  free(device->v6_address_ll);
+ 
+   free(device);
+ }
+--- a/src/player.c
++++ b/src/player.c
+@@ -2633,7 +2633,24 @@
+   *retval = -1;
+   return COMMAND_END;
+ }
++
++// Compares two addresses ignoring any "%scope" suffix, since a link-local
++// address arrives with a scope from some sources and without from others
++static bool
++address_matches(const char *address, const char *candidate)
++{
++  size_t len;
+ 
++  if (!address || !candidate)
++    return false;
++
++  len = strcspn(address, "%");
++  if (strcspn(candidate, "%") != len)
++    return false;
++
++  return strncmp(address, candidate, len) == 0;
++}
++
+ static enum command_state
+ speaker_get_byaddress(void *arg, int *retval)
+ {
+@@ -2645,8 +2662,8 @@
+ 
+   for (device = outputs_list(), i = 0; device; device = device->next, i++)
+     {
+-      match_v4 = device->v4_address && (strcmp(spk_param->address, device->v4_address) == 0);
+-      match_v6 = device->v6_address && (strcmp(spk_param->address, device->v6_address) == 0);
++      match_v4 = address_matches(spk_param->address, device->v4_address);
++      match_v6 = address_matches(spk_param->address, device->v6_address) || address_matches(spk_param->address, device->v6_address_ll);
+       if (match_v4 || match_v6)
+ 	{
+ 	  device_to_speaker_info(spk_param->spk_info, device, i);

@@ -104,11 +104,16 @@ stdenv.mkDerivation (finalAttrs: {
   # the item at 0. Pause and play go out as websocket notifications
   # ("remote_pause", "remote_play") for the app to act on; next and
   # previous are dropped.
+  #
+  # And a HomePod sends those DACP reports from its IPv6 link-local
+  # address, which the mDNS layer threw away. It is kept now as a
+  # secondary address the device is recognised by, never connected to.
   patches = [
     ./owntone-evrtsp-connect-failure.patch
     ./owntone-websocket-vhost-init.patch
     ./owntone-dacp-speaker-authorize.patch
     ./owntone-airplay-events-to-listener.patch
+    ./owntone-mdns-linklocal-address.patch
   ];
 
   configureFlags = [ "--without-avahi" ];
