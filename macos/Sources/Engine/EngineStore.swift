@@ -1,4 +1,5 @@
 import Foundation
+import OSLog
 import Observation
 
 /// Live view of the engine, shared by every window.
@@ -96,6 +97,7 @@ final class EngineStore {
     /// Outputs whose slider the user is currently dragging. Refreshes leave
     /// their volume alone so the knob does not fight the pointer.
     private var adjusting: Set<String> = []
+    private static let log = Logger(subsystem: "bar.esko.Tutti", category: "store")
     private var isAdjustingMaster = false
 
     /// One in-flight debounce per output, plus one for master.
@@ -212,6 +214,10 @@ final class EngineStore {
                 var merged = output
                 merged.volume = local.volume
                 return merged
+            }
+            for output in outputs where output.selected {
+                let held = adjusting.contains(output.id)
+                Self.log.notice("refreshOutputs: \(output.name, privacy: .public) volume \(output.volume) adjusting \(held)")
             }
             connection = .online
             adoptSelectionIfUnset()
