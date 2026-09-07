@@ -1,33 +1,54 @@
 import SwiftUI
 
-/// What is currently coming out of the speakers.
+/// What is currently coming out of the speakers, and the controls for it.
 ///
-/// Read-only for now. Transport goes through the system's Now Playing slot
-/// and the media keys (`NowPlayingCenter`), which pause and resume Spotify
-/// itself over librespot's control socket. Buttons here would call the
-/// same `EngineStore.pausePlayback` and `resumePlayback`; nothing stops
-/// them but the design.
+/// Transport and the scrubber go to Spotify itself over librespot's control
+/// socket (`EngineStore.pausePlayback` and friends), so the phone shows the
+/// same state. Progress is ticked locally from the engine's last reading,
+/// because the engine pushes state changes and not seconds.
 struct NowPlayingCard: View {
     let track: NowPlaying
     let artworkURL: URL?
+    var lengthMs: Int?
+    var isPlaying = false
+    /// The engine's position at a given moment, for the timeline to tick.
+    var progressMs: (Date) -> Int = { _ in 0 }
+    var onPlayPause: () -> Void = {}
+    var onPrevious: () -> Void = {}
+    var onNext: () -> Void = {}
+    var onSeek: (Int) -> Void = { _ in }
+
+    /// Set while the knob is held: the slider then shows the hand, not the
+    /// clock, and the seek goes out on release.
+    @State private var scrubMs: Double?
 
     var body: some View {
-        HStack(spacing: 10) {
-            artwork
-            VStack(alignment: .leading, spacing: 1) {
-                Text(track.title ?? "Unknown track")
-                    .font(.system(size: 13, weight: .medium))
-                    .lineLimit(1)
-                    .truncationMode(.tail)
-                if let subtitle {
-                    Text(subtitle)
-                        .font(.system(size: 11))
-                        .foregroundStyle(.secondary)
+        VStack(spacing: 6) {
+            HStack(spacing: 10) {
+                artwork
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(track.title ?? "Unknown track")
+                        .font(.system(size: 13, weight: .medium))
                         .lineLimit(1)
                         .truncationMode(.tail)
+                    if let subtitle {
+                        Text(subtitle)
+                            .font(.system(size: 11))
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                            .truncationMode(.tail)
+                    }
+                }
+                Spacer(minLength: 0)
+            }
+
+            if let lengthMs, lengthMs > 0 {
+                TimelineView(.periodic(from: .now, by: 1)) { context in
+                    scrubber(lengthMs: lengthMs, now: context.date)
                 }
             }
-            Spacer(minLength: 0)
+
+            transport
         }
     }
 
@@ -49,6 +70,66 @@ struct NowPlayingCard: View {
                 ArtworkPlaceholder()
             }
         }
+    }
+
+    /// Elapsed on the left, what is left on the right, the knob between. A
+    /// native `Slider` for the same reason the volume ones are: keyboard,
+    /// VoiceOver and the system's knob come with it.
+    private func scrubber(lengthMs: Int, now: Date) -> some View {
+        let shown = scrubMs ?? Double(min(max(progressMs(now), 0), lengthMs))
+        let position = Binding<Double>(
+            get: { shown },
+            set: { scrubMs = $0 }
+        )
+        return HStack(spacing: 8) {
+            Text(Self.clock(ms: Int(shown)))
+                .frame(width: 34, alignment: .trailing)
+            Slider(value: position, in: 0...Double(lengthMs)) { editing in
+                if editing {
+                    scrubMs = shown
+                } else if let target = scrubMs {
+                    onSeek(Int(target))
+                    scrubMs = nil
+                }
+            }
+            .controlSize(.mini)
+            Text("-" + Self.clock(ms: lengthMs - Int(shown)))
+                .frame(width: 34, alignment: .leading)
+        }
+        .font(.system(size: 10).monospacedDigit())
+        .foregroundStyle(.secondary)
+    }
+
+    private var transport: some View {
+        HStack(spacing: 26) {
+            transportButton("backward.fill", size: 13, action: onPrevious)
+            transportButton(isPlaying ? "pause.fill" : "play.fill", size: 19, action: onPlayPause)
+                .frame(width: 22)
+            transportButton("forward.fill", size: 13, action: onNext)
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    private func transportButton(_ symbol: String, size: CGFloat, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: symbol)
+                .font(.system(size: size, weight: .semibold))
+                .foregroundStyle(.primary)
+                .frame(minWidth: 22, minHeight: 22)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    /// "m:ss", or "h:mm:ss" past the hour, as every player writes it.
+    static func clock(ms: Int) -> String {
+        let total = max(ms, 0) / 1000
+        let seconds = total % 60
+        let minutes = (total / 60) % 60
+        let hours = total / 3600
+        return hours > 0
+            ? String(format: "%d:%02d:%02d", hours, minutes, seconds)
+            : String(format: "%d:%02d", minutes, seconds)
     }
 }
 
@@ -124,9 +205,13 @@ struct ArtworkPlaceholder: View {
 }
 
 #Preview("Playing") {
-    NowPlayingCard(track: Fixtures.nowPlaying, artworkURL: nil)
-        .frame(width: Metrics.popoverWidth)
-        .padding()
+    NowPlayingCard(
+        track: Fixtures.nowPlaying, artworkURL: nil,
+        lengthMs: Fixtures.nowPlaying.lengthMs ?? 214_000, isPlaying: true,
+        progressMs: { _ in 62_000 }
+    )
+    .frame(width: Metrics.popoverWidth)
+    .padding()
 }
 
 #Preview("Idle") {

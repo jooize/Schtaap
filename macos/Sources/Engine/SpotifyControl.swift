@@ -42,6 +42,7 @@ struct SpotifyControl: Sendable {
     func pause() async throws { _ = try await send("pause") }
     func next() async throws { _ = try await send("next") }
     func previous() async throws { _ = try await send("prev") }
+    func seek(toMs position: Int) async throws { _ = try await send("seek \(max(position, 0))") }
 
     /// Spotify's own level, 0...65535, whether or not a session is up.
     func volume() async throws -> Int {

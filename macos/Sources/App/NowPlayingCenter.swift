@@ -5,11 +5,11 @@ import MediaPlayer
 /// Control Center, the menu bar's Now Playing item, and the keyboard's media
 /// keys' idea of what is on.
 ///
-/// Play and pause are the only commands, and they pause and resume Spotify
+/// Play, pause, next, previous and a position change all go to Spotify
 /// itself through librespot's control socket (`SpotifyControl`), so the
 /// phone shows the same state. Pausing the engine instead would stall
 /// librespot's writes and resume into stale audio, which is why the store
-/// never does that. Skipping is not offered yet; the socket could do it.
+/// never does that.
 ///
 /// macOS only lists an app in Now Playing once it handles at least one
 /// remote command. Display alone, as this first shipped, never appeared.
@@ -24,6 +24,9 @@ final class NowPlayingCenter {
     /// arriving before then is accepted and does nothing.
     var onPlay: (() -> Void)?
     var onPause: (() -> Void)?
+    var onNext: (() -> Void)?
+    var onPrevious: (() -> Void)?
+    var onSeek: ((Int) -> Void)?
 
     /// The transport state last published, which is what the toggle command
     /// decides on.
@@ -39,11 +42,7 @@ final class NowPlayingCenter {
 
     init() {
         let commands = MPRemoteCommandCenter.shared()
-        for command in [
-            commands.stopCommand, commands.nextTrackCommand,
-            commands.previousTrackCommand, commands.changePlaybackPositionCommand,
-            commands.seekForwardCommand, commands.seekBackwardCommand,
-        ] {
+        for command in [commands.stopCommand, commands.seekForwardCommand, commands.seekBackwardCommand] {
             command.isEnabled = false
         }
 
@@ -66,6 +65,23 @@ final class NowPlayingCenter {
                 guard let self else { return }
                 self.isPublishedAsPlaying ? self.onPause?() : self.onPlay?()
             }
+            return .success
+        }
+        commands.nextTrackCommand.isEnabled = true
+        commands.nextTrackCommand.addTarget { [weak self] _ in
+            Task { @MainActor in self?.onNext?() }
+            return .success
+        }
+        commands.previousTrackCommand.isEnabled = true
+        commands.previousTrackCommand.addTarget { [weak self] _ in
+            Task { @MainActor in self?.onPrevious?() }
+            return .success
+        }
+        commands.changePlaybackPositionCommand.isEnabled = true
+        commands.changePlaybackPositionCommand.addTarget { [weak self] event in
+            guard let event = event as? MPChangePlaybackPositionCommandEvent else { return .commandFailed }
+            let position = Int(event.positionTime * 1000)
+            Task { @MainActor in self?.onSeek?(position) }
             return .success
         }
     }

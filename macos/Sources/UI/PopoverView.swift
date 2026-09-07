@@ -111,7 +111,17 @@ struct PopoverView: View {
     @ViewBuilder
     private var nowPlayingSection: some View {
         if let track = store.nowPlaying, track.hasMetadata {
-            NowPlayingCard(track: track, artworkURL: artworkURL(for: track))
+            NowPlayingCard(
+                track: track,
+                artworkURL: artworkURL(for: track),
+                lengthMs: track.lengthMs ?? store.player?.itemLengthMs,
+                isPlaying: store.isPlaying,
+                progressMs: { store.progressMs(at: $0) },
+                onPlayPause: { store.isPlaying ? store.pausePlayback() : store.resumePlayback() },
+                onPrevious: { store.skipToPrevious() },
+                onNext: { store.skipToNext() },
+                onSeek: { store.seek(toMs: $0) }
+            )
         } else if store.nowPlaying?.isPlaceholder == true, store.player?.state == .play {
             ConnectingCard()
         } else {

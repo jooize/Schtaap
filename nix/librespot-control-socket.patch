@@ -1,7 +1,7 @@
 diff -ruN a/src/control.rs b/src/control.rs
 --- a/src/control.rs
 +++ b/src/control.rs
-@@ -0,0 +1,168 @@
+@@ -0,0 +1,176 @@
 +//! A Unix socket on which a local supervisor drives playback.
 +//!
 +//! librespot is a Spotify Connect receiver: the phone tells it what to do,
@@ -16,6 +16,7 @@ diff -ruN a/src/control.rs b/src/control.rs
 +//!
 +//!   play, pause, play_pause, next, prev
 +//!   volume <0..65535>       the same scale as the VOLUME event variable
++//!   seek <milliseconds>     into the current track
 +//!   status                  answers `ok volume <0..65535>`
 +//!
 +//! The socket file is created mode 0600. Whoever can open it can control
@@ -43,6 +44,7 @@ diff -ruN a/src/control.rs b/src/control.rs
 +    Next,
 +    Prev,
 +    SetVolume(u16),
++    Seek(u32),
 +    Status,
 +}
 +
@@ -73,6 +75,11 @@ diff -ruN a/src/control.rs b/src/control.rs
 +                .map(Command::SetVolume)
 +                .map_err(|_| format!("volume must be 0..65535, not '{value}'")),
 +            ("volume", None) => Err("volume needs a value".to_string()),
++            ("seek", Some(value)) => value
++                .parse::<u32>()
++                .map(Command::Seek)
++                .map_err(|_| format!("seek wants milliseconds, not '{value}'")),
++            ("seek", None) => Err("seek needs a position".to_string()),
 +            ("play" | "pause" | "play_pause" | "next" | "prev" | "status", Some(_)) => {
 +                Err(format!("'{name}' takes no argument"))
 +            }
@@ -94,6 +101,7 @@ diff -ruN a/src/control.rs b/src/control.rs
 +            Command::Next => spirc.next(),
 +            Command::Prev => spirc.prev(),
 +            Command::SetVolume(volume) => spirc.set_volume(*volume),
++            Command::Seek(position_ms) => spirc.set_position_ms(*position_ms),
 +            Command::Status => unreachable!(),
 +        };
 +        sent.map(|()| String::new()).map_err(|e| e.to_string())
@@ -211,7 +219,7 @@ diff -ruN a/src/main.rs b/src/main.rs
      .optopt(
 +        CONTROL_SOCKET_SHORT,
 +        CONTROL_SOCKET,
-+        "Accept playback commands (play, pause, next, prev, volume) on a Unix socket at PATH.",
++        "Accept playback commands (play, pause, next, prev, volume, seek) on a Unix socket at PATH.",
 +        "PATH",
 +    )
 +    .optopt(

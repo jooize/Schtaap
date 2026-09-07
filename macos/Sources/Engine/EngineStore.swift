@@ -35,6 +35,20 @@ final class EngineStore {
     private(set) var player: PlayerStatus?
     private(set) var nowPlaying: NowPlaying?
 
+    /// The engine's position when last read, and when. The engine pushes
+    /// state changes, never seconds, so the card ticks from here while
+    /// playing. A seek moves it at once, ahead of the engine's confirmation.
+    private(set) var progressAnchor: (ms: Int, at: Date)?
+
+    /// What the user just asked Spotify to do, shown until the engine agrees
+    /// or a few seconds pass. A pause takes a second or two to reach the
+    /// engine (librespot stops writing, the engine runs dry), and the
+    /// refresh in between would otherwise flip the button back.
+    private(set) var pendingTransport: PlayerStatus.State?
+    private var pendingTransportExpiry: Task<Void, Never>?
+
+    var isPlaying: Bool { (pendingTransport ?? player?.state) == .play }
+
     /// Master volume in 0...100. Written straight through by the slider.
     private(set) var masterVolume: Double = 50
 
@@ -126,6 +140,9 @@ final class EngineStore {
         // control socket, so the phone shows the same state.
         nowPlayingCenter.onPause = { [weak self] in self?.pausePlayback() }
         nowPlayingCenter.onPlay = { [weak self] in self?.resumePlayback() }
+        nowPlayingCenter.onNext = { [weak self] in self?.skipToNext() }
+        nowPlayingCenter.onPrevious = { [weak self] in self?.skipToPrevious() }
+        nowPlayingCenter.onSeek = { [weak self] in self?.seek(toMs: $0) }
     }
 
     private static var intendedFile: URL {
@@ -169,6 +186,8 @@ final class EngineStore {
         volumeWrites.removeAll()
         spotifyVolumeSync?.cancel()
         spotifyVolumeSync = nil
+        pendingTransportExpiry?.cancel()
+        pendingTransport = nil
         for task in rejoinTasks.values { task.cancel() }
         rejoinTasks.removeAll()
         rejoining.removeAll()
@@ -241,6 +260,11 @@ final class EngineStore {
         do {
             let status = try await client.player()
             player = status
+            progressAnchor = (status.itemProgressMs, .now)
+            if status.state == pendingTransport {
+                pendingTransportExpiry?.cancel()
+                pendingTransport = nil
+            }
             if !isAdjustingMaster {
                 masterVolume = Double(status.volume)
                 syncSpotifyVolume(status.volume)
@@ -275,20 +299,62 @@ final class EngineStore {
 
     // MARK: - Spotify
 
+    /// Where the track is at `date`: the last reading plus what has played
+    /// since, held while paused and while a pause is pending.
+    func progressMs(at date: Date) -> Int {
+        guard let progressAnchor else { return 0 }
+        guard isPlaying else { return progressAnchor.ms }
+        let elapsed = Int(date.timeIntervalSince(progressAnchor.at) * 1000)
+        let length = player?.itemLengthMs ?? nowPlaying?.lengthMs ?? .max
+        return min(progressAnchor.ms + max(elapsed, 0), length)
+    }
+
     /// Pauses Spotify itself. librespot stops writing, the engine runs dry
     /// and reports `pause`, and the phone shows the track paused. Not a mute:
     /// the track stops advancing. The popover's speaker icon stays a mute.
     func pausePlayback() {
-        guard let spotify else { return }
-        Task {
-            do { try await spotify.pause() } catch { Self.log.error("pause: \(error.localizedDescription, privacy: .public)") }
-        }
+        expect(.pause)
+        tellSpotify("pause") { try await $0.pause() }
     }
 
     func resumePlayback() {
+        expect(.play)
+        tellSpotify("play") { try await $0.play() }
+    }
+
+    func skipToNext() {
+        tellSpotify("next") { try await $0.next() }
+    }
+
+    func skipToPrevious() {
+        tellSpotify("previous") { try await $0.previous() }
+    }
+
+    /// Moves within the track. The card shows the new position at once; the
+    /// engine's own reading follows through the metadata bridge.
+    func seek(toMs position: Int) {
+        progressAnchor = (position, .now)
+        tellSpotify("seek") { try await $0.seek(toMs: position) }
+    }
+
+    private func expect(_ state: PlayerStatus.State) {
+        pendingTransport = state
+        pendingTransportExpiry?.cancel()
+        pendingTransportExpiry = Task { [weak self] in
+            try? await Task.sleep(for: .seconds(4))
+            guard !Task.isCancelled else { return }
+            self?.pendingTransport = nil
+        }
+    }
+
+    private func tellSpotify(_ what: String, _ command: @escaping @Sendable (SpotifyControl) async throws -> Void) {
         guard let spotify else { return }
         Task {
-            do { try await spotify.play() } catch { Self.log.error("play: \(error.localizedDescription, privacy: .public)") }
+            do {
+                try await command(spotify)
+            } catch {
+                Self.log.error("\(what, privacy: .public): \(error.localizedDescription, privacy: .public)")
+            }
         }
     }
 
