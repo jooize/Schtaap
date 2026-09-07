@@ -80,6 +80,12 @@ enum MetadataBridge {
 
         ensurePipe(metadataPipe)
 
+        // Spotify's own transport state, for the app: the engine's says
+        // "paused" for a stop as well, since a stop keeps the speakers.
+        if ["playing", "paused", "stopped"].contains(event) {
+            SpotifySessionFile.update(at: sessionFile) { $0.playback = event }
+        }
+
         // Transport first, before any metadata: a pause should silence the
         // speakers now, not after a pipe write. The seek it ends with makes
         // librespot report the corrected position in its own event, so the

@@ -124,7 +124,18 @@ struct PopoverView: View {
                 onSeek: { store.seek(toMs: $0) }
             )
         } else if store.nowPlaying?.isPlaceholder == true, store.player?.state == .play {
-            ConnectingCard()
+            ConnectingCard(
+                title: "Connecting to Spotify\u{2026}",
+                hint: "Sound and track details are on their way."
+            )
+        } else if store.spotifySession?.active == true {
+            // A phone has picked this receiver but nothing has reached the
+            // engine yet: the seconds between a pick and the first track,
+            // or a phone that is connected and idle.
+            ConnectingCard(
+                title: "Waiting for Spotify\u{2026}",
+                hint: "Play something on the phone that chose this receiver."
+            )
         } else {
             IdleCard(connectName: connectName, showsInSpotify: showsInSpotify)
         }

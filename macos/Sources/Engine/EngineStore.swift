@@ -432,6 +432,10 @@ final class EngineStore {
     /// Where the track is at `date`: the last reading plus what has played
     /// since, held while paused and while a pause is pending.
     func progressMs(at date: Date) -> Int {
+        // Spotify stopped at the end of its playlist. The engine holds the
+        // last track paused a few seconds short of its end (the heard
+        // position); Spotify shows it at the start, and a play begins there.
+        if spotifySession?.isStopped == true { return 0 }
         guard let progressAnchor else { return 0 }
         guard isPlaying else { return progressAnchor.ms }
         let elapsed = Int(date.timeIntervalSince(progressAnchor.at) * 1000)

@@ -175,17 +175,25 @@ struct IdleCard: View {
     }
 }
 
-/// The slot while the engine is already streaming the pipe but Spotify has
-/// not yet said what is in it. Without this the header shows the pipe's file
-/// name as a title, which is the plumbing showing through.
+/// The slot while a phone has this receiver but no track has reached the
+/// engine: the engine streaming the pipe before Spotify has said what is in
+/// it, or a phone that has picked the receiver and not played yet. A spinner
+/// where the cover goes, since something is in motion, and never the pipe
+/// item's own title, which is the plumbing showing through.
 struct ConnectingCard: View {
+    let title: String
+    let hint: String
+
     var body: some View {
         HStack(spacing: 10) {
-            ArtworkWell { ArtworkPlaceholder() }
+            ArtworkWell {
+                ProgressView()
+                    .controlSize(.small)
+            }
             VStack(alignment: .leading, spacing: 2) {
-                Text("Connecting to Spotify\u{2026}")
+                Text(title)
                     .font(.system(size: 13, weight: .medium))
-                Text("Sound and track details are on their way.")
+                Text(hint)
                     .font(.system(size: 11))
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)

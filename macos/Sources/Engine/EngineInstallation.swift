@@ -34,13 +34,15 @@ struct EngineInstallation {
 
     var databaseFile: URL { root.appending(path: "songs3.db") }
 
-    /// The pipe librespot writes PCM into. Its file name is what OwnTone
-    /// titles the item with until the track's own title arrives through the
-    /// metadata pipe, and that title is what a speaker, the Home app and
-    /// Control Center show meanwhile. So it is a word a listener can read,
-    /// not a file name; OwnTone recognises a pipe by its type, not by an
-    /// extension.
-    var audioPipe: URL { libraryDirectory.appending(path: "Spotify") }
+    /// The pipe librespot writes PCM into. Untitled, OwnTone would title the
+    /// item with this file name, and that is what a speaker, the Home app
+    /// and Control Center show until the track's own title arrives; the
+    /// config's `pipe_title` (our patch) names it `pipeTitle` instead.
+    var audioPipe: URL { libraryDirectory.appending(path: "spotify.fifo") }
+
+    /// What the pipe item is called before a track's title arrives, and so
+    /// what a speaker shows for those seconds.
+    static let pipeTitle = "Spotify"
 
     /// librespot's control socket, which the helper names on its command
     /// line from the same directory (`Layout.controlSocket`). A Unix socket
@@ -155,6 +157,7 @@ struct EngineInstallation {
         \tname = "\(escaped(Branding.appName))"
         \tdirectories = { "\(escaped(libraryDirectory.path))" }
         \tpipe_autostart = true
+        \tpipe_title = "\(escaped(Self.pipeTitle))"
         }
 
         """

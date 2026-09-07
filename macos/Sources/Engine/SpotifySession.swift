@@ -15,7 +15,14 @@ struct SpotifySession: Codable, Equatable, Sendable {
     var clientName: String?
     var clientBrand: String?
     var clientModel: String?
+    /// Spotify's own transport state, `playing`, `paused` or `stopped`,
+    /// from the last event that said. `stopped` is the end of a playlist:
+    /// the engine is merely paused then, holding the last track, and the
+    /// card should not pretend that track is paused near its end.
+    var playback: String?
     var changedAt = Date()
+
+    var isStopped: Bool { active && playback == "stopped" }
 
     /// The client as a person would name it. librespot passes what Spotify
     /// tells it about the controlling app, which is a model ("iPhone"), an
