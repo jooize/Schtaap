@@ -1,0 +1,93 @@
+librespot reconnects when its session to Spotify's servers is lost, and
+`status` reports that session.
+
+The session dies on a closed connection or a missed keep-alive and is
+then invalid for good, but nothing acted on that while a Spirc stood:
+its loop checks the session only when something wakes it, and with no
+phone talking to the device that took minutes to hours here, with the
+device advertised and playing nothing in between. The main loop now
+retires the Spirc and connects again with the last credentials as soon
+as the session is invalid, under the same rate limit as a Spirc that
+shut itself down. `status` gains `session live|lost|none` so the app
+can say when Spotify is unreachable rather than merely idle.
+
+Applies on top of librespot-control-socket.patch.
+
+--- a/src/control.rs	2026-09-08 01:16:33
++++ b/src/control.rs	2026-09-08 01:16:55
+@@ -13,7 +13,7 @@
+ //!   play, pause, play_pause, next, prev
+ //!   volume <0..65535>       the same scale as the VOLUME event variable
+ //!   seek <milliseconds>     into the current track
+-//!   status                  answers `ok volume <0..65535>`
++//!   status                  answers `ok volume <0..65535> session <live|lost|none>`
+ //!
+ //! The socket file is created mode 0600. Whoever can open it can control
+ //! playback on the account that is connected, which is exactly the trust
+@@ -84,10 +84,17 @@
+     }
+ 
+     /// Applies the command. `spirc` is None between sessions, when nothing
+-    /// but `status` can be answered.
+-    pub fn apply(&self, spirc: Option<&Spirc>, mixer: &dyn Mixer) -> Result<String, String> {
++    /// but `status` can be answered. `session_lost` is the session to
++    /// Spotify's servers being invalid while the Spirc still stands, which
++    /// the main loop repairs; `status` reports it meanwhile.
++    pub fn apply(&self, spirc: Option<&Spirc>, session_lost: bool, mixer: &dyn Mixer) -> Result<String, String> {
+         if let Command::Status = self {
+-            return Ok(format!("volume {}", mixer.volume()));
++            let session = match (spirc, session_lost) {
++                (None, _) => "none",
++                (Some(_), true) => "lost",
++                (Some(_), false) => "live",
++            };
++            return Ok(format!("volume {} session {session}", mixer.volume()));
+         }
+         let spirc = spirc.ok_or_else(|| "not connected to Spotify".to_string())?;
+         let sent = match self {
+--- a/src/main.rs	2026-09-08 01:16:33
++++ b/src/main.rs	2026-09-08 01:16:55
+@@ -2109,8 +2109,34 @@
+                     connecting = true;
+                 } else {
+                     error!("Spirc shut down too often. Not reconnecting automatically.");
++                    exit(1);
++                }
++            },
++            // The session to Spotify's servers can die while Spirc lives on:
++            // a closed connection or a missed keep-alive invalidates it, and
++            // Spirc's loop only notices when something wakes it, which with
++            // no phone talking to it can be hours. The device then looks
++            // fine on the network and plays nothing. Treat it like a fresh
++            // discovery: retire the Spirc and connect again with the same
++            // credentials, within the rate limit the Spirc branch applies.
++            _ = async {}, if !connecting && spirc.is_some() && session.is_invalid() && last_credentials.is_some() => {
++                warn!("Session to Spotify lost, reconnecting");
++                if let Some(spirc) = spirc.take() {
++                    if let Err(e) = spirc.shutdown() {
++                        error!("error sending spirc shutdown message: {e}");
++                    }
++                }
++                if let Some(spirc_task) = spirc_task.take() {
++                    // Continue shutdown in its own task
++                    tokio::spawn(spirc_task);
++                }
++                auto_connect_times.retain(|&t| t.elapsed() < RECONNECT_RATE_LIMIT_WINDOW);
++                if auto_connect_times.len() > RECONNECT_RATE_LIMIT {
++                    error!("Session lost too often. Not reconnecting automatically.");
+                     exit(1);
+                 }
++                auto_connect_times.push(Instant::now());
++                connecting = true;
+             },
+             _ = async {}, if player.is_invalid() => {
+                 error!("Player shut down unexpectedly");
+@@ -2118,7 +2144,7 @@
+             },
+             request = control_rx.recv() => {
+                 if let Some(request) = request {
+-                    let outcome = request.command.apply(spirc.as_ref(), mixer.as_ref());
++                    let outcome = request.command.apply(spirc.as_ref(), session.is_invalid(), mixer.as_ref());
+                     // The client may have gone away; nothing to do about it.
+                     let _ = request.reply.send(outcome);
+                 }

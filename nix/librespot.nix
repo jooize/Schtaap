@@ -8,10 +8,17 @@
 # prev and volume on a Unix socket and routes them through Spirc, so the
 # phone's slider and play state follow. See the patch for the wire format.
 #
+# The second patch makes the main loop reconnect when the session to
+# Spotify's servers is lost, which stock 0.8 leaves dead until the Spirc
+# happens to shut down, and teaches `status` to report that session.
+#
 # Only the binary crate is touched, and no dependency is added, so the
 # vendored Cargo hash stays nixpkgs' own.
 { librespot }:
 
 librespot.overrideAttrs (previous: {
-  patches = (previous.patches or [ ]) ++ [ ./librespot-control-socket.patch ];
+  patches = (previous.patches or [ ]) ++ [
+    ./librespot-control-socket.patch
+    ./librespot-session-loss-reconnect.patch
+  ];
 })
