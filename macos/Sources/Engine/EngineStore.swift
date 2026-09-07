@@ -233,12 +233,18 @@ final class EngineStore {
             connection = .offline(reason)
         case .events(let events):
             // A tap on a speaker's top means the same as a media key here:
-            // Spotify pauses and plays, and the phone shows it.
-            if events.contains(.remotePause) {
-                pausePlayback()
-            }
-            if events.contains(.remotePlay) {
-                resumePlayback()
+            // Spotify pauses and plays, and the phone shows it. The speaker
+            // says which way it believes it is toggling, and it is wrong
+            // after a pause it was never told about: the engine pauses it
+            // with a flush, which leaves it thinking it is playing, so its
+            // next tap says "pause" to a paused player and the user has to
+            // tap twice. Either message means "the other one" from here.
+            if events.contains(.remotePause) || events.contains(.remotePlay) {
+                if isPlaying {
+                    pausePlayback()
+                } else {
+                    resumePlayback()
+                }
             }
             if events.contains(.outputs) || events.contains(.volume) {
                 await refreshOutputs()
