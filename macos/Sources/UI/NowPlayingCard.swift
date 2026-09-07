@@ -22,6 +22,10 @@ struct NowPlayingCard: View {
     /// clock, and the seek goes out on release.
     @State private var scrubMs: Double?
 
+    /// The right-hand time is what is left by default; a click on it shows
+    /// the track's length instead, and the choice is kept.
+    @AppStorage("ShowsTrackLength") private var showsLength = false
+
     var body: some View {
         VStack(spacing: 6) {
             HStack(spacing: 10) {
@@ -93,8 +97,15 @@ struct NowPlayingCard: View {
                 }
             }
             .controlSize(.mini)
-            Text("-" + Self.clock(ms: lengthMs - Int(shown)))
-                .frame(width: 34, alignment: .leading)
+            Button {
+                showsLength.toggle()
+            } label: {
+                Text(showsLength ? Self.clock(ms: lengthMs) : "-" + Self.clock(ms: lengthMs - Int(shown)))
+                    .frame(width: 34, alignment: .leading)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .help(showsLength ? "Show time remaining" : "Show track length")
         }
         .font(.system(size: 10).monospacedDigit())
         .foregroundStyle(.secondary)

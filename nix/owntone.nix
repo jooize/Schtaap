@@ -108,12 +108,17 @@ stdenv.mkDerivation (finalAttrs: {
   # And a HomePod sends those DACP reports from its IPv6 link-local
   # address, which the mDNS layer threw away. It is kept now as a
   # secondary address the device is recognised by, never connected to.
+  #
+  # And the input thread reads 2.2 s ahead, which is 2.2 s between a seek
+  # or a pause on the phone and the speakers, on top of what AirPlay
+  # buffers. A quarter of a second now.
   patches = [
     ./owntone-evrtsp-connect-failure.patch
     ./owntone-websocket-vhost-init.patch
     ./owntone-dacp-speaker-authorize.patch
     ./owntone-airplay-events-to-listener.patch
     ./owntone-mdns-linklocal-address.patch
+    ./owntone-input-readahead.patch
   ];
 
   configureFlags = [ "--without-avahi" ];

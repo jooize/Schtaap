@@ -1,0 +1,23 @@
+The input thread reads ahead until it holds 96000 samples, 2.2 s at
+44.1 kHz. Everything in that buffer is audio the phone has already
+counted as played: a seek or a pause made there reaches the speakers
+only once the buffer drains, on top of the 2 s the AirPlay receivers
+hold. The buffer is not what keeps playback steady: the player streams
+silence through a read deficit of up to 1.5 s (PLAYER_READ_BEHIND_MAX)
+before it suspends, the pipe itself holds 64 KB, and the writer is a
+local process blocked on the pipe, never behind. A quarter second is
+slack for the 10 ms read loop and nothing more.
+
+--- a/src/input.c
++++ b/src/input.c
+@@ -40,8 +40,8 @@
+ #include "input.h"
+ 
+ // Disallow further writes to the buffer when its size exceeds this threshold.
+-// The below gives us room to buffer 2 seconds of 48000/16/2 audio.
+-#define INPUT_BUFFER_THRESHOLD STOB(96000, 16, 2)
++// The below gives us room to buffer 0.25 seconds of 44100/16/2 audio.
++#define INPUT_BUFFER_THRESHOLD STOB(11025, 16, 2)
+ // How long (in nsec) to wait when the input buffer is full before looping
+ #define INPUT_LOOP_TIMEOUT_NSEC 10000000
+ // How long (in sec) to keep an input open without the player reading from it

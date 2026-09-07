@@ -40,6 +40,18 @@ final class EngineStore {
     /// playing. A seek moves it at once, ahead of the engine's confirmation.
     private(set) var progressAnchor: (ms: Int, at: Date)?
 
+    /// Set by a seek: until then the engine is still playing out what came
+    /// before it, and its readings are not yet about the new position.
+    private var seekSettlingUntil: Date?
+
+    /// How far the engine's reading may sit from the card's own clock before
+    /// the card follows it. The engine reports the position it is feeding
+    /// the speakers, which trails the phone by the pipe and the engine's
+    /// read-ahead, and at a pause rewinds by what the speakers had not yet
+    /// played: about two seconds at most, with the read-ahead patched down.
+    /// A seek or a track change is far more than this.
+    private static let progressTolerance = 2_500
+
     /// What the user just asked Spotify to do, shown until the engine agrees
     /// or a few seconds pass. A pause takes a second or two to reach the
     /// engine (librespot stops writing, the engine runs dry), and the
@@ -259,8 +271,8 @@ final class EngineStore {
         guard !usesFixtures else { return }
         do {
             let status = try await client.player()
+            adoptProgress(from: status, previousItem: player?.itemId)
             player = status
-            progressAnchor = (status.itemProgressMs, .now)
             if status.state == pendingTransport {
                 pendingTransportExpiry?.cancel()
                 pendingTransport = nil
@@ -309,6 +321,25 @@ final class EngineStore {
         return min(progressAnchor.ms + max(elapsed, 0), length)
     }
 
+    /// Follows the engine's reading only when it disagrees with the card's
+    /// own clock by more than the buffers explain, so a seek that has not
+    /// reached the speakers yet, or a pause that rewound by the AirPlay
+    /// buffer, does not drag the knob back and forth.
+    private func adoptProgress(from status: PlayerStatus, previousItem: Int?) {
+        let now = Date.now
+        let reading = status.itemProgressMs
+        let sameItem = progressAnchor != nil && status.itemId == previousItem
+        let agrees = sameItem && abs(reading - progressMs(at: now)) <= Self.progressTolerance
+        let settling = seekSettlingUntil.map { now < $0 } ?? false
+
+        if agrees || (sameItem && settling && !agrees) {
+            if agrees { seekSettlingUntil = nil }
+            return
+        }
+        progressAnchor = (reading, now)
+        seekSettlingUntil = nil
+    }
+
     /// Pauses Spotify itself. librespot stops writing, the engine runs dry
     /// and reports `pause`, and the phone shows the track paused. Not a mute:
     /// the track stops advancing. The popover's speaker icon stays a mute.
@@ -334,6 +365,7 @@ final class EngineStore {
     /// engine's own reading follows through the metadata bridge.
     func seek(toMs position: Int) {
         progressAnchor = (position, .now)
+        seekSettlingUntil = .now.addingTimeInterval(8)
         tellSpotify("seek") { try await $0.seek(toMs: position) }
     }
 
