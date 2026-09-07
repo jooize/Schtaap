@@ -92,7 +92,8 @@ struct PopoverView: View {
                     name: $connectName,
                     isEditing: $isEditingName,
                     showsInSpotify: $showsInSpotify,
-                    subtitle: receiverSubtitle,
+                    subtitle: receiverSubtitle.text,
+                    subtitleIsWarning: receiverSubtitle.isWarning,
                     symbolName: SymbolCatalog.name(SpotifyDeviceType.advertised.symbolName),
                     onCommit: { commitName() }
                 )
@@ -135,12 +136,31 @@ struct PopoverView: View {
     /// Switched off, the section heading above is briefly a lie -- the name is
     /// still there but nothing is advertising it -- so the subtitle is where
     /// that gets said, in the line already spent on this.
-    private var receiverSubtitle: String {
-        guard showsInSpotify else { return "Not appearing in Spotify" }
-        guard let device = Host.current().localizedName, !device.isEmpty else {
-            return "on this Mac"
+    ///
+    /// While a phone uses the receiver the line says so, and names the
+    /// client when Spotify said what it is. A receiver that cannot reach
+    /// Spotify's servers, or is not running at all, says that instead, as a
+    /// warning: everything on the LAN can be fine while that is the fault.
+    private var receiverSubtitle: (text: String, isWarning: Bool) {
+        guard showsInSpotify else { return ("Not appearing in Spotify", false) }
+        switch store.spotifyUplink {
+        case .down where store.connection.isOnline:
+            return ("Spotify receiver is not running", true)
+        case .lost:
+            return ("Reconnecting to Spotify\u{2026}", true)
+        default:
+            break
         }
-        return "on \(device)"
+        if let session = store.spotifySession, session.active {
+            if let client = session.clientDescription {
+                return ("Connected from \(client)", false)
+            }
+            return ("Connected", false)
+        }
+        guard let device = Host.current().localizedName, !device.isEmpty else {
+            return ("on this Mac", false)
+        }
+        return ("on \(device)", false)
     }
 
     @ViewBuilder

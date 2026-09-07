@@ -44,14 +44,38 @@ struct SpotifyControl: Sendable {
     func previous() async throws { _ = try await send("prev") }
     func seek(toMs position: Int) async throws { _ = try await send("seek \(max(position, 0))") }
 
-    /// Spotify's own level, 0...65535, whether or not a session is up.
-    func volume() async throws -> Int {
+    /// What `status` answers: Spotify's own level, 0...65535, and the state
+    /// of librespot's session to Spotify's servers, `live`, `lost` (dead,
+    /// being rebuilt) or `none` (no phone has picked the device since
+    /// librespot started, so there is none to speak of).
+    struct Status: Equatable, Sendable {
+        let volume: Int
+        let session: String
+    }
+
+    /// The reply is `key value` pairs, so a librespot that answers more or
+    /// less than expected still parses.
+    func status() async throws -> Status {
         let detail = try await send("status")
-        let words = detail.split(separator: " ")
-        guard words.count == 2, words[0] == "volume", let level = Int(words[1]) else {
+        let words = detail.split(separator: " ").map(String.init)
+        var volume: Int?
+        var session = "none"
+        for index in stride(from: 0, to: words.count - 1, by: 2) {
+            switch words[index] {
+            case "volume": volume = Int(words[index + 1])
+            case "session": session = words[index + 1]
+            default: break
+            }
+        }
+        guard let volume else {
             throw Failure.refused("unexpected status '\(detail)'")
         }
-        return level
+        return Status(volume: volume, session: session)
+    }
+
+    /// Spotify's own level, 0...65535, whether or not a session is up.
+    func volume() async throws -> Int {
+        try await status().volume
     }
 
     /// Sets Spotify's level, 0...65535. Ignored by librespot while no phone

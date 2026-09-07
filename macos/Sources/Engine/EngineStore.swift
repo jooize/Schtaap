@@ -135,6 +135,22 @@ final class EngineStore {
     private let spotify: SpotifyControl?
     private var spotifyVolumeSync: Task<Void, Never>?
 
+    /// Who is using the receiver, from the file the event bridge keeps.
+    private(set) var spotifySession: SpotifySession?
+    private var spotifySessionWatch: DispatchSourceFileSystemObject?
+
+    /// Whether librespot can reach Spotify's servers: what `status` says,
+    /// asked every so often. Idle is the honest state before anyone has
+    /// ever picked the device, when there is no session to be alive.
+    enum SpotifyUplink: Equatable {
+        case idle, live, lost, down
+    }
+
+    private(set) var spotifyUplink: SpotifyUplink = .idle
+    private var spotifyUplinkPoll: Task<Void, Never>?
+    private var spotifyUplinkFailures = 0
+    private static let spotifyUplinkInterval = Duration.seconds(20)
+
     /// Bonjour lookup for device hardware, which the engine's API omits.
     let directory = AirPlayDirectory()
 
@@ -201,6 +217,71 @@ final class EngineStore {
                 await self.handle(message)
             }
         }
+
+        watchSpotifySession()
+        spotifyUplinkPoll = Task { [weak self] in
+            while !Task.isCancelled {
+                await self?.checkSpotifyUplink()
+                try? await Task.sleep(for: Self.spotifyUplinkInterval)
+            }
+        }
+    }
+
+    // MARK: - Spotify's side
+
+    private static var spotifySessionFile: URL {
+        Branding.supportDirectory.appending(path: SpotifySessionFile.name)
+    }
+
+    /// The bridge replaces the file atomically, which is a write to the
+    /// directory, so the directory is what is watched: a watch on the file
+    /// itself would follow the old inode into the bin.
+    private func watchSpotifySession() {
+        reloadSpotifySession()
+        let directory = Self.spotifySessionFile.deletingLastPathComponent()
+        let descriptor = open(directory.path, O_EVTONLY)
+        guard descriptor >= 0 else {
+            Self.log.error("cannot watch \(directory.path, privacy: .public): \(String(cString: strerror(errno)), privacy: .public)")
+            return
+        }
+        let source = DispatchSource.makeFileSystemObjectSource(
+            fileDescriptor: descriptor, eventMask: .write, queue: .main
+        )
+        source.setEventHandler { [weak self] in
+            Task { @MainActor in self?.reloadSpotifySession() }
+        }
+        source.setCancelHandler { close(descriptor) }
+        source.resume()
+        spotifySessionWatch = source
+    }
+
+    private func reloadSpotifySession() {
+        let session = SpotifySessionFile.read(at: Self.spotifySessionFile)
+        if session != spotifySession {
+            spotifySession = session
+        }
+    }
+
+    /// One `status` round trip. Two failures in a row mean librespot is not
+    /// answering, not a restart in progress.
+    private func checkSpotifyUplink() async {
+        guard let spotify else { return }
+        do {
+            let status = try await spotify.status()
+            spotifyUplinkFailures = 0
+            let uplink: SpotifyUplink = switch status.session {
+            case "live": .live
+            case "lost": .lost
+            default: .idle
+            }
+            if uplink != spotifyUplink { spotifyUplink = uplink }
+        } catch {
+            spotifyUplinkFailures += 1
+            if spotifyUplinkFailures >= 2, spotifyUplink != .down {
+                Self.log.info("Spotify uplink: \(error.localizedDescription, privacy: .public)")
+                spotifyUplink = .down
+            }
+        }
     }
 
     func stop() {
@@ -212,6 +293,10 @@ final class EngineStore {
         isAwaitingFirstContact = false
         for task in volumeWrites.values { task.cancel() }
         volumeWrites.removeAll()
+        spotifyUplinkPoll?.cancel()
+        spotifyUplinkPoll = nil
+        spotifySessionWatch?.cancel()
+        spotifySessionWatch = nil
         spotifyVolumeSync?.cancel()
         spotifyVolumeSync = nil
         pendingTransportExpiry?.cancel()
@@ -383,6 +468,14 @@ final class EngineStore {
     /// and the speakers agree. Not a mute: the track stops advancing. The
     /// popover's speaker icon stays a mute.
     func pausePlayback() {
+        // Freeze the clock where it stands. Once a pause is expected the
+        // card stops ticking, and would show the anchor, which is the
+        // engine's last reading: the start of the track, or wherever the
+        // last event was. That was the 0:00 that flashed before the
+        // engine's paused position arrived.
+        if progressAnchor != nil {
+            progressAnchor = (progressMs(at: .now), .now)
+        }
         expect(.pause)
         tellSpotify("pause") { try await $0.pause() }
     }

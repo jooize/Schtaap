@@ -139,6 +139,10 @@ private struct Layout {
     /// side; see `EngineInstallation.controlSocket`.
     var controlSocket: URL { support.appending(path: "librespot.sock") }
 
+    /// Who is using the receiver, written by the metadata bridge from
+    /// librespot's session events and watched by the app.
+    var sessionFile: URL { support.appending(path: SpotifySessionFile.name) }
+
     /// The engine's JSON API, on the port the app writes into owntone.conf
     /// (`EngineInstallation.owntoneConfig`) and `EngineEndpoint.default`
     /// reads. Localhost is in the engine's trusted networks.
@@ -349,6 +353,9 @@ private func run() throws -> Never {
         if let program = oneventProgram(try executablePath()) {
             arguments += ["--onevent", program]
         }
+        // A fresh librespot has nobody connected, whatever the last one
+        // left behind when it died.
+        SpotifySessionFile.write(SpotifySession(), to: layout.sessionFile)
         supervise(layout.engineBin.appending(path: "librespot"), arguments)
 
     // Run by librespot itself, once per playback event, with the event in the
@@ -359,6 +366,7 @@ private func run() throws -> Never {
         MetadataBridge.handleEvent(
             metadataPipe: URL(fileURLWithPath: settings.audioPipe + ".metadata"),
             stateDirectory: layout.metadataState,
+            sessionFile: layout.sessionFile,
             transport: EngineTransport(engine: layout.engineAPI, socket: layout.controlSocket)
         )
         exit(EXIT_SUCCESS)

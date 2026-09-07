@@ -67,6 +67,8 @@ targets:
       # The control socket client, shared with the app: the bridge seeks
       # Spotify back to where the sound stopped when it pauses.
       - path: Sources/Engine/SpotifyControl.swift
+      # The session file the bridge writes and the app watches.
+      - path: Sources/Engine/SpotifySession.swift
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: bar.esko.Tutti.EngineHelper

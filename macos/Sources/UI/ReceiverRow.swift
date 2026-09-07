@@ -14,6 +14,9 @@ struct ReceiverRow: View {
     @Binding var isEditing: Bool
     @Binding var showsInSpotify: Bool
     let subtitle: String
+    /// A subtitle that reports a fault (Spotify out of reach) rather than a
+    /// state, drawn so it is not mistaken for the usual quiet line.
+    var subtitleIsWarning = false
     let symbolName: String
     let onCommit: () -> Void
 
@@ -28,7 +31,7 @@ struct ReceiverRow: View {
                 nameField
                 Text(subtitle)
                     .font(.system(size: 10))
-                    .foregroundStyle(.tertiary)
+                    .foregroundStyle(subtitleIsWarning ? AnyShapeStyle(.orange) : AnyShapeStyle(.tertiary))
                     .lineLimit(1)
                     .truncationMode(.tail)
             }

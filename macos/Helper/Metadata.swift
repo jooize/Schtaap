@@ -72,7 +72,9 @@ enum MetadataBridge {
     /// Handles the event in the environment, and returns whether anything was
     /// written. Never throws: a metadata failure is not a reason to disturb
     /// playback, so everything here degrades to a line on stderr.
-    static func handleEvent(metadataPipe: URL, stateDirectory: URL, transport: EngineTransport) {
+    static func handleEvent(
+        metadataPipe: URL, stateDirectory: URL, sessionFile: URL, transport: EngineTransport
+    ) {
         let environment = ProcessInfo.processInfo.environment
         let event = environment["PLAYER_EVENT"] ?? ""
 
@@ -90,8 +92,33 @@ enum MetadataBridge {
             return
         case "playing":
             transport.playing()
-        case "stopped", "session_disconnected":
+        case "stopped":
             transport.stopped()
+        case "session_disconnected":
+            transport.sessionEnded()
+        default:
+            break
+        }
+
+        // Who is using the receiver, for the app to show. Nothing below
+        // concerns these events.
+        switch event {
+        case "session_connected":
+            SpotifySessionFile.update(at: sessionFile) { session in
+                session = SpotifySession(active: true, userName: environment["USER_NAME"])
+            }
+            return
+        case "session_client_changed":
+            SpotifySessionFile.update(at: sessionFile) { session in
+                session.clientName = environment["CLIENT_NAME"]
+                session.clientBrand = environment["CLIENT_BRAND_NAME"]
+                session.clientModel = environment["CLIENT_MODEL_NAME"]
+            }
+            return
+        case "session_disconnected":
+            SpotifySessionFile.update(at: sessionFile) { session in
+                session = SpotifySession(active: false)
+            }
         default:
             break
         }
@@ -119,7 +146,14 @@ enum MetadataBridge {
                 blob = progressItem(positionMs: position, durationMs: state.durationMs)
             }
 
-        case "stopped", "end_of_track":
+        case "stopped":
+            // The pause above already flushed the speakers, and a flush item
+            // is a no-op on a paused engine anyway. Only the track is over.
+            pruneCovers(in: stateDirectory, keeping: nil)
+            saveState(TrackState(), in: stateDirectory)
+            return
+
+        case "end_of_track":
             pruneCovers(in: stateDirectory, keeping: nil)
             state = TrackState()
             blob = item(.ssnc, "pfls")
@@ -145,8 +179,10 @@ enum MetadataBridge {
         }
 
         // Only a confirmed write retires the track description; otherwise the
-        // next event picks it up again.
-        let patience = carriesTrack ? readerPatience : 0
+        // next event picks it up again. A track_changed never waits: with
+        // the engine stopped or paused there is no reader until playback
+        // starts, and it is the resend on that event that meets one.
+        let patience = carriesTrack && event != "track_changed" ? readerPatience : 0
         if write(blob, to: metadataPipe, waitingForReader: patience), carriesTrack {
             state.delivered = true
         }
