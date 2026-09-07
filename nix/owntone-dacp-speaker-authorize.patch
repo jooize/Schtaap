@@ -123,14 +123,14 @@ trusting the address, minus everything that is not DACP.
 +  remote = httpd_header_find(hreq->in_headers, "Active-Remote");
 +  if (!remote || (safe_atou32(remote, &active_remote) < 0))
 +    {
-+      DPRINTF(E_DBG, L_DACP, "Request '%s' from '%s' has no usable Active-Remote: '%s'\n", hreq->uri, hreq->peer_address, remote);
++      DPRINTF(E_LOG, L_DACP, "Request '%s' from '%s' has no usable Active-Remote: '%s'\n", hreq->uri, hreq->peer_address, remote);
 +      return false;
 +    }
 +
 +  ret = player_speaker_get_byactiveremote_address(&speaker_info, active_remote, hreq->peer_address);
 +  if (ret < 0)
 +    {
-+      DPRINTF(E_DBG, L_DACP, "Request '%s' from '%s' has Active-Remote %" PRIu32 ", which is no speaker at that address\n", hreq->uri, hreq->peer_address, active_remote);
++      DPRINTF(E_LOG, L_DACP, "Request '%s' from '%s' has Active-Remote %" PRIu32 ", which is no speaker at that address\n", hreq->uri, hreq->peer_address, active_remote);
 +      return false;
 +    }
 +
