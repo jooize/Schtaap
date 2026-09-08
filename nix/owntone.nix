@@ -129,6 +129,10 @@ stdenv.mkDerivation (finalAttrs: {
   # And an AirPlay flush left the master session's partial packet in place,
   # ten milliseconds from ahead of the pause that went out first on resume,
   # spliced onto the resumed audio as a click. The flush drops it now.
+  #
+  # And a resume re-anchored the stream's clock while its rtptime stood
+  # still, so a device reading the first packet before the sync played
+  # a moment of the song at once. The rtptime moves on by the pause now.
   patches = [
     ./owntone-evrtsp-connect-failure.patch
     ./owntone-websocket-vhost-init.patch
@@ -141,6 +145,7 @@ stdenv.mkDerivation (finalAttrs: {
     ./owntone-pipe-artwork-survives-pause.patch
     ./owntone-pipe-title.patch
     ./owntone-airplay-flush-drops-partial-packet.patch
+    ./owntone-airplay-resume-continues-timeline.patch
   ];
 
   configureFlags = [ "--without-avahi" ];

@@ -88,6 +88,13 @@ actor EngineClient {
         try await put("api/outputs/set", body: ["outputs": ids])
     }
 
+    /// Stops playback outright, which is what lets the AirPlay sessions go:
+    /// a pause keeps them (so a speaker's own controls still reach us),
+    /// a stop releases them after the engine's timeout.
+    func stopPlayback() async throws {
+        try await put("api/player/stop")
+    }
+
     func setMasterVolume(_ volume: Int) async throws {
         try await put("api/player/volume", query: [
             URLQueryItem(name: "volume", value: String(clampVolume(volume)))

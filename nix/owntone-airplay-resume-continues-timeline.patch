@@ -1,0 +1,72 @@
+A resume after a flush continues the stream's timeline.
+
+The rtptime stands still while the player is paused, but the device's
+clock does not, and the device keeps the mapping between the two it
+was given at the start. Under that mapping the first packets after a
+resume, stamped with the old rtptime, are due in the past. The sync
+packet sent just before them establishes a new mapping, but a device
+that reads a packet before the sync plays it at once: a moment of the
+song, then silence until the packets are due under the new mapping,
+then the resume proper. Heard as a very brief piece of the song at
+the press, now and then.
+
+Now a flush marks the master session, and the first write after it
+moves the rtptime on by the time that passed, so the old mapping and
+the new one agree and the packets are due in the future whichever the
+device uses. The gap in rtptime is harmless: the flush already told
+the device to drop everything before it.
+
+Applies on top of owntone-airplay-flush-drops-partial-packet.patch.
+
+--- a/src/outputs/airplay.c	2026-09-08 14:28:04
++++ b/src/outputs/airplay.c	2026-09-08 14:28:04
+@@ -234,6 +234,10 @@
+   // compared to the rtptimes of the corresponding RTP packages we are sending)
+   uint32_t output_buffer_samples;
+ 
++  // Set by a flush, cleared by the next write, which then moves the rtptime
++  // on by the time that passed in between. See airplay_write().
++  bool flushed;
++
+   struct airplay_master_session *next;
+ };
+ 
+@@ -4200,6 +4204,7 @@
+     {
+       evbuffer_drain(ams->input_buffer, evbuffer_get_length(ams->input_buffer));
+       ams->input_buffer_samples = 0;
++      ams->flushed = true;
+     }
+ 
+   session->callback_id = callback_id;
+@@ -4255,6 +4260,30 @@
+ 	  if (!quality_is_equal(&obuf->data[i].quality, &ams->rtp_session->quality))
+ 	    continue;
+ 
++	  // The first write after a flush. The rtptime stood still while the
++	  // player was paused, but the device's clock did not, and the device
++	  // still holds the mapping between the two it was given at the start:
++	  // under it, a packet stamped with the old rtptime is due in the past.
++	  // The new sync packet below corrects that, but the packets are sent
++	  // right behind it, and a device that reads a packet before the sync
++	  // plays it at once: a moment of the song, then silence, then the
++	  // resume. Moving the rtptime on by the time that passed keeps the
++	  // old mapping and the new one in agreement, so the packets are due
++	  // in the future whichever the device uses.
++	  if (ams->flushed)
++	    {
++	      ams->flushed = false;
++	      if (timespec_cmp(obuf->pts, ams->cur_stamp.ts) > 0)
++		{
++		  struct timespec gap = timespec_sub(obuf->pts, ams->cur_stamp.ts);
++		  uint64_t rate = ams->quality.sample_rate;
++		  uint32_t skip = (uint32_t)(gap.tv_sec * rate + (uint64_t)gap.tv_nsec * rate / 1000000000);
++		  DPRINTF(E_DBG, L_AIRPLAY, "Resuming after flush, rtptime moved on by %" PRIu32 " samples (%ld.%03ld s)\n",
++		    skip, (long)gap.tv_sec, (long)(gap.tv_nsec / 1000000));
++		  ams->rtp_session->pos += skip;
++		}
++	    }
++
+ 	  // Set ams->cur_stamp, which involves a calculation of which session
+ 	  // rtptime corresponds to the pts we are given by the player.
+ 	  timestamp_set(ams, obuf->pts);

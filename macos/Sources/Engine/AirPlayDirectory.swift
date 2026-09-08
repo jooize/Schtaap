@@ -44,9 +44,16 @@ final class AirPlayDirectory {
 
         browser.stateUpdateHandler = { state in
             MainActor.assumeIsolated {
-                // Denied permission surfaces here. Stop cleanly and stay in the
-                // no-identities state; the UI already handles it.
-                if case .failed = state { self.stop() }
+                // Denied permission surfaces here, as failed or as waiting
+                // with nothing ever arriving. Stop cleanly either way and
+                // stay in the no-identities state; the UI already handles
+                // it, and the next popover opening starts a fresh browse,
+                // which is what sees a grant given since (a running
+                // browser never does).
+                switch state {
+                case .failed, .waiting: self.stop()
+                default: break
+                }
             }
         }
 
