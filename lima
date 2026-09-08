@@ -1,9 +1,0 @@
-#!/bin/sh
-# limactl wrapper keeping all Lima state project-local (.lima/).
-set -eu
-dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
-export LIMA_HOME="$dir/.lima"
-# QEMU driver for bridged socket_vmnet networking (vz cannot attach).
-PATH="$dir/result-qemu/bin:$PATH"
-export PATH
-exec "$dir/result-lima/bin/limactl" "$@"

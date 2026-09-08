@@ -1,7 +1,0 @@
-%admin ALL=(root:wheel) NOPASSWD:NOSETENV: /bin/mkdir -m 775 -p /private/var/run/lima
-
-# Manage "bridged" network daemons
-
-%admin ALL=(root:wheel) NOPASSWD:NOSETENV: \
-    /opt/socket_vmnet/bin/socket_vmnet --pidfile=/private/var/run/lima/bridged_socket_vmnet.pid --socket-group=admin --vmnet-mode=bridged --vmnet-interface=en0 /private/var/run/lima/socket_vmnet.bridged, \
-    /usr/bin/pkill -F /private/var/run/lima/bridged_socket_vmnet.pid
