@@ -1,0 +1,44 @@
+A pause keeps the position the remote was showing.
+
+Spirc reports a pause twice: handle_pause sends the position its own
+clock had reached, which is the one every remote was extrapolating, and
+the player's Paused event then overwrites it with the player's stream
+position. That position is ahead of the first by everything the backend
+has taken and not yet played, which with a pipe backend feeding another
+player is half a second or more, so every pause stepped the phone's
+slider forward a moment after it showed the pause. The supervisor
+behind the pipe then seeks back to where the sound actually stopped,
+which is a step the other way; the forward one in between was noise.
+
+Now a Paused event for a pause Spirc itself made keeps the position it
+already reported. A pause the player made on its own, with Spirc still
+Playing, still takes the player's position, since that is the only one
+there is.
+
+Applies on top of librespot-control-socket.patch,
+librespot-session-loss-reconnect.patch and
+librespot-play-from-stopped.patch.
+
+--- a/connect/src/spirc.rs	2026-09-08 11:14:40
++++ b/connect/src/spirc.rs	2026-09-08 11:14:40
+@@ -774,7 +774,19 @@
+             } => {
+                 trace!("==> Paused");
+                 match self.play_status {
+-                    SpircPlayStatus::Paused { .. } | SpircPlayStatus::Playing { .. } => {
++                    // The pause came through handle_pause, which already put
++                    // the position where the clock the remote shows had it.
++                    // The player's own position is ahead of that by whatever
++                    // the backend has taken and not yet played, so reporting
++                    // it here stepped the remote's slider forward on every
++                    // pause, a moment after it showed the pause.
++                    SpircPlayStatus::Paused { position_ms, .. } => {
++                        self.play_status = SpircPlayStatus::Paused {
++                            position_ms,
++                            preloading_of_next_track_triggered: false,
++                        };
++                    }
++                    SpircPlayStatus::Playing { .. } => {
+                         self.connect_state
+                             .update_position(new_position_ms, self.now_ms());
+                         self.play_status = SpircPlayStatus::Paused {

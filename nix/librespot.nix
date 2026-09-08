@@ -13,6 +13,9 @@
 # happens to shut down, and teaches `status` to report that session.
 # The third makes a plain play while stopped (the end of a playlist with
 # autoplay off) start the context again, as Spotify's own button does.
+# The fourth keeps a pause at the position the phone was showing, rather
+# than stepping it forward to the player's own, which runs ahead of the
+# pipe by whatever the engine has buffered.
 #
 # Only the binary crate is touched, and no dependency is added, so the
 # vendored Cargo hash stays nixpkgs' own.
@@ -23,5 +26,6 @@ librespot.overrideAttrs (previous: {
     ./librespot-control-socket.patch
     ./librespot-session-loss-reconnect.patch
     ./librespot-play-from-stopped.patch
+    ./librespot-pause-keeps-position.patch
   ];
 })

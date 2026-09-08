@@ -35,6 +35,15 @@ struct EngineTransport {
 
     private static let timeout: TimeInterval = 1.5
 
+    /// How far past the engine's position a resume starts, in milliseconds.
+    ///
+    /// The position is read before the engine is told to pause, and its
+    /// FLUSH reaches the speakers an RTSP round trip after that, so they
+    /// play a few tens of milliseconds past it. Resuming exactly there
+    /// plays those again, which is heard as a short stutter. A gap of the
+    /// same size is not heard, so err on that side.
+    private static let flushLagMs = 80
+
     /// The engine's player state and position, from `GET /api/player`.
     private struct PlayerState: Decodable {
         let state: String
@@ -59,10 +68,11 @@ struct EngineTransport {
         // only once the AirPlay buffer ahead of it is full (player.c,
         // play_start). Read before the pause, which restarts the input.
         let heard = before.itemProgressMs
+        let resume = heard + Self.flushLagMs
         do {
             let control = SpotifyControl(socket: socket)
-            _ = try control.exchangeBlocking("seek \(heard)")
-            log("paused the engine, Spotify back to \(heard) ms")
+            _ = try control.exchangeBlocking("seek \(resume)")
+            log("paused the engine at \(heard) ms, Spotify back to \(resume) ms")
         } catch {
             log("paused the engine at \(heard) ms, but could not seek Spotify: \(error.localizedDescription)")
         }
