@@ -481,18 +481,6 @@ final class EngineStore {
     /// stopped (`EngineTransport` in the helper), so the phone, the engine
     /// and the speakers agree. Not a mute: the track stops advancing. The
     /// popover's speaker icon stays a mute.
-    /// For quitting. A paused engine keeps its AirPlay sessions so that a
-    /// resume is instant and a speaker's tap still reaches us, which is
-    /// right while the app is around and wrong once it is not: the
-    /// speakers stayed taken, and Apple Music on this Mac was refused The
-    /// Office after a quit (2026-09-08). A playing engine is left alone,
-    /// the phone is still using it. Spotify's next play after a stop comes
-    /// in through the pipe's autostart, as a first play does.
-    func releaseSpeakersIfPaused() async {
-        guard !usesFixtures, player?.state == .pause else { return }
-        try? await client.stopPlayback()
-    }
-
     func pausePlayback() {
         // Freeze the clock where it stands. Once a pause is expected the
         // card stops ticking, and would show the anchor, which is the

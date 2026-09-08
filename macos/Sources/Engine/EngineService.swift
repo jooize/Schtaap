@@ -5,13 +5,13 @@ import ServiceManagement
 
 /// Registration and supervision of the two bundled engine agents.
 ///
-/// launchd owns the processes, not this app. That is the difference between
-/// an engine that is running because the popover is open and one that is
-/// running because the Mac is on: the phone can only cast to a Spotify
-/// Connect target that exists, and the user is not going to open a menu bar
-/// popover first. It also means crash restart, throttling and log handling
-/// are launchd's problem rather than ours, and that the agents appear in
-/// System Settings under Login Items where a user can turn them off.
+/// launchd runs the processes, this app decides when. The engine lives as
+/// long as the app does: launching the app starts the agents, quitting it
+/// stops them, so a quit frees the speakers and leaves nothing advertised,
+/// and "Start at Login" is the one switch for the whole thing. launchd
+/// still owns crash restart and throttling (the plists' KeepAlive brings
+/// back a crash and nothing else), and the agents appear in System
+/// Settings under Login Items where a user can turn them off.
 @MainActor
 @Observable
 final class EngineService {
@@ -119,12 +119,14 @@ final class EngineService {
                 Self.log.info("\(label, privacy: .public): registered")
                 registeredAnything = true
             }
-            // A fresh registration starts the agent with the config we just
-            // wrote, so restarting on top of that would only interrupt it.
+            // The agents do not run at load, so a launch starts them. A
+            // changed config needs the ones already running to start over.
             if changed && !registeredAnything {
                 Self.log.info("config changed, restarting agents")
                 restart()
                 try await reregisterIfRestartFailed()
+            } else {
+                start()
             }
         } catch {
             Self.log.error("registration failed: \(String(describing: error), privacy: .public)")
@@ -255,6 +257,37 @@ final class EngineService {
         return !stateLine.contains("state = spawn scheduled")
     }
 
+    /// Starts whichever agents are not running. A running one is left alone.
+    func start() {
+        guard !isOffline else { return }
+        for label in labels {
+            launchctl(["kickstart", "gui/\(getuid())/\(label)"], label)
+        }
+    }
+
+    /// Stops both agents, for a quit. SIGTERM reaches the engine through the
+    /// helper, owntone tears its AirPlay sessions down on the way out, and
+    /// the helper exits clean, which the plists' KeepAlive leaves alone.
+    /// Returns at once: the processes are launchd's, not ours, and finish
+    /// shutting down whether or not this app is still around.
+    func stop() {
+        guard !isOffline else { return }
+        for label in labels {
+            launchctl(["kill", "TERM", "gui/\(getuid())/\(label)"], label)
+        }
+    }
+
+    private func launchctl(_ arguments: [String], _ label: String) {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/bin/launchctl")
+        process.arguments = arguments
+        // A failure here means the agent is not loaded, which
+        // refreshStatus() reports on its own terms.
+        try? process.run()
+        process.waitUntilExit()
+        Self.log.info("\(arguments[0], privacy: .public) \(label, privacy: .public): exit \(process.terminationStatus)")
+    }
+
     /// Takes the agents down and lets launchd bring them straight back, so
     /// they re-read the config.
     ///
@@ -264,14 +297,7 @@ final class EngineService {
     func restart() {
         guard !isOffline else { return }
         for label in labels {
-            let process = Process()
-            process.executableURL = URL(fileURLWithPath: "/bin/launchctl")
-            process.arguments = ["kickstart", "-k", "gui/\(getuid())/\(label)"]
-            // A failure here means the agent is not loaded, which
-            // refreshStatus() reports on its own terms.
-            try? process.run()
-            process.waitUntilExit()
-            Self.log.info("kickstart \(label, privacy: .public): exit \(process.terminationStatus)")
+            launchctl(["kickstart", "-k", "gui/\(getuid())/\(label)"], label)
         }
     }
 

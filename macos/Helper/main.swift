@@ -202,14 +202,36 @@ private func redirectOutput(to file: URL) {
 /// signal handler takes no context.
 private nonisolated(unsafe) var enginePID: pid_t = 0
 
+/// Set once this job was told to stop, so that the engine's death by our
+/// own SIGTERM reads as a clean exit and not as a crash.
+private nonisolated(unsafe) var stopRequested = false
+
 /// Passes a termination signal on to the engine so it can shut down, rather
 /// than leaving it orphaned when launchd stops this job.
 private func forwardToEngine(_ signal: Int32) {
+    stopRequested = true
     if enginePID > 0 { kill(enginePID, signal) }
 }
 
-/// Starts `executable`, waits for it, and exits with its fate.
+/// Set when the engine is to be started again after it exits, by the
+/// probe below: a stop of librespot alone, not of this job.
+private nonisolated(unsafe) var restartRequested = false
+
+/// Runs `executable` and reports its fate as this process's own, starting
+/// it again first if that was asked for while it ran.
 private func supervise(_ executable: URL, _ arguments: [String]) -> Never {
+    while true {
+        let status = run(executable, arguments)
+        if restartRequested && !stopRequested {
+            restartRequested = false
+            continue
+        }
+        exitAsEngine(status)
+    }
+}
+
+/// Starts `executable` and waits for it. Returns its wait status.
+private func run(_ executable: URL, _ arguments: [String]) -> Int32 {
     // posix_spawn wants a NULL-terminated array of mutable C strings. The
     // strdup'd copies are never freed, which is correct: this process is
     // either about to spend its life in waitpid or about to exit.
@@ -240,24 +262,34 @@ private func supervise(_ executable: URL, _ arguments: [String]) -> Never {
             exit(EXIT_FAILURE)
         }
     }
-
-    // Report the engine's outcome as this process's own, so launchd's
-    // KeepAlive and its throttling see what actually happened. Swift does
-    // not surface the wait macros, so the low seven bits are the signal that
-    // killed it and the next eight are the exit status.
-    let terminatingSignal = status & 0x7F
-    exit(terminatingSignal == 0 ? (status >> 8) & 0xFF : EXIT_FAILURE)
+    enginePID = 0
+    return status
 }
 
-/// Stays loaded without starting anything, and waits to be restarted.
-///
-/// Exiting would be the obvious way to say "nothing to run here", but the
-/// plist's KeepAlive is unconditional, so launchd would spawn us straight
-/// back and we would spin. Parking keeps the job in the state the app's
-/// health check expects -- loaded and running -- and switching the setting
-/// back on is the same `launchctl kickstart -k` as any other config change.
+private func exitAsEngine(_ status: Int32) -> Never {
+    // Report the engine's outcome as this process's own, so that launchd's
+    // KeepAlive (Crashed only) does the right thing: a stop we were asked
+    // for is a clean exit and stays down; a crash is re-raised as our own
+    // death by the same signal, which is what brings the engine back; a
+    // plain failure (a config it cannot read, say) stays down too, rather
+    // than looping. Swift does not surface the wait macros, so the low seven
+    // bits are the signal that killed it and the next eight are the status.
+    let terminatingSignal = status & 0x7F
+    if stopRequested {
+        exit(EXIT_SUCCESS)
+    }
+    if terminatingSignal != 0 {
+        signal(terminatingSignal, SIG_DFL)
+        raise(terminatingSignal)
+    }
+    exit((status >> 8) & 0xFF)
+}
+
+/// Nothing to run here. A clean exit stays down: the plist's KeepAlive
+/// only brings back a crash, and switching the setting back on is the same
+/// `launchctl kickstart -k` as any other config change.
 private func park() -> Never {
-    dispatchMain()
+    exit(EXIT_SUCCESS)
 }
 
 /// What to hand librespot's `--onevent`: this same binary, in metadata mode.
@@ -360,8 +392,8 @@ private func run() throws -> Never {
         // Local Network access, read by trying, and acted on: a grant that
         // arrives after librespot opened its mDNS socket never reaches that
         // socket, so the device stays invisible in Spotify until librespot
-        // is started again. Ending it here makes launchd do that (KeepAlive)
-        // with the grant in place. See LocalNetworkProbe.
+        // is started again, which supervise() does on request. See
+        // LocalNetworkProbe.
         let probe = LocalNetworkProbe(
             executable: try executablePath(),
             sessionFile: layout.sessionFile,
@@ -370,7 +402,9 @@ private func run() throws -> Never {
             FileHandle.standardError.write(Data(
                 "helper: local network access granted, restarting librespot so it can advertise\n".utf8
             ))
-            forwardToEngine(SIGTERM)
+            // librespot alone, not this job: supervise() starts it again.
+            restartRequested = true
+            if enginePID > 0 { kill(enginePID, SIGTERM) }
         }
         probe.start()
         supervise(layout.engineBin.appending(path: "librespot"), arguments)

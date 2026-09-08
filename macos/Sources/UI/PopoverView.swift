@@ -361,19 +361,8 @@ struct PopoverView: View {
             }
 
             MenuRow(title: "Quit \(Branding.appName)") {
-                // The engine outlives the app by design, but a paused one
-                // holding the speakers with nobody to resume it would keep
-                // them from every other sender. Bounded: a quit never waits
-                // on the engine for more than a moment.
-                Task {
-                    await withTaskGroup(of: Void.self) { group in
-                        group.addTask { await store.releaseSpeakersIfPaused() }
-                        group.addTask { try? await Task.sleep(for: .seconds(1.5)) }
-                        await group.next()
-                        group.cancelAll()
-                    }
-                    NSApp.terminate(nil)
-                }
+                // The engine goes with the app: AppDelegate stops it.
+                NSApp.terminate(nil)
             }
         }
         .padding(.horizontal, Metrics.horizontalInset - 6)

@@ -5,6 +5,7 @@ import SwiftUI
 /// popover is the whole app.
 @main
 struct AppMain: App {
+    @NSApplicationDelegateAdaptor private var delegate: AppDelegate
     @State private var store: EngineStore
     @State private var engine: EngineService
 
@@ -24,6 +25,7 @@ struct AppMain: App {
             connectName: Preferences.connectName,
             showsInSpotify: Preferences.showsInSpotify
         )
+        AppDelegate.engine = engine
         store.start()
     }
 
@@ -36,5 +38,18 @@ struct AppMain: App {
             MenuBarLabel(isPlaying: store.player?.isPlaying ?? false)
         }
         .menuBarExtraStyle(.window)
+    }
+}
+
+/// The engine lives as long as the app does, and every way of quitting
+/// ends here: the footer's Quit, an AppleScript quit, a logout. The stop
+/// returns at once, so nothing waits on the engine.
+@MainActor
+final class AppDelegate: NSObject, NSApplicationDelegate {
+    static var engine: EngineService?
+
+    func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        Self.engine?.stop()
+        return .terminateNow
     }
 }

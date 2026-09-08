@@ -26,11 +26,23 @@
 		<string>librespot</string>
 	</array>
 
+	<!--
+	    The engine lives as long as the app does: the app starts the agents
+	    when it launches (launchctl kickstart) and stops them when it quits
+	    (launchctl kill TERM), so quitting the app frees the speakers and
+	    leaves nothing advertised. So no RunAtLoad, and a KeepAlive that only
+	    brings back a crash: the helper dies by the engine's own signal when
+	    the engine crashes, and exits 0 when it was asked to stop, which is
+	    the difference launchd needs.
+	-->
 	<key>RunAtLoad</key>
-	<true/>
+	<false/>
 
 	<key>KeepAlive</key>
-	<true/>
+	<dict>
+		<key>Crashed</key>
+		<true/>
+	</dict>
 
 	<key>ProcessType</key>
 	<string>Interactive</string>
