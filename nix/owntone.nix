@@ -150,6 +150,17 @@ stdenv.mkDerivation (finalAttrs: {
 
   configureFlags = [ "--without-avahi" ];
 
+  # ld64 derives LC_UUID from a hash of its output that skips the symbol and
+  # string tables but not the load command recording the string table's
+  # size. With -g the stabs (N_OSO, N_SO) name the build directory, which
+  # on macOS is random per build and of a different length under Nix
+  # (/nix/var/nix/builds/nix-<pid>-<n>) than under Lix (/nix/var/nix/b/<n>),
+  # so two machines got two UUIDs for otherwise identical binaries. Nix
+  # strips the stabs anyway; -S keeps them out of the link output, and the
+  # UUID then depends on the code alone. Found 2026-09-08 comparing a local
+  # build with a GitHub runner's: 16 bytes apart, all of them the UUID.
+  env.NIX_LDFLAGS = "-S";
+
   enableParallelBuilding = true;
 
   meta = {

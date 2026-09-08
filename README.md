@@ -102,12 +102,21 @@ and the workflow that produced it:
 
     gh attestation verify Tutti-0.1.0-macos.zip --owner jooize
 
-The zip is meant to be reproducible: the same commit, the same Xcode,
-the same bytes. Every run builds twice, on two separate runners, and
-refuses to publish unless the two zips are identical. What is not yet
-reproducible is a build on another Mac: a local Lix build of owntone
-differs from the runner's in the linker's UUID and nothing else, cause
-not yet found.
+What that proves is narrower than "an honest build": GitHub vouches that
+this workflow file, at this commit, on GitHub's own runner, produced
+these bytes. The recipe is the commit itself, so what to check is the
+workflow file, the pinned action commits, and the flake lock. Nothing
+from the author's Mac and no secret takes part.
+
+The zip is reproducible: the same commit, the same Xcode, the same
+bytes. Every run builds twice, on two separate runners, and refuses to
+publish unless the two zips are identical. The engine is meant to
+reproduce on other Macs too, Nix or Lix, after two fixes: librespot
+embedded the Nix build directory in its panic locations (verified
+identical to the runner's), and owntone's linker UUID depended on the
+length of that directory's name through the debug symbols Nix later
+stripped (fixed, cross-machine check pending). Both are commented in
+`nix/`.
 
 Release builds are ad-hoc signed and not notarized. macOS refuses to
 open the app the first time; allow it under System Settings > Privacy &
