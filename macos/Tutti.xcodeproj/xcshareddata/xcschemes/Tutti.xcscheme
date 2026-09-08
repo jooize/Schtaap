@@ -10,8 +10,8 @@
          <ExecutionAction
             ActionType = "Xcode.IDEStandardExecutionActionsCore.ExecutionActionType.ShellScriptAction">
             <ActionContent
-               title = "Bump Build Number"
-               scriptText = "set -o errexit&#10;set -o nounset&#10;&#10;build_file=&quot;${SRCROOT}/.build-number&quot;&#10;version_file=&quot;${SRCROOT}/.last-version&quot;&#10;&#10;current_version=&quot;$(sed -n &apos;s/^MARKETING_VERSION *= *//p&apos; &quot;${SRCROOT}/Version.xcconfig&quot; | head -1)&quot;&#10;last_version=&quot;&quot;&#10;if [ -f &quot;$version_file&quot; ]; then&#10;  last_version=&quot;$(cat &quot;$version_file&quot;)&quot;&#10;fi&#10;&#10;if [ &quot;$current_version&quot; != &quot;$last_version&quot; ]; then&#10;  build_number=0&#10;  printf &apos;%s\n&apos; &quot;$current_version&quot; &gt; &quot;$version_file&quot;&#10;elif [ -f &quot;$build_file&quot; ]; then&#10;  build_number=&quot;$(cat &quot;$build_file&quot;)&quot;&#10;else&#10;  build_number=0&#10;fi&#10;&#10;build_number=$((build_number + 1))&#10;printf &apos;%s\n&apos; &quot;$build_number&quot; &gt; &quot;$build_file&quot;&#10;printf &apos;CURRENT_PROJECT_VERSION = %s\n&apos; &quot;$build_number&quot; &gt; &quot;${SRCROOT}/BuildNumber.xcconfig&quot;&#10;">
+               title = "Stamp Commit"
+               scriptText = "set -o errexit&#10;set -o nounset&#10;&#10;commit=&quot;$(git -C &quot;${SRCROOT}&quot; rev-parse HEAD 2&gt;/dev/null || printf unknown)&quot;&#10;if [ &quot;$commit&quot; != unknown ] &amp;&amp; [ -n &quot;$(git -C &quot;${SRCROOT}&quot; status --porcelain 2&gt;/dev/null)&quot; ]; then&#10;  commit=&quot;${commit}-dirty&quot;&#10;fi&#10;printf &apos;GIT_COMMIT = %s\n&apos; &quot;$commit&quot; &gt; &quot;${SRCROOT}/Commit.xcconfig&quot;&#10;">
                <EnvironmentBuildable>
                   <BuildableReference
                      BuildableIdentifier = "primary"

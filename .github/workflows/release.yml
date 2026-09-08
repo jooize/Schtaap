@@ -48,8 +48,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          # The build number is the commit count, and the notices builder
-          # reads the repository through git.
+          # The notices builder reads the repository through git.
           fetch-depth: 0
 
       - name: Select Xcode
@@ -73,7 +72,6 @@ jobs:
           fi
           {
             echo "version=$version"
-            echo "build=$(git rev-list --count HEAD)"
             echo "epoch=$(git log -1 --format=%ct)"
           } >> "$GITHUB_OUTPUT"
 
@@ -83,20 +81,23 @@ jobs:
         run: ./macos/build-engine
 
       - name: Build app
-        env:
-          BUILD: ${{ steps.version.outputs.build }}
         run: |
           cd macos
           # CODE_SIGN_IDENTITY "-" is ad-hoc; the project's Apple Development
-          # identity only exists on the author's Mac. CURRENT_PROJECT_VERSION
-          # on the command line outranks the scheme's build-number counter,
-          # which would otherwise say 1 on every fresh clone.
+          # identity only exists on the author's Mac. The build number is the
+          # version (Version.xcconfig), so nothing is passed for it.
           xcodebuild -project Tutti.xcodeproj -scheme Tutti -configuration Release \
             -derivedDataPath .build \
             CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM= \
-            CURRENT_PROJECT_VERSION="$BUILD" \
             build
-          codesign --verify --deep --strict --verbose=2 .build/Build/Products/Release/Tutti.app
+          app=.build/Build/Products/Release/Tutti.app
+          codesign --verify --deep --strict --verbose=2 "$app"
+          # The scheme pre-action stamped the commit; a "-dirty" here would
+          # mean something changed the tree before the build, and the bytes
+          # would no longer be the commit's.
+          commit="$(/usr/libexec/PlistBuddy -c 'Print GitCommit' "$app/Contents/Info.plist")"
+          echo "GitCommit=$commit  CFBundleVersion=$(/usr/libexec/PlistBuddy -c 'Print CFBundleVersion' "$app/Contents/Info.plist")"
+          [ "$commit" = "$GITHUB_SHA" ] || { echo "::error::built commit $commit is not $GITHUB_SHA" >&2; exit 1; }
 
       - name: Package
         env:

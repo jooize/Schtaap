@@ -187,6 +187,9 @@ targets:
         CFBundleName: $(PRODUCT_NAME)
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        # The commit this build came from, stamped by the scheme pre-action.
+        # Identification only; nothing orders by it.
+        GitCommit: $(GIT_COMMIT)
         CFBundlePackageType: APPL
         LSMinimumSystemVersion: $(MACOSX_DEPLOYMENT_TARGET)
         NSHumanReadableCopyright: "© 2026 Tilde Esko. MIT License."
@@ -209,35 +212,21 @@ schemes:
         Tutti: all
       preActions:
         # Runs before Xcode reads the xcconfig, which is the only point early
-        # enough to set CURRENT_PROJECT_VERSION dynamically. A build phase
-        # would run after Info.plist processing.
-        - name: Bump Build Number
+        # enough to feed a build setting a value from outside. A build phase
+        # would run after Info.plist processing. The build number itself is
+        # the version (Version.xcconfig); this only records which commit was
+        # built, "-dirty" if the tree had changes, "unknown" without git.
+        - name: Stamp Commit
           settingsTarget: Tutti
           script: |
             set -o errexit
             set -o nounset
 
-            build_file="${SRCROOT}/.build-number"
-            version_file="${SRCROOT}/.last-version"
-
-            current_version="$(sed -n 's/^MARKETING_VERSION *= *//p' "${SRCROOT}/Version.xcconfig" | head -1)"
-            last_version=""
-            if [ -f "$version_file" ]; then
-              last_version="$(cat "$version_file")"
+            commit="$(git -C "${SRCROOT}" rev-parse HEAD 2>/dev/null || printf unknown)"
+            if [ "$commit" != unknown ] && [ -n "$(git -C "${SRCROOT}" status --porcelain 2>/dev/null)" ]; then
+              commit="${commit}-dirty"
             fi
-
-            if [ "$current_version" != "$last_version" ]; then
-              build_number=0
-              printf '%s\n' "$current_version" > "$version_file"
-            elif [ -f "$build_file" ]; then
-              build_number="$(cat "$build_file")"
-            else
-              build_number=0
-            fi
-
-            build_number=$((build_number + 1))
-            printf '%s\n' "$build_number" > "$build_file"
-            printf 'CURRENT_PROJECT_VERSION = %s\n' "$build_number" > "${SRCROOT}/BuildNumber.xcconfig"
+            printf 'GIT_COMMIT = %s\n' "$commit" > "${SRCROOT}/Commit.xcconfig"
     run:
       config: Debug
     profile:

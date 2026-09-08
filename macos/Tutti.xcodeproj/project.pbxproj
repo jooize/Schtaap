@@ -63,12 +63,11 @@
 		10CB1D5C86ADBACB7C8E7541 /* CopyFiles */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
-			dstPath = "";
-			dstSubfolderSpec = 7;
+			dstPath = Contents/Helpers;
+			dstSubfolderSpec = 1;
 			files = (
-				BF688766957095A8E6C86A72 /* NOTICES.txt in CopyFiles */,
-				398F9DCB146BDAE5D659BF18 /* htdocs in CopyFiles */,
-				96F3C119C300681A752F1B98 /* manifest.json in CopyFiles */,
+				36447C4746A62F904E39DBDB /* bin in CopyFiles */,
+				E8DCCEF86151B73BCA8757B2 /* lib in CopyFiles */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -96,11 +95,12 @@
 		E78883BE35F7653E426B6C1A /* CopyFiles */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
-			dstPath = Contents/Helpers;
-			dstSubfolderSpec = 1;
+			dstPath = "";
+			dstSubfolderSpec = 7;
 			files = (
-				36447C4746A62F904E39DBDB /* bin in CopyFiles */,
-				E8DCCEF86151B73BCA8757B2 /* lib in CopyFiles */,
+				BF688766957095A8E6C86A72 /* NOTICES.txt in CopyFiles */,
+				398F9DCB146BDAE5D659BF18 /* htdocs in CopyFiles */,
+				96F3C119C300681A752F1B98 /* manifest.json in CopyFiles */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -146,7 +146,7 @@
 		ECC56688451434FA1487CA40 /* ReceiverRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReceiverRow.swift; sourceTree = "<group>"; };
 		F3FD946E10AD3797BBDE65F3 /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 		FA32B1B5907D80AE1C4A9A62 /* bin */ = {isa = PBXFileReference; lastKnownFileType = folder; name = bin; path = Engine/bin; sourceTree = SOURCE_ROOT; };
-		"TEMP_F31E85C3-E1FA-47C0-AC23-179E380B10BF" /* Version.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Version.xcconfig; sourceTree = "<group>"; };
+		"TEMP_562286A8-6013-4415-AFDC-7AA87DF3E0DF" /* Version.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Version.xcconfig; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -283,10 +283,10 @@
 			path = Support;
 			sourceTree = "<group>";
 		};
-		"TEMP_A5C965A2-FD5A-46BB-B6FA-3B967AFD7D54" /* macos */ = {
+		"TEMP_2D48C418-F734-4F6D-A209-FA0A3444B439" /* macos */ = {
 			isa = PBXGroup;
 			children = (
-				"TEMP_F31E85C3-E1FA-47C0-AC23-179E380B10BF" /* Version.xcconfig */,
+				"TEMP_562286A8-6013-4415-AFDC-7AA87DF3E0DF" /* Version.xcconfig */,
 			);
 			path = macos;
 			sourceTree = "<group>";
@@ -433,7 +433,7 @@
 /* Begin XCBuildConfiguration section */
 		0897C94399D4433118D5CFF5 /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = "TEMP_F31E85C3-E1FA-47C0-AC23-179E380B10BF" /* Version.xcconfig */;
+			baseConfigurationReference = "TEMP_562286A8-6013-4415-AFDC-7AA87DF3E0DF" /* Version.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				APP_PRODUCT_NAME = Tutti;
@@ -552,7 +552,7 @@
 		};
 		D77CF51768ED944D8C0B0719 /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = "TEMP_F31E85C3-E1FA-47C0-AC23-179E380B10BF" /* Version.xcconfig */;
+			baseConfigurationReference = "TEMP_562286A8-6013-4415-AFDC-7AA87DF3E0DF" /* Version.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				APP_PRODUCT_NAME = Tutti;
