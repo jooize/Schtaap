@@ -356,6 +356,19 @@ private func run() throws -> Never {
         // A fresh librespot has nobody connected, whatever the last one
         // left behind when it died.
         SpotifySessionFile.write(SpotifySession(), to: layout.sessionFile)
+
+        // Local Network access, read by trying, and acted on: a grant that
+        // arrives after librespot opened its mDNS socket never reaches that
+        // socket, so the device stays invisible in Spotify until librespot
+        // is started again. Ending it here makes launchd do that (KeepAlive)
+        // with the grant in place. See LocalNetworkProbe.
+        let probe = LocalNetworkProbe(sessionFile: layout.sessionFile) {
+            FileHandle.standardError.write(Data(
+                "helper: local network access granted, restarting librespot so it can advertise\n".utf8
+            ))
+            forwardToEngine(SIGTERM)
+        }
+        probe.start()
         supervise(layout.engineBin.appending(path: "librespot"), arguments)
 
     // Run by librespot itself, once per playback event, with the event in the

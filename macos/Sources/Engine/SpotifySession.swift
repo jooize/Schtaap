@@ -20,7 +20,14 @@ struct SpotifySession: Codable, Equatable, Sendable {
     /// the engine is merely paused then, holding the last track, and the
     /// card should not pretend that track is paused near its end.
     var playback: String?
+    /// Whether the engine may use the local network: `granted`, `denied`
+    /// or `unknown`, from the helper's probe (LocalNetworkProbe). Denied
+    /// is the one thing that makes a running receiver invisible to phones,
+    /// and nothing else on the LAN or at Spotify says so.
+    var localNetwork: String?
     var changedAt = Date()
+
+    var isLocalNetworkDenied: Bool { localNetwork == "denied" }
 
     var isStopped: Bool { active && playback == "stopped" }
 

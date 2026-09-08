@@ -162,6 +162,13 @@ struct PopoverView: View {
         default:
             break
         }
+        // The one fault neither the uplink nor the session shows: the engine
+        // is running and reaching Spotify, and no phone can see it. Named
+        // as System Settings names it, which is the helper, not the app,
+        // until the helper ships as a bundle of its own.
+        if store.spotifySession?.isLocalNetworkDenied == true {
+            return ("Local Network access is off for EngineHelper", true)
+        }
         if let session = store.spotifySession, session.active {
             if let client = session.clientDescription {
                 return ("Connected from \(client)", false)
