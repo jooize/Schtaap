@@ -110,13 +110,12 @@ from the author's Mac and no secret takes part.
 
 The zip is reproducible: the same commit, the same Xcode, the same
 bytes. Every run builds twice, on two separate runners, and refuses to
-publish unless the two zips are identical. The engine is meant to
-reproduce on other Macs too, Nix or Lix, after two fixes: librespot
-embedded the Nix build directory in its panic locations (verified
-identical to the runner's), and owntone's linker UUID depended on the
-length of that directory's name through the debug symbols Nix later
-stripped (fixed, cross-machine check pending). Both are commented in
-`nix/`.
+publish unless the two zips are identical. The engine reproduces on
+other Macs too: a local Lix build of every file under `Contents/Helpers`
+is byte-identical to the runner's. That took two fixes, both commented
+in `nix/`: librespot embedded the Nix build directory in its panic
+locations, and owntone's linker UUID depended on the length of that
+directory's name through debug symbols Nix later stripped.
 
 Release builds are ad-hoc signed and not notarized. macOS refuses to
 open the app the first time; allow it under System Settings > Privacy &
