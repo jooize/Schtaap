@@ -36,10 +36,15 @@ LAN and starts discovering the household's speakers.
 ## The engine
 
 Two LaunchAgents, registered through `SMAppService` and visible in System
-Settings under Login Items as "Tutti, 2 items". launchd owns the processes, so
-they start at login and restart on crash whether or not the popover is open --
-which is the point, since a phone can only cast to a Connect target that
-already exists.
+Settings under Login Items as "Tutti, 2 items". launchd runs the processes and
+brings a crashed one back; the app decides when they run. It starts them when
+it launches (`launchctl kickstart`) and stops them when it quits (`launchctl
+kill TERM`, from `applicationShouldTerminate`), so a quit frees the speakers
+and leaves nothing advertised, and "Start at Login" is the one switch for the
+whole thing. The plists carry no `RunAtLoad` and a `KeepAlive` for crashes
+only; the helper exits clean when asked to stop, re-raises the engine's signal
+when it crashed, and passes a plain failure through, which is how launchd tells
+the three apart.
 
 Both plists run one program, `EngineHelper`, with one argument. A plist is a
 static file and every path the engine needs is known only at runtime, so the
@@ -47,8 +52,17 @@ helper resolves them from the bundle it finds itself in. It spawns the engine
 and waits rather than exec'ing into it, because macOS attributes local network
 access to the responsible process: exec'ing left librespot with no responsible
 ancestor and the permission prompt read "Allow librespot ...". Staying alive as
-the parent, with an embedded Info.plist carrying the app's name, makes it read
-"Tutti".
+the parent makes the prompt name the helper, "EngineHelper". It was meant to
+read "Tutti" through an embedded Info.plist, but macOS names a bare executable
+by its file name and ignores that plist (settled 2026-09-08); shipping the
+helper as a bundle of its own is the fix, not done yet.
+
+The helper also probes Local Network access for itself, by sending one
+datagram to an unused multicast group from a fresh child process (a grant
+reaches a running process, a revocation only a new one). A grant that arrives
+after librespot opened its mDNS socket never reaches that socket, so the helper
+starts librespot again; the reading goes into `spotify-session.json` for the
+receiver row. See `Helper/LocalNetworkProbe.swift`.
 
 The helper has a third mode, `metadata`, that librespot itself runs on every
 player event (`--onevent`). It turns the event in the environment into the
@@ -74,10 +88,16 @@ State lives in `~/Library/Application Support/Tutti`:
     songs3.db, Cache/       owntone's database and caches; Cache/Metadata holds
                             the current track and its cover for the bridge
 
-The app's own build number is written into `engine.json` so that any new
-build restarts the agents. launchd keeps a running job on whatever binary it
-started, so without that an update touching only the helper would never take
-effect until the next login.
+The helper's code hash and the payload's store paths are written into
+`engine.json` so that a build which changes either restarts the agents, and
+one which changes neither leaves a running engine alone. Debug builds are
+signed with the Apple Development identity for the same reason: an ad-hoc
+signature changes on every build, and launchd refuses a job whose code no
+longer matches the requirement it recorded.
+
+`defaults write bar.esko.Tutti EngineLogLevel debug` sets owntone's log level
+at the next launch; `defaults delete` puts it back. The log grows fast at
+debug.
 
 ### Ad-hoc signing and stale registrations
 
@@ -149,43 +169,27 @@ from whatever was playing the first time the app sees a live engine.
 
 ## Known gaps
 
-Ordered by what blocks playback first.
-
-- **The engine segfaults when an AirPlay session tears down.** Reproduced
-  every time a second speaker is selected while one is already playing, and
-  again when a selected speaker is dropped. Always the same stack:
-  `evrtsp_connection_free` from `session_free`, on the player thread, out of
-  a libevent callback. launchd restarts the agent, so the symptom a user sees
-  is a speaker that will not switch and a list that resets. This is upstream,
-  not our packaging -- see owntone-server issues #1509 and #1760 -- and it is
-  the single largest obstacle to shipping. Crash reports land in
-  `~/Library/Logs/DiagnosticReports/owntone-*.ips`.
-- **Device probes fail intermittently.** `airplay: device_probe: Error
-  sending GET /info (probe)` while a plain `curl` to the same speaker's
-  port 7000 answers 200 in tens of milliseconds. Suspected cause is a second
-  IPv4 interface on the machine -- a VM bridge alongside the LAN -- and
-  OwnTone choosing the wrong one. `bind_address` does not fix it: the option
-  also moves the HTTP API off localhost, where the app expects it. Needs a
-  read of how the AirPlay session picks its local address.
+- **Unsigned for distribution, not notarized, no updater.** Debug builds
+  only, on the developer's certificate.
+- **The Local Network prompt names "EngineHelper".** See above. Every
+  helper rebuild or bundle move re-prompts, once unbranded.
+- **A resume is heard ~2 s after the press.** That is the AirPlay 2 buffer
+  OwnTone streams into (`event_play_start` two seconds after the sync
+  packet). Apple's own senders resume faster with SETRATEANCHORTIME, which
+  OwnTone 29.3 does not speak.
 - **AirPlay 2 runs without PTP.** Ports 319 and 320 are privileged and an
-  unprivileged agent cannot bind them, so the engine logs "AirPlay PTP daemon
-  unavailable, only NTP will be available" at every launch. Consequences for
-  multi-speaker sync are unmeasured.
+  unprivileged agent cannot bind them, so the engine logs "AirPlay PTP
+  daemon unavailable, only NTP will be available" at every launch. Fine
+  for one stereo pair; unmeasured beyond it.
 - **librespot's mDNS complains.** `libmdns: error sending packet ...
-  HostUnreachable` on every launch, almost certainly the same second
-  interface as above. It advertises successfully anyway.
-- **Playback is unverified.** Device activation now works and sticks; no
-  audio has been confirmed coming out of a speaker.
-- **No transport buttons in the popover.** The media keys and a HomePod's
-  top pause and resume Spotify through librespot's control socket; the
-  popover itself only offers a mute. Pausing the engine is never an option:
-  it stalls librespot's writes and resumes into stale audio.
-- **Track metadata and rejoin are unverified against real playback.** Both
-  are wired and tested offline (the bridge byte-for-byte against the Python
-  original, the state machine through every event), but playback itself has
-  never run here, so neither has been seen end to end.
+  HostUnreachable`, seven then one a minute, is libmdns sending on an
+  interface without a route. It advertises anyway; the lines are noise,
+  not the Local Network permission.
 - **Logs grow without bound.** Nothing rotates them.
-- **The default Connect name collides with the hardware.** Shipping
-  "HomePods" as `Branding.defaultConnectName` puts a receiver named after
-  HomePods directly above a list of actual HomePods. The computer's name, or
-  the app's, would not.
+- **The default Connect name collides with the hardware.** "HomePods" as
+  `Branding.defaultConnectName` puts a receiver named after HomePods above
+  a list of actual HomePods. Editable in the popover.
+- **The controlling phone cannot be named.** librespot 0.8 never fills
+  the client name, brand or model, so the receiver row says "Connected".
+- **No groups editor, no first-run explanation.** Both wanted, neither
+  specified.
