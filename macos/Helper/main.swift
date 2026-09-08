@@ -64,7 +64,7 @@ private enum HelperError: Error, CustomStringConvertible {
     var description: String {
         switch self {
         case .usage:
-            return "usage: \(ProcessInfo.processInfo.processName) owntone|librespot|metadata"
+            return "usage: \(ProcessInfo.processInfo.processName) owntone|librespot|metadata|probe"
         case .noExecutablePath:
             return "could not determine own executable path"
         case .notInBundle(let path):
@@ -362,7 +362,11 @@ private func run() throws -> Never {
         // socket, so the device stays invisible in Spotify until librespot
         // is started again. Ending it here makes launchd do that (KeepAlive)
         // with the grant in place. See LocalNetworkProbe.
-        let probe = LocalNetworkProbe(sessionFile: layout.sessionFile) {
+        let probe = LocalNetworkProbe(
+            executable: try executablePath(),
+            sessionFile: layout.sessionFile,
+            requestFile: layout.support.appending(path: LocalNetworkProbe.requestFileName)
+        ) {
             FileHandle.standardError.write(Data(
                 "helper: local network access granted, restarting librespot so it can advertise\n".utf8
             ))
@@ -383,6 +387,12 @@ private func run() throws -> Never {
             transport: EngineTransport(engine: layout.engineAPI, socket: layout.controlSocket)
         )
         exit(EXIT_SUCCESS)
+
+    // One reading of Local Network access, reported in the exit code. Run
+    // by the librespot supervisor as a child for every reading, because a
+    // revocation is only visible to a process started after it.
+    case "probe":
+        exit(LocalNetworkProbe.probe().exitCode)
 
     default:
         throw HelperError.usage

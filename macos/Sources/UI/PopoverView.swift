@@ -64,6 +64,7 @@ struct PopoverView: View {
             // launchd can have stopped the agents, or the user approved them
             // in System Settings, since the popover was last open.
             engine.refreshStatus()
+            store.requestLocalNetworkProbe()
         }
         .onDisappear { commitName() }
         // Switching the receiver off has to reach the agent to mean anything:

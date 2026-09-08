@@ -255,6 +255,16 @@ final class EngineStore {
         spotifySessionWatch = source
     }
 
+    /// Asks the helper for a fresh Local Network reading now, rather than at
+    /// its next interval: the popover opening is when a stale one shows.
+    /// A touch of the file the helper's probe loop watches; the reading
+    /// comes back through the session file like any other.
+    func requestLocalNetworkProbe() {
+        guard !usesFixtures else { return }
+        let file = Branding.supportDirectory.appending(path: "local-network-probe-request")
+        try? Data(Date().description.utf8).write(to: file)
+    }
+
     private func reloadSpotifySession() {
         let session = SpotifySessionFile.read(at: Self.spotifySessionFile)
         if session != spotifySession {
