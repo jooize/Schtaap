@@ -162,7 +162,10 @@ struct EngineTransport {
         return result.value
     }
 
+    /// Stamped like librespot's own lines, so the gap between its event
+    /// and the seek this ends with can be read off the log.
     private func log(_ message: String) {
-        FileHandle.standardError.write(Data("transport: \(message)\n".utf8))
+        let stamp = ISO8601DateFormatter().string(from: Date())
+        FileHandle.standardError.write(Data("[\(stamp)] transport: \(message)\n".utf8))
     }
 }

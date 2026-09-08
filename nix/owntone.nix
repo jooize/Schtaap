@@ -125,6 +125,10 @@ stdenv.mkDerivation (finalAttrs: {
   #
   # And a pipe item is titled by `library { pipe_title }` rather than its
   # file name, which is what the speakers showed until the track arrived.
+  #
+  # And an AirPlay flush left the master session's partial packet in place,
+  # ten milliseconds from ahead of the pause that went out first on resume,
+  # spliced onto the resumed audio as a click. The flush drops it now.
   patches = [
     ./owntone-evrtsp-connect-failure.patch
     ./owntone-websocket-vhost-init.patch
@@ -136,6 +140,7 @@ stdenv.mkDerivation (finalAttrs: {
     ./owntone-pipe-drain-on-stop.patch
     ./owntone-pipe-artwork-survives-pause.patch
     ./owntone-pipe-title.patch
+    ./owntone-airplay-flush-drops-partial-packet.patch
   ];
 
   configureFlags = [ "--without-avahi" ];

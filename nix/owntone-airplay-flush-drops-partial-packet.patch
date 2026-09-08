@@ -1,0 +1,37 @@
+An AirPlay flush drops the partial packet the master session was holding.
+
+airplay_write() collects the player's writes in the master session's
+input buffer and sends a packet whenever a full one is there, so between
+writes the buffer holds the tail of the last one: up to a packet less a
+byte, ten milliseconds of audio from the send position, which runs two
+seconds ahead of what the speakers have played. A flush told the device
+to drop what it had, but nothing dropped this, so it went out as the head
+of the first packet after a resume, spliced onto audio from the resume
+point behind it. Two discontinuities in a row, heard as a click at the
+start of every resume. Now the flush drops it too, and the timestamp
+accounting that counts it (timestamp_set) starts from zero.
+
+--- a/src/outputs/airplay.c
++++ b/src/outputs/airplay.c
+@@ -4187,11 +4187,22 @@
+ airplay_device_flush(struct output_device *device, int callback_id)
+ {
+   struct airplay_session *session = device->session;
++  struct airplay_master_session *ams = session->master_session;
+ 
+   if (session->state != AIRPLAY_STATE_STREAMING)
+     return 0; // No-op, nothing to flush
+ 
++  // The tail of the last write that did not fill a packet. The device is
++  // about to drop everything it has, and the player resumes from behind
++  // where this came from, so sending it first would splice ten
++  // milliseconds from ahead of the pause onto the resumed audio: a click.
++  if (ams)
++    {
++      evbuffer_drain(ams->input_buffer, evbuffer_get_length(ams->input_buffer));
++      ams->input_buffer_samples = 0;
++    }
++
+   session->callback_id = callback_id;
+ 
+   sequence_start(AIRPLAY_SEQ_FLUSH, session, NULL, "flush");
