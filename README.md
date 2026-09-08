@@ -103,8 +103,11 @@ and the workflow that produced it:
     gh attestation verify Tutti-0.1.0-macos.zip --owner jooize
 
 The zip is meant to be reproducible: the same commit, the same Xcode,
-the same bytes. Running the workflow twice by hand and comparing the two
-`SHA256SUMS` is the check.
+the same bytes. Every run builds twice, on two separate runners, and
+refuses to publish unless the two zips are identical. What is not yet
+reproducible is a build on another Mac: a local Lix build of owntone
+differs from the runner's in the linker's UUID and nothing else, cause
+not yet found.
 
 Release builds are ad-hoc signed and not notarized. macOS refuses to
 open the app the first time; allow it under System Settings > Privacy &

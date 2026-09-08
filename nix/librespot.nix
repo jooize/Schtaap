@@ -28,4 +28,17 @@ librespot.overrideAttrs (previous: {
     ../patches/librespot/librespot-play-from-stopped.patch
     ../patches/librespot/librespot-pause-keeps-position.patch
   ];
+
+  # rustc records a source path for every panic location, and the vendored
+  # crates are compiled from under the build directory. On macOS Nix has no
+  # chroot, so that directory has a fresh random name per build
+  # (/nix/var/nix/builds/nix-<pid>-<n>/ under Nix, /nix/var/nix/b/<n>/ under
+  # Lix) and two builds of this derivation differed in ~950 embedded paths
+  # plus the content-derived LC_UUID. Mapped to /build, which is what the
+  # Linux sandbox would have made it, the same commit gives the same bytes.
+  # buildRustPackage sets no RUSTFLAGS of its own for a release build, so
+  # this is appended rather than replacing anything.
+  preBuild = (previous.preBuild or "") + ''
+    export RUSTFLAGS="''${RUSTFLAGS-} --remap-path-prefix $NIX_BUILD_TOP=/build"
+  '';
 })
