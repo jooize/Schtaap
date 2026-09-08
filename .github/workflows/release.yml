@@ -1,0 +1,132 @@
+# Release build: the engine from the flake, the app from Xcode, the result
+# attested by GitHub.
+#
+# Pushing a tag v<MARKETING_VERSION> builds the app on a GitHub-hosted Mac
+# from that commit alone, records a build provenance attestation that binds
+# the zip's digest to the commit and to this workflow file, and publishes a
+# GitHub Release carrying the zip and its checksum. Anyone can then check
+# that a download is the build of the commit it claims to be:
+#
+#     gh attestation verify Tutti-0.1.0-macos.zip --owner jooize
+#
+# Run by hand (workflow_dispatch) it builds the same zip and uploads it as a
+# workflow artifact, without attesting or releasing. Two such runs of one
+# commit with equal SHA256SUMS are the reproducibility check.
+#
+# Signing is ad-hoc. The zip runs on any Apple Silicon Mac, but Gatekeeper
+# refuses it until the user allows it under System Settings > Privacy &
+# Security. Developer ID signing and notarization replace the identity in
+# the "Build app" step and add a notarytool step after "Package"; nothing
+# else changes.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  # Pinned: a release must be rebuildable with the compiler that built it.
+  # What the image carries is listed at
+  # https://github.com/actions/runner-images/blob/main/images/macos/macos-26-Readme.md
+  XCODE_VERSION: "26.4.1"
+
+jobs:
+  build:
+    runs-on: macos-26
+    permissions:
+      contents: write      # create the release
+      id-token: write      # sign the attestation
+      attestations: write  # store it
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # The build number is the commit count, and the notices builder
+          # reads the repository through git.
+          fetch-depth: 0
+
+      - name: Select Xcode
+        run: |
+          app="/Applications/Xcode_${XCODE_VERSION}.app"
+          if [ ! -d "$app" ]; then
+            echo "Xcode $XCODE_VERSION is not on this runner image. Available:" >&2
+            ls -d /Applications/Xcode_*.app >&2
+            exit 1
+          fi
+          sudo xcode-select --switch "$app"
+          xcodebuild -version
+
+      - name: Read version
+        id: version
+        run: |
+          version="$(sed -n 's/^MARKETING_VERSION *= *//p' macos/Version.xcconfig | head -1)"
+          if [ "$GITHUB_REF_TYPE" = tag ] && [ "$GITHUB_REF_NAME" != "v$version" ]; then
+            echo "tag $GITHUB_REF_NAME does not match MARKETING_VERSION $version in macos/Version.xcconfig" >&2
+            exit 1
+          fi
+          {
+            echo "version=$version"
+            echo "build=$(git rev-list --count HEAD)"
+            echo "epoch=$(git log -1 --format=%ct)"
+          } >> "$GITHUB_OUTPUT"
+
+      - uses: DeterminateSystems/nix-installer-action@ef8a148080ab6020fd15196c2084a2eea5ff2d25 # v22
+
+      - name: Build engine
+        run: ./macos/build-engine
+
+      - name: Build app
+        env:
+          BUILD: ${{ steps.version.outputs.build }}
+        run: |
+          cd macos
+          # CODE_SIGN_IDENTITY "-" is ad-hoc; the project's Apple Development
+          # identity only exists on the author's Mac. CURRENT_PROJECT_VERSION
+          # on the command line outranks the scheme's build-number counter,
+          # which would otherwise say 1 on every fresh clone.
+          xcodebuild -project Tutti.xcodeproj -scheme Tutti -configuration Release \
+            -derivedDataPath .build \
+            CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM= \
+            CURRENT_PROJECT_VERSION="$BUILD" \
+            build
+          codesign --verify --deep --strict --verbose=2 .build/Build/Products/Release/Tutti.app
+
+      - name: Package
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          EPOCH: ${{ steps.version.outputs.epoch }}
+        run: |
+          app=macos/.build/Build/Products/Release/Tutti.app
+          # Every file's mtime becomes the commit's, so the zip depends on
+          # the sources and not on when the runner happened to build them.
+          stamp="$(TZ=UTC date -u -r "$EPOCH" +%Y%m%d%H%M.%S)"
+          TZ=UTC find "$app" -exec touch -h -t "$stamp" {} +
+          mkdir dist
+          ditto -c -k --keepParent --norsrc --noextattr --noqtn --noacl \
+            "$app" "dist/Tutti-$VERSION-macos.zip"
+          (cd dist && shasum -a 256 ./*.zip > SHA256SUMS)
+          cat dist/SHA256SUMS
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: Tutti-${{ steps.version.outputs.version }}
+          path: dist/
+          if-no-files-found: error
+
+      - name: Attest
+        if: github.ref_type == 'tag'
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: dist/*.zip
+
+      - name: Release
+        if: github.ref_type == 'tag'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # The annotated tag's message is the release notes.
+          gh release create "$GITHUB_REF_NAME" --verify-tag --notes-from-tag \
+            --title "$GITHUB_REF_NAME" dist/*

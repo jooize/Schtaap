@@ -92,6 +92,25 @@ fixtures, off the network.
 
 Runs on macOS 15 and later.
 
+## Releases
+
+Every tag `vX.Y.Z` is built by GitHub Actions on a GitHub-hosted Mac,
+from that commit alone: the engine from the flake, the app from Xcode
+(`.github/workflows/release.yml`). The workflow records a build
+provenance attestation, so a download can be checked against the commit
+and the workflow that produced it:
+
+    gh attestation verify Tutti-0.1.0-macos.zip --owner jooize
+
+The zip is meant to be reproducible: the same commit, the same Xcode,
+the same bytes. Running the workflow twice by hand and comparing the two
+`SHA256SUMS` is the check.
+
+Release builds are ad-hoc signed and not notarized. macOS refuses to
+open the app the first time; allow it under System Settings > Privacy &
+Security, then open it again. Developer ID signing and notarization come
+with a paid developer account and change nothing else.
+
 ## Layout
 
     macos/          the app, the helper, the agent plists, the build scripts
