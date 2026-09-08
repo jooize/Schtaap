@@ -13,6 +13,8 @@ can say when Spotify is unreachable rather than merely idle.
 
 Applies on top of librespot-control-socket.patch.
 
+SPDX-License-Identifier: MIT
+
 --- a/src/control.rs	2026-09-08 01:16:33
 +++ b/src/control.rs	2026-09-08 01:16:55
 @@ -13,7 +13,7 @@

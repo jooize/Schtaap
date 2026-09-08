@@ -19,6 +19,8 @@ Applies on top of librespot-control-socket.patch,
 librespot-session-loss-reconnect.patch and
 librespot-play-from-stopped.patch.
 
+SPDX-License-Identifier: MIT
+
 --- a/connect/src/spirc.rs	2026-09-08 11:14:40
 +++ b/connect/src/spirc.rs	2026-09-08 11:14:40
 @@ -774,7 +774,19 @@

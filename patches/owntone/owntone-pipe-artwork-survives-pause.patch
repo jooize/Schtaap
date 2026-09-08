@@ -8,6 +8,8 @@ the artwork API answered 404 for the item, the speakers were sent nothing,
 and the next PICT only comes with the next track. The file now lives
 until the next picture replaces it or the input module deinitialises.
 
+SPDX-License-Identifier: GPL-2.0-or-later
+
 --- a/src/inputs/pipe.c	2026-09-08 01:15:38
 +++ b/src/inputs/pipe.c	2026-09-08 01:16:04
 @@ -839,8 +839,11 @@

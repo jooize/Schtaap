@@ -134,18 +134,18 @@ stdenv.mkDerivation (finalAttrs: {
   # still, so a device reading the first packet before the sync played
   # a moment of the song at once. The rtptime moves on by the pause now.
   patches = [
-    ./owntone-evrtsp-connect-failure.patch
-    ./owntone-websocket-vhost-init.patch
-    ./owntone-dacp-speaker-authorize.patch
-    ./owntone-airplay-events-to-listener.patch
-    ./owntone-mdns-linklocal-address.patch
-    ./owntone-input-readahead.patch
-    ./owntone-pause-keeps-sessions.patch
-    ./owntone-pipe-drain-on-stop.patch
-    ./owntone-pipe-artwork-survives-pause.patch
-    ./owntone-pipe-title.patch
-    ./owntone-airplay-flush-drops-partial-packet.patch
-    ./owntone-airplay-resume-continues-timeline.patch
+    ../patches/owntone/owntone-evrtsp-connect-failure.patch
+    ../patches/owntone/owntone-websocket-vhost-init.patch
+    ../patches/owntone/owntone-dacp-speaker-authorize.patch
+    ../patches/owntone/owntone-airplay-events-to-listener.patch
+    ../patches/owntone/owntone-mdns-linklocal-address.patch
+    ../patches/owntone/owntone-input-readahead.patch
+    ../patches/owntone/owntone-pause-keeps-sessions.patch
+    ../patches/owntone/owntone-pipe-drain-on-stop.patch
+    ../patches/owntone/owntone-pipe-artwork-survives-pause.patch
+    ../patches/owntone/owntone-pipe-title.patch
+    ../patches/owntone/owntone-airplay-flush-drops-partial-packet.patch
+    ../patches/owntone/owntone-airplay-resume-continues-timeline.patch
   ];
 
   configureFlags = [ "--without-avahi" ];

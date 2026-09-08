@@ -15,6 +15,8 @@ the connect failed while at it -- the error was otherwise silent.
 
 Upstream (owntone-server master, checked 2026-09-03) has the same code.
 
+SPDX-License-Identifier: GPL-2.0-or-later
+
 --- a/src/evrtsp/rtsp.c
 +++ b/src/evrtsp/rtsp.c
 @@ -1483,8 +1483,22 @@

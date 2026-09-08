@@ -11,6 +11,8 @@ has always stopped before we get here (librespot closes its end before it
 reports paused), and what it writes next begins where its own metadata
 says, so what is queued at a stop is never wanted.
 
+SPDX-License-Identifier: GPL-2.0-or-later
+
 --- a/src/inputs/pipe.c	2026-09-08 01:15:38
 +++ b/src/inputs/pipe.c	2026-09-08 01:16:04
 @@ -238,6 +238,27 @@

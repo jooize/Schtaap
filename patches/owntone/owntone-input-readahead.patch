@@ -8,6 +8,8 @@ before it suspends, the pipe itself holds 64 KB, and the writer is a
 local process blocked on the pipe, never behind. A quarter second is
 slack for the 10 ms read loop and nothing more.
 
+SPDX-License-Identifier: GPL-2.0-or-later
+
 --- a/src/input.c
 +++ b/src/input.c
 @@ -40,8 +40,8 @@

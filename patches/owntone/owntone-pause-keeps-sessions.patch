@@ -12,6 +12,8 @@ And a pipe input asked to start at a position answered 0, so a paused
 pipe reported 0:00 until it was read again. It answers with the
 position it was given: the writer's metadata is what set it.
 
+SPDX-License-Identifier: GPL-2.0-or-later
+
 --- a/src/player.c
 +++ b/src/player.c
 @@ -1589,7 +1589,14 @@

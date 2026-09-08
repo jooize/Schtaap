@@ -13,6 +13,8 @@ match against it in speaker_get_byaddress(), comparing addresses
 without their scope since the peer address from the HTTP backend
 carries one and other sources may not.
 
+SPDX-License-Identifier: GPL-2.0-or-later
+
 --- a/src/mdns_dnssd.c
 +++ b/src/mdns_dnssd.c
 @@ -537,7 +537,7 @@

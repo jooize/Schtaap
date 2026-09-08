@@ -11,6 +11,8 @@ point behind it. Two discontinuities in a row, heard as a click at the
 start of every resume. Now the flush drops it too, and the timestamp
 accounting that counts it (timestamp_set) starts from zero.
 
+SPDX-License-Identifier: GPL-2.0-or-later
+
 --- a/src/outputs/airplay.c
 +++ b/src/outputs/airplay.c
 @@ -4187,11 +4187,22 @@

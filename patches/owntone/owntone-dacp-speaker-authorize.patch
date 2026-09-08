@@ -21,6 +21,8 @@ gives 3310982810), which made speaker_get() fail even when the
 request was authorized. When the Active-Remote names no speaker, the
 speaker at the request's own address is used.
 
+SPDX-License-Identifier: GPL-2.0-or-later
+
 --- a/src/httpd_dacp.c
 +++ b/src/httpd_dacp.c
 @@ -548,13 +548,21 @@

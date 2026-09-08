@@ -7,6 +7,8 @@ library option `pipe_title` gives every pipe item that title instead,
 unset by default, so the file can keep a file name and the listener
 still reads a word.
 
+SPDX-License-Identifier: GPL-2.0-or-later
+
 --- a/src/conffile.c	2026-09-08 01:16:32
 +++ b/src/conffile.c	2026-09-08 01:49:10
 @@ -107,6 +107,7 @@

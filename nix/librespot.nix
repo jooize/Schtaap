@@ -23,9 +23,9 @@
 
 librespot.overrideAttrs (previous: {
   patches = (previous.patches or [ ]) ++ [
-    ./librespot-control-socket.patch
-    ./librespot-session-loss-reconnect.patch
-    ./librespot-play-from-stopped.patch
-    ./librespot-pause-keeps-position.patch
+    ../patches/librespot/librespot-control-socket.patch
+    ../patches/librespot/librespot-session-loss-reconnect.patch
+    ../patches/librespot/librespot-play-from-stopped.patch
+    ../patches/librespot/librespot-pause-keeps-position.patch
   ];
 })

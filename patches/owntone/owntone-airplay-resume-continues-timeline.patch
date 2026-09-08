@@ -18,6 +18,8 @@ the device to drop everything before it.
 
 Applies on top of owntone-airplay-flush-drops-partial-packet.patch.
 
+SPDX-License-Identifier: GPL-2.0-or-later
+
 --- a/src/outputs/airplay.c	2026-09-08 14:28:04
 +++ b/src/outputs/airplay.c	2026-09-08 14:28:04
 @@ -234,6 +234,10 @@

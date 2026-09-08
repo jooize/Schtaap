@@ -2,7 +2,10 @@
 # relocate.bash -- make macOS binaries self-contained by copying their
 # /nix/store dylib closure into a bundle and rewriting install names.
 #
-# Usage: relocate.bash --out <bundle_root> [--dry-run] <binary>...
+# Usage: relocate.bash --out <bundle_root> [--sources <file>] [--dry-run] <binary>...
+#
+# --sources writes the store path of every file copied, inputs and dylibs
+# alike, one per line, so the caller knows which packages it is shipping.
 #
 # Layout produced:
 #   <bundle_root>/bin/<binary>     (inputs; executables or loadable dylibs)
@@ -16,22 +19,25 @@ shopt -s nullglob
 
 DRY_RUN=0
 OUT=""
+SOURCES=""
 INPUTS=()
 
 usage() {
     cat <<'EOF'
-Usage: relocate.bash --out <bundle_root> [--dry-run] <binary>...
+Usage: relocate.bash --out <bundle_root> [--sources <file>] [--dry-run] <binary>...
 
 Copies each <binary> to <bundle_root>/bin, copies its transitive
 /nix/store dylib closure to <bundle_root>/lib, rewrites install names
 (@executable_path/../lib from bin, @loader_path from lib), and ad-hoc
 re-signs everything. Verifies no /nix/store references remain.
+--sources lists every copied file's source path in <file>.
 EOF
 }
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --out) OUT="${2:?--out needs a value}"; shift 2 ;;
+        --sources) SOURCES="${2:?--sources needs a value}"; shift 2 ;;
         --dry-run) DRY_RUN=1; shift ;;
         -h|--help) usage; exit 0 ;;
         -*) printf 'unknown flag: %s\n' "$1" >&2; usage >&2; exit 1 ;;
@@ -127,6 +133,15 @@ while [[ -s "$QUEUE" ]]; do
     run chmod u+w "$dst"
     enqueue "$dep"
 done
+
+# The queue is drained, so SEEN is the complete dylib list.
+if [[ -n "$SOURCES" ]]; then
+    if (( DRY_RUN )); then
+        printf 'DRY-RUN: write %s\n' "$SOURCES"
+    else
+        { printf '%s\n' "${INPUTS[@]}"; cat -- "$SEEN"; } > "$SOURCES"
+    fi
+fi
 
 # 3. Rewrite references, set ids, re-sign.
 for src in "${INPUTS[@]}"; do

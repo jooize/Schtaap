@@ -11,6 +11,8 @@ does nothing.
 Applies on top of librespot-control-socket.patch and
 librespot-session-loss-reconnect.patch.
 
+SPDX-License-Identifier: MIT
+
 --- a/connect/src/spirc.rs	2026-09-08 01:49:10
 +++ b/connect/src/spirc.rs	2026-09-08 01:49:10
 @@ -666,7 +666,7 @@

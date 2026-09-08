@@ -31,6 +31,8 @@
 	<array>
 		<string>_airplay._tcp</string>
 	</array>
+	<key>NSHumanReadableCopyright</key>
+	<string>© 2026 Tilde Esko. MIT License.</string>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>$(PRODUCT_NAME) appears as a speaker in Spotify and plays to your AirPlay speakers.</string>
 </dict>

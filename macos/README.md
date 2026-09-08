@@ -140,7 +140,8 @@ carries the name. Change those, run `./generate`, done.
     Sources/Support/     branding, preferences, login item
     Helper/              EngineHelper: the program launchd runs
     LaunchAgents/        the two agent plists, copied into the bundle
-    Engine/              gitignored payload from ./build-engine
+    Engine/              gitignored payload from ./build-engine, with its
+                         NOTICES.txt of bundled packages and licenses
 
 ## Design
 

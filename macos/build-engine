@@ -76,8 +76,10 @@ work="$(mktemp -d)"
 trap 'rm -rf -- "$work"' EXIT
 staged="$work/Engine"
 
+sources="$work/sources"
+
 note "Relocating dylib closure..."
-run "$here/relocate.bash" --out "$staged" \
+run "$here/relocate.bash" --out "$staged" --sources "$sources" \
   "$owntone/bin/owntone" \
   "$owntone/lib/owntone/owntone-sqlext.so" \
   "$librespot/bin/librespot"
@@ -93,6 +95,22 @@ run cp -R -- "$owntone/share/owntone/htdocs" "$staged/htdocs"
 # No `--` here: macOS chmod does not accept it. The path is one we built
 # under mktemp, so it cannot start with a dash.
 run chmod -R u+w "$staged/htdocs"
+
+# The third-party notices for exactly what was copied: every package a
+# shipped file came from, and the text of each license. Generated from
+# the flake so it is built against the same nixpkgs as the binaries.
+# getFlake needs --impure; the git+file URL makes it read the repository
+# the way `nix build "$repo#..."` above does, tracked files only.
+if (( dry_run )); then
+  printf 'DRY-RUN: write %s\n' "$staged/NOTICES.txt"
+else
+  note "Writing third-party notices..."
+  shipped="$(sed -e 's|^\(/nix/store/[^/]*\).*|"\1"|' -- "$sources" | sort -u | tr '\n' ' ')"
+  notices="$(nix build --no-link --print-out-paths --impure --expr \
+    "(builtins.getFlake \"git+file://$repo\").lib.engineNotices [ $shipped ]")"
+  cp -- "$notices" "$staged/NOTICES.txt"
+  chmod u+w "$staged/NOTICES.txt"
+fi
 
 # What the app shows when asked which engine it is running, and how it
 # tells one payload from another: a store path hashes the whole build

@@ -12,6 +12,8 @@ nothing forever.
 Allocate the storage on the first ESTABLISHED instead. PROTOCOL_INIT,
 when it does arrive, still allocates it as before.
 
+SPDX-License-Identifier: GPL-2.0-or-later
+
 --- a/src/websocket.c
 +++ b/src/websocket.c
 @@ -299,6 +299,14 @@

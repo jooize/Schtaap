@@ -36,6 +36,7 @@
 		ACC4CC004774AF5352D532B7 /* PopoverPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 120986F0B2623EF185B59679 /* PopoverPage.swift */; };
 		AF38B1F5F60FAA6822003FF8 /* ReceiverRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = ECC56688451434FA1487CA40 /* ReceiverRow.swift */; };
 		BD4DC060E73D5CACA8B1AE29 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8FBEFBD930F0E25D6F76BAA4 /* Models.swift */; };
+		BF688766957095A8E6C86A72 /* NOTICES.txt in CopyFiles */ = {isa = PBXBuildFile; fileRef = CB5AA998C6AA56AFC7F9877E /* NOTICES.txt */; };
 		BFA2F12DD8658CC5D21F2373 /* EngineService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77AA1B76E0CDED7C10244B5C /* EngineService.swift */; };
 		D0C630EA83B635470781616A /* AppMain.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC5239B909D87054B34F49F3 /* AppMain.swift */; };
 		D1F7176BBA5B54F72D7ED5BC /* EngineTransport.swift in Sources */ = {isa = PBXBuildFile; fileRef = B162DB13F607DE7935070A48 /* EngineTransport.swift */; };
@@ -62,10 +63,12 @@
 		10CB1D5C86ADBACB7C8E7541 /* CopyFiles */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
-			dstPath = Contents/Library;
-			dstSubfolderSpec = 1;
+			dstPath = "";
+			dstSubfolderSpec = 7;
 			files = (
-				765424DD1E826234ACE7FB5D /* LaunchAgents in CopyFiles */,
+				BF688766957095A8E6C86A72 /* NOTICES.txt in CopyFiles */,
+				398F9DCB146BDAE5D659BF18 /* htdocs in CopyFiles */,
+				96F3C119C300681A752F1B98 /* manifest.json in CopyFiles */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -83,22 +86,21 @@
 		A30CD52F92CF6493D108B09E /* CopyFiles */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
-			dstPath = Contents/Helpers;
+			dstPath = Contents/Library;
 			dstSubfolderSpec = 1;
 			files = (
-				36447C4746A62F904E39DBDB /* bin in CopyFiles */,
-				E8DCCEF86151B73BCA8757B2 /* lib in CopyFiles */,
+				765424DD1E826234ACE7FB5D /* LaunchAgents in CopyFiles */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		E78883BE35F7653E426B6C1A /* CopyFiles */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
-			dstPath = "";
-			dstSubfolderSpec = 7;
+			dstPath = Contents/Helpers;
+			dstSubfolderSpec = 1;
 			files = (
-				398F9DCB146BDAE5D659BF18 /* htdocs in CopyFiles */,
-				96F3C119C300681A752F1B98 /* manifest.json in CopyFiles */,
+				36447C4746A62F904E39DBDB /* bin in CopyFiles */,
+				E8DCCEF86151B73BCA8757B2 /* lib in CopyFiles */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -136,6 +138,7 @@
 		B5B2E4E93D68E7F39B2E2DD1 /* Controls.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Controls.swift; sourceTree = "<group>"; };
 		B8C00EEB0E43CB58E2985278 /* EngineStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EngineStore.swift; sourceTree = "<group>"; };
 		BE34C46A98E9C471AD2981CF /* Preferences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Preferences.swift; sourceTree = "<group>"; };
+		CB5AA998C6AA56AFC7F9877E /* NOTICES.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = NOTICES.txt; sourceTree = "<group>"; };
 		CC5239B909D87054B34F49F3 /* AppMain.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppMain.swift; sourceTree = "<group>"; };
 		E0C9B800B73A9498DA93A25A /* LaunchAgents */ = {isa = PBXFileReference; lastKnownFileType = folder; path = LaunchAgents; sourceTree = SOURCE_ROOT; };
 		E3545B120E70088CFCD88C13 /* SpotifyControl.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpotifyControl.swift; sourceTree = "<group>"; };
@@ -143,7 +146,7 @@
 		ECC56688451434FA1487CA40 /* ReceiverRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReceiverRow.swift; sourceTree = "<group>"; };
 		F3FD946E10AD3797BBDE65F3 /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 		FA32B1B5907D80AE1C4A9A62 /* bin */ = {isa = PBXFileReference; lastKnownFileType = folder; name = bin; path = Engine/bin; sourceTree = SOURCE_ROOT; };
-		"TEMP_8ABD4B49-E143-420B-929B-E49B2C5D7C6C" /* Version.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Version.xcconfig; sourceTree = "<group>"; };
+		"TEMP_F31E85C3-E1FA-47C0-AC23-179E380B10BF" /* Version.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Version.xcconfig; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -166,6 +169,7 @@
 				87EB0E59C95A1FDD052A5B8E /* htdocs */,
 				5D0A1585567777DC529F39BB /* lib */,
 				4485D1194C3543B29ADC6C32 /* manifest.json */,
+				CB5AA998C6AA56AFC7F9877E /* NOTICES.txt */,
 			);
 			path = Engine;
 			sourceTree = "<group>";
@@ -279,10 +283,10 @@
 			path = Support;
 			sourceTree = "<group>";
 		};
-		"TEMP_387691A1-C104-43CB-B0AD-DA336C53EF1A" /* macos */ = {
+		"TEMP_A5C965A2-FD5A-46BB-B6FA-3B967AFD7D54" /* macos */ = {
 			isa = PBXGroup;
 			children = (
-				"TEMP_8ABD4B49-E143-420B-929B-E49B2C5D7C6C" /* Version.xcconfig */,
+				"TEMP_F31E85C3-E1FA-47C0-AC23-179E380B10BF" /* Version.xcconfig */,
 			);
 			path = macos;
 			sourceTree = "<group>";
@@ -429,7 +433,7 @@
 /* Begin XCBuildConfiguration section */
 		0897C94399D4433118D5CFF5 /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = "TEMP_8ABD4B49-E143-420B-929B-E49B2C5D7C6C" /* Version.xcconfig */;
+			baseConfigurationReference = "TEMP_F31E85C3-E1FA-47C0-AC23-179E380B10BF" /* Version.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				APP_PRODUCT_NAME = Tutti;
@@ -519,7 +523,6 @@
 				COMBINE_HIDPI_IMAGES = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
 				INFOPLIST_FILE = Info.plist;
-				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
@@ -537,7 +540,6 @@
 				COMBINE_HIDPI_IMAGES = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
 				INFOPLIST_FILE = Info.plist;
-				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
@@ -550,7 +552,7 @@
 		};
 		D77CF51768ED944D8C0B0719 /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = "TEMP_8ABD4B49-E143-420B-929B-E49B2C5D7C6C" /* Version.xcconfig */;
+			baseConfigurationReference = "TEMP_F31E85C3-E1FA-47C0-AC23-179E380B10BF" /* Version.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				APP_PRODUCT_NAME = Tutti;

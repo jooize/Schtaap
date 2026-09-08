@@ -13,6 +13,8 @@ and "remote_play" to any client that subscribed to them, so the
 client driving this server decides what a speaker's pause should do.
 Next and previous are dropped at INFO.
 
+SPDX-License-Identifier: GPL-2.0-or-later
+
 --- a/src/listener.h
 +++ b/src/listener.h
 @@ -28,6 +28,9 @@

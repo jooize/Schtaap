@@ -95,13 +95,18 @@ Runs on macOS 15 and later.
 ## Layout
 
     macos/          the app, the helper, the agent plists, the build scripts
-    nix/            owntone, librespot and an audio-only ffmpeg, with patches
+    patches/        the changes to OwnTone and librespot, as plain patches
+                    against their release sources; nothing in them is Nix
+    nix/            owntone, librespot and an audio-only ffmpeg, plus the
+                    generator for the bundle's third-party notices
     flake.nix       the three packages above, for macos/build-engine
 
 ## The patches
 
-OwnTone 29.3 and librespot 0.8.0 are stock apart from these. Each patch
-file opens with why it exists.
+OwnTone 29.3 and librespot 0.8.0 are stock apart from these, in
+`patches/owntone/` and `patches/librespot/`. They apply with `patch -p1`
+to the release sources and owe nothing to Nix. Each patch file opens
+with why it exists.
 
 OwnTone:
 
@@ -169,4 +174,24 @@ someone else yet:
 - librespot 0.8 never learns which phone is connected, so the popover
   says "Connected" and cannot say from what.
 
-No license file yet.
+## License
+
+The app, the helper, the build scripts and the Nix expressions are under
+the MIT License; see [LICENSE](LICENSE).
+
+The patches are licensed like the programs they change. Those in
+`patches/owntone/` are GPL-2.0-or-later, as OwnTone is, and the license
+text is beside them in [patches/owntone/COPYING](patches/owntone/COPYING).
+Those in `patches/librespot/` are MIT, as librespot is. Each patch says so
+in its header.
+
+A built app bundles OwnTone, librespot, FFmpeg and their libraries. Which
+packages, under which licenses, and the full text of each, are in
+`NOTICES.txt` in the bundle's Resources. `macos/build-engine` generates
+it from the same Nix closure the binaries came from, so it cannot drift
+from what ships.
+
+Not affiliated with Spotify or Apple. Spotify is a trademark of Spotify
+AB. AirPlay and HomePod are trademarks of Apple Inc. librespot is an
+unofficial Spotify Connect client that Spotify does not support, so a
+change on Spotify's side can stop it at any time.
