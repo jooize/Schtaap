@@ -9,7 +9,7 @@
       pkgs = nixpkgs.legacyPackages.${system};
       # Named in the bundle's third-party notices as where the recipes,
       # the patches and the corresponding source can be had.
-      sourceUrl = "https://github.com/jooize/SpotifyConnectToAirPlay";
+      sourceUrl = "https://github.com/jooize/Schtaap";
     in
     {
       packages.${system} = {

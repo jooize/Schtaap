@@ -1,7 +1,8 @@
-# SpotifyConnectToAirPlay
+# Schtaap
 
-A macOS menu bar app that makes a Mac appear as a speaker in Spotify and
-plays what is sent to it on AirPlay 2 speakers, in sync. Pick "HomePods"
+Spotify Connect Heard Through Apple AirPlay: a macOS menu bar app that
+makes a Mac appear as a speaker in Spotify and plays what is sent to it
+on AirPlay 2 speakers, in sync. Pick "HomePods"
 in Spotify's device list on a phone or a computer, and the music comes out
 of the household's HomePods, with the track, artist, album and cover on
 every speaker and in the Mac's Now Playing.
@@ -9,7 +10,6 @@ every speaker and in the Mac's Now Playing.
 The phone is only a remote. The audio streams from Spotify's servers to
 the Mac, so the phone can leave the house and the music carries on.
 
-The app is **Schtaap**: Spotify Connect Heard Through Apple AirPlay.
 Built and used daily on one Mac; see [Status](#status) before relying
 on it and [Releases](#releases) for how a download is verified.
 
