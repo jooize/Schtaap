@@ -138,7 +138,10 @@ struct PopoverView: View {
                 hint: "Play something on the phone that chose this receiver."
             )
         } else {
-            IdleCard(connectName: connectName, showsInSpotify: showsInSpotify)
+            IdleCard(
+                connectName: connectName, showsInSpotify: showsInSpotify,
+                symbolName: SymbolCatalog.name(SpotifyDeviceType.advertised.symbolName)
+            )
         }
     }
 

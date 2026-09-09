@@ -9,6 +9,11 @@ import SwiftUI
 /// and this Mac plays to whatever is ticked below. Making the receiver a row
 /// under its own heading puts the two in signal order, and the topology stops
 /// needing to be explained.
+///
+/// It behaves like a speaker row too: a click anywhere on it flips whether
+/// this Mac appears in Spotify, which is what the hover fill promises all the
+/// way down the popover. Renaming is the pencil that appears beside the name
+/// on hover, and a click on the name itself.
 struct ReceiverRow: View {
     @Binding var name: String
     @Binding var isEditing: Bool
@@ -25,18 +30,19 @@ struct ReceiverRow: View {
 
     var body: some View {
         HStack(spacing: 10) {
-            DeviceIcon(symbol: symbolName, isActive: showsInSpotify)
-
-            VStack(alignment: .leading, spacing: 1) {
-                nameField
-                Text(subtitle)
-                    .font(.system(size: 10))
-                    .foregroundStyle(subtitleIsWarning ? AnyShapeStyle(.orange) : AnyShapeStyle(.tertiary))
-                    .lineLimit(1)
-                    .truncationMode(.tail)
+            if isEditing {
+                leading
+            } else {
+                Button {
+                    showsInSpotify.toggle()
+                } label: {
+                    leading.contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Appear in Spotify")
+                .accessibilityValue(name)
+                .accessibilityAddTraits(showsInSpotify ? [.isSelected] : [])
             }
-
-            Spacer(minLength: 6)
 
             Toggle("", isOn: $showsInSpotify)
                 .labelsHidden()
@@ -63,6 +69,30 @@ struct ReceiverRow: View {
         }
     }
 
+    /// Icon, name and subtitle: the part of the row that is the click target
+    /// when not editing.
+    private var leading: some View {
+        HStack(spacing: 10) {
+            DeviceIcon(symbol: symbolName, isActive: showsInSpotify)
+
+            VStack(alignment: .leading, spacing: 1) {
+                HStack(spacing: 6) {
+                    nameField
+                    if isHovering, !isEditing {
+                        pencil
+                    }
+                }
+                Text(subtitle)
+                    .font(.system(size: 10))
+                    .foregroundStyle(subtitleIsWarning ? AnyShapeStyle(.orange) : AnyShapeStyle(.tertiary))
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+            }
+
+            Spacer(minLength: 6)
+        }
+    }
+
     @ViewBuilder
     private var nameField: some View {
         if isEditing {
@@ -76,12 +106,28 @@ struct ReceiverRow: View {
             Button { isEditing = true } label: {
                 Text(name)
                     .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(.primary)
                     .lineLimit(1)
                     .truncationMode(.tail)
             }
             .buttonStyle(.plain)
             .help("Rename how this Mac appears in Spotify")
         }
+    }
+
+    /// Says the name can be changed, only while the pointer is on the row,
+    /// the way a speaker row's slider shows up only once it plays.
+    private var pencil: some View {
+        Button { isEditing = true } label: {
+            Image(systemName: "pencil")
+                .font(.system(size: 11, weight: .medium))
+                .foregroundStyle(.secondary)
+                .frame(width: 16, height: 16)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .help("Rename how this Mac appears in Spotify")
+        .accessibilityLabel("Rename")
     }
 }
 

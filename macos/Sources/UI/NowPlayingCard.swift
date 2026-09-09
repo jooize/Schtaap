@@ -144,34 +144,65 @@ struct NowPlayingCard: View {
     }
 }
 
-/// The same slot as the now-playing card, shown when nothing is. It keeps
-/// the header the same height either way, and spends the line on the one
-/// thing a person opening the popover to silence needs: what to tap on the
-/// phone. The name is read live, so the sentence can never go stale.
+/// The same slot as the now-playing card, shown when nothing is. It fills
+/// the same height, so nothing moves when a track starts, and it is drawn
+/// dimmed the way an empty well is: a state, not a headline. The artwork
+/// row keeps its place with a dashed well and a title, and the rows where
+/// the scrubber and transport will be spend themselves on the two steps a
+/// person takes on the phone. The name is read live, so the steps can never
+/// go stale.
 struct IdleCard: View {
     let connectName: String
     let showsInSpotify: Bool
+    /// The glyph Spotify draws for this receiver, so step two shows what to
+    /// look for in the list.
+    let symbolName: String
 
     var body: some View {
-        HStack(spacing: 10) {
-            ArtworkWell { ArtworkPlaceholder() }
-            VStack(alignment: .leading, spacing: 2) {
-                Text("Nothing playing")
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 10) {
+                ArtworkWell(isDashed: true) { ArtworkPlaceholder() }
+                Text(showsInSpotify ? "Ready for Spotify" : "Hidden from Spotify")
                     .font(.system(size: 13, weight: .medium))
-                Text(hint)
+                    .foregroundStyle(.secondary)
+                Spacer(minLength: 0)
+            }
+            .frame(height: 40)
+
+            if showsInSpotify {
+                VStack(alignment: .leading, spacing: 5) {
+                    step(1, symbol: SymbolCatalog.name("airplayaudio", fallback: "speaker.wave.2"),
+                         text: "Open Spotify\u{2019}s device list")
+                    step(2, symbol: symbolName,
+                         text: "Pick \u{201C}\(connectName)\u{201D}")
+                }
+            } else {
+                Text("Turn on the switch above to play here.")
                     .font(.system(size: 11))
                     .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
             }
-            Spacer(minLength: 0)
         }
+        .frame(maxWidth: .infinity, minHeight: Metrics.cardHeight, alignment: .topLeading)
+        .opacity(0.62)
     }
 
-    private var hint: String {
-        guard showsInSpotify else {
-            return "Not appearing in Spotify. Switch it on above to play here."
+    private func step(_ number: Int, symbol: String, text: String) -> some View {
+        HStack(spacing: 8) {
+            Text(String(number))
+                .font(.system(size: 9.5, weight: .semibold))
+                .foregroundStyle(.secondary)
+                .frame(width: 16, height: 16)
+                .background(Circle().fill(.quaternary))
+            Image(systemName: symbol)
+                .font(.system(size: 11))
+                .foregroundStyle(.secondary)
+                .frame(width: 14)
+            Text(text)
+                .font(.system(size: 11))
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .truncationMode(.tail)
         }
-        return "In Spotify, choose \u{201C}\(connectName)\u{201D} from the device list."
     }
 }
 
@@ -200,18 +231,27 @@ struct ConnectingCard: View {
             }
             Spacer(minLength: 0)
         }
+        .frame(maxWidth: .infinity, minHeight: Metrics.cardHeight, alignment: .topLeading)
     }
 }
 
-/// The 40-point rounded square both cards start with.
+/// The 40-point rounded square every card starts with. Dashed, it is the
+/// outline of where artwork will go rather than an empty one.
 struct ArtworkWell<Content: View>: View {
+    var isDashed = false
     @ViewBuilder let content: () -> Content
 
     var body: some View {
-        RoundedRectangle(cornerRadius: 6, style: .continuous)
-            .fill(.quaternary)
-            .frame(width: 40, height: 40)
-            .overlay { content() }
+        let shape = RoundedRectangle(cornerRadius: 6, style: .continuous)
+        Group {
+            if isDashed {
+                shape.strokeBorder(.quaternary, style: StrokeStyle(lineWidth: 1.5, dash: [3, 3]))
+            } else {
+                shape.fill(.quaternary)
+            }
+        }
+        .frame(width: 40, height: 40)
+        .overlay { content() }
     }
 }
 
@@ -234,13 +274,13 @@ struct ArtworkPlaceholder: View {
 }
 
 #Preview("Idle") {
-    IdleCard(connectName: "HomePods", showsInSpotify: true)
+    IdleCard(connectName: "HomePods", showsInSpotify: true, symbolName: "hifispeaker.fill")
         .frame(width: Metrics.popoverWidth)
         .padding()
 }
 
 #Preview("Idle, hidden from Spotify") {
-    IdleCard(connectName: "HomePods", showsInSpotify: false)
+    IdleCard(connectName: "HomePods", showsInSpotify: false, symbolName: "hifispeaker.fill")
         .frame(width: Metrics.popoverWidth)
         .padding()
 }

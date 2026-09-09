@@ -6,6 +6,11 @@ enum Metrics {
     static let iconColumn: CGFloat = 26
     /// Icon column plus the gap after it, so sliders line up under row titles.
     static let rowTextInset: CGFloat = 36
+    /// The now-playing slot: a 40-point artwork row, a 16-point scrubber and
+    /// a 22-point transport row, 6 points between each. Every other card in
+    /// the slot fills the same height, so the popover does not jump when a
+    /// track starts.
+    static let cardHeight: CGFloat = 90
 }
 
 /// The device icon at the head of each row.
