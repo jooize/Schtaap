@@ -101,7 +101,7 @@ from that commit alone: the engine from the flake, the app from Xcode
 provenance attestation, so a download can be checked against the commit
 and the workflow that produced it:
 
-    gh attestation verify Schtaap-0.1.0-macos.zip --owner jooize
+    gh attestation verify Schtaap-0.1.1-macos.zip --owner jooize
 
 What that proves is narrower than "an honest build": GitHub vouches that
 this workflow file, at this commit, on GitHub's own runner, produced

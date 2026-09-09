@@ -10,7 +10,7 @@
 # Anyone can then check that a download is the build of the commit it
 # claims to be:
 #
-#     gh attestation verify Schtaap-0.1.0-macos.zip --owner jooize
+#     gh attestation verify Schtaap-0.1.1-macos.zip --owner jooize
 #
 # Run by hand (workflow_dispatch) it builds and compares in the same way
 # and leaves the zip as a workflow artifact, without attesting or

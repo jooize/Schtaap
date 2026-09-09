@@ -7,7 +7,7 @@
 // CFBundleShortVersionString allows only digits and dots, so a pre-release
 // is a 0.y.z version, never a suffix.
 
-MARKETING_VERSION = 0.1.0
+MARKETING_VERSION = 0.1.1
 
 // The build number is the version. Launch Services and Sparkle order copies
 // of an app by CFBundleVersion alone (measured 2026-09-08: the copy with the
