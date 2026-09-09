@@ -43,8 +43,8 @@ final class EngineService {
 
     /// Registration and healing happen with no UI attached, so this is the
     /// only witness when they go wrong: `log stream --predicate
-    /// 'subsystem == "bar.esko.Tutti"'`.
-    private static let log = Logger(subsystem: "bar.esko.Tutti", category: "engine")
+    /// 'subsystem == "bar.esko.Schtaap"'`.
+    private static let log = Logger(subsystem: "bar.esko.Schtaap", category: "engine")
 
     /// The two agents, addressed by the plist file names shipped in
     /// Contents/Library/LaunchAgents. Built from the bundle identifier so
@@ -57,7 +57,7 @@ final class EngineService {
         self.installation = installation
         self.isOffline = usesFixtures
 
-        let identifier = Bundle.main.bundleIdentifier ?? "bar.esko.Tutti"
+        let identifier = Bundle.main.bundleIdentifier ?? "bar.esko.Schtaap"
         let names = ["\(identifier).owntone", "\(identifier).librespot"]
         self.labels = names
         self.owntone = SMAppService.agent(plistName: "\(names[0]).plist")

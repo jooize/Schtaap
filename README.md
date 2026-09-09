@@ -9,8 +9,9 @@ every speaker and in the Mac's Now Playing.
 The phone is only a remote. The audio streams from Spotify's servers to
 the Mac, so the phone can leave the house and the music carries on.
 
-Working name in the app: **Tutti**. Not released; built and used on one
-Mac. See [Status](#status).
+The app is **Schtaap**: Spotify Connect Heard Through Apple AirPlay.
+Built and used daily on one Mac; see [Status](#status) before relying
+on it and [Releases](#releases) for how a download is verified.
 
 ## What it does
 
@@ -58,7 +59,7 @@ other, and seeks Spotify back to what the speakers actually played).
 
 The app talks to OwnTone over its JSON API and websocket on localhost,
 and to librespot over a Unix socket that one of the patches adds. All
-state is under `~/Library/Application Support/Tutti`.
+state is under `~/Library/Application Support/bar.esko.Schtaap`.
 
 Details of the app, the helper and the engine's lifecycle are in
 [macos/README.md](macos/README.md).
@@ -74,13 +75,13 @@ without that certificate can set `CODE_SIGN_IDENTITY: "-"` in
 
     cd macos
     ./build-engine      # owntone + librespot from the flake, staged in Engine/
-    ./generate          # Tutti.xcodeproj from project.yml (XcodeGen via nix run)
-    xcodebuild -project Tutti.xcodeproj -scheme Tutti -configuration Debug \
+    ./generate          # Schtaap.xcodeproj from project.yml (XcodeGen via nix run)
+    xcodebuild -project Schtaap.xcodeproj -scheme Schtaap -configuration Debug \
       -derivedDataPath .build build
-    open .build/Build/Products/Debug/Tutti.app
+    open .build/Build/Products/Debug/Schtaap.app
 
 The first launch registers the two agents with launchd (System Settings
-lists them under Login Items as "Tutti, 2 items") and asks for Local
+lists them under Login Items as "Schtaap, 2 items") and asks for Local
 Network access twice, once for the app and once for the helper. Both are
 needed: the helper's is what lets the engine advertise itself and reach
 the speakers, the app's only fetches speaker models and stereo-pair
@@ -100,7 +101,7 @@ from that commit alone: the engine from the flake, the app from Xcode
 provenance attestation, so a download can be checked against the commit
 and the workflow that produced it:
 
-    gh attestation verify Tutti-0.1.0-macos.zip --owner jooize
+    gh attestation verify Schtaap-0.1.0-macos.zip --owner jooize
 
 What that proves is narrower than "an honest build": GitHub vouches that
 this workflow file, at this commit, on GitHub's own runner, produced

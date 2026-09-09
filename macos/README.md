@@ -7,12 +7,12 @@ The app ships them, configures them, and registers them with launchd.
 ## Build
 
     ./build-engine             # build owntone + librespot from the flake
-    ./generate                 # regenerate Tutti.xcodeproj from project.yml
-    open Tutti.xcodeproj
+    ./generate                 # regenerate Schtaap.xcodeproj from project.yml
+    open Schtaap.xcodeproj
 
 Or from the command line:
 
-    xcodebuild -project Tutti.xcodeproj -scheme Tutti -configuration Debug \
+    xcodebuild -project Schtaap.xcodeproj -scheme Schtaap -configuration Debug \
       -derivedDataPath .build build
 
 `build-engine` needs Nix and takes a while the first time; after that the
@@ -20,13 +20,13 @@ payload sits in `Engine/`, which is gitignored, and only has to be rebuilt
 when the engine changes. Skipping it still builds a working app: the engine
 sources are optional, and the popover says so rather than pretending.
 
-`Tutti.xcodeproj` and `Info.plist` are generated but committed, so a fresh
+`Schtaap.xcodeproj` and `Info.plist` are generated but committed, so a fresh
 clone builds in Xcode without XcodeGen. `project.yml` is the source of truth;
 never hand-edit the project file.
 
 ## Running without the engine
 
-    open .build/Build/Products/Debug/Tutti.app --args -UseFixtures YES
+    open .build/Build/Products/Debug/Schtaap.app --args -UseFixtures YES
 
 Loads `Fixtures.swift` instead of the network, so the whole UI is reachable
 with nothing else running. Fixture mode also blocks engine registration, which
@@ -36,7 +36,7 @@ LAN and starts discovering the household's speakers.
 ## The engine
 
 Two LaunchAgents, registered through `SMAppService` and visible in System
-Settings under Login Items as "Tutti, 2 items". launchd runs the processes and
+Settings under Login Items as "Schtaap, 2 items". launchd runs the processes and
 brings a crashed one back; the app decides when they run. It starts them when
 it launches (`launchctl kickstart`) and stops them when it quits (`launchctl
 kill TERM`, from `applicationShouldTerminate`), so a quit frees the speakers
@@ -53,7 +53,7 @@ and waits rather than exec'ing into it, because macOS attributes local network
 access to the responsible process: exec'ing left librespot with no responsible
 ancestor and the permission prompt read "Allow librespot ...". Staying alive as
 the parent makes the prompt name the helper, "EngineHelper". It was meant to
-read "Tutti" through an embedded Info.plist, but macOS names a bare executable
+read "Schtaap" through an embedded Info.plist, but macOS names a bare executable
 by its file name and ignores that plist (settled 2026-09-08); shipping the
 helper as a bundle of its own is the fix, not done yet.
 
@@ -74,7 +74,7 @@ usually dropped; the helper remembers the track and resends it on the next
 event until a write succeeds. See `Helper/Metadata.swift` for the format's
 traps, all read out of OwnTone's `src/inputs/pipe.c`.
 
-State lives in `~/Library/Application Support/Tutti`:
+State lives in `~/Library/Application Support/bar.esko.Schtaap`:
 
     owntone.conf            generated each launch; hand edits are overwritten
     engine.json             connect name, pipe path, bitrate, app build; read by
@@ -95,7 +95,7 @@ signed with the Apple Development identity for the same reason: an ad-hoc
 signature changes on every build, and launchd refuses a job whose code no
 longer matches the requirement it recorded.
 
-`defaults write bar.esko.Tutti EngineLogLevel debug` sets owntone's log level
+`defaults write bar.esko.Schtaap EngineLogLevel debug` sets owntone's log level
 at the next launch; `defaults delete` puts it back. The log grows fast at
 debug.
 
@@ -111,8 +111,8 @@ register at launch and again after a restart, since the check at launch runs
 while the old processes are still up and passes. If you are debugging it by
 hand:
 
-    launchctl print gui/$(id -u)/bar.esko.Tutti.owntone
-    launchctl bootout gui/$(id -u)/bar.esko.Tutti.owntone
+    launchctl print gui/$(id -u)/bar.esko.Schtaap.owntone
+    launchctl bootout gui/$(id -u)/bar.esko.Schtaap.owntone
 
 launchd throttles respawns to one per 10 seconds, so give it a moment before
 concluding anything.

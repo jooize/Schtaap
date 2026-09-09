@@ -160,7 +160,7 @@ final class EngineStore {
     /// Outputs whose slider the user is currently dragging. Refreshes leave
     /// their volume alone so the knob does not fight the pointer.
     private var adjusting: Set<String> = []
-    private static let log = Logger(subsystem: "bar.esko.Tutti", category: "store")
+    private static let log = Logger(subsystem: "bar.esko.Schtaap", category: "store")
     private var isAdjustingMaster = false
 
     /// One in-flight debounce per output, plus one for master.

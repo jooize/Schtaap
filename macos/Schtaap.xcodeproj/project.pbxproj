@@ -1,0 +1,678 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		12481DCB8C3FDBED4808A8C2 /* SpotifyControl.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7AFA2CE4107890ADEAFCE3BB /* SpotifyControl.swift */; };
+		1CDE2253E5882DBA3713446F /* PopoverView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2E38E2030FA8C39E4288F616 /* PopoverView.swift */; };
+		23EDF6C29F58C5DB4F0D9F51 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = 58FC0029BB59C32F9F1DC0B2 /* main.swift */; };
+		2457C79AC7A1BC06290D0141 /* AppMain.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85B5B5AB611FB9353FA24B65 /* AppMain.swift */; };
+		24DBB897B84AE554418F19D9 /* manifest.json in CopyFiles */ = {isa = PBXBuildFile; fileRef = 49D0B788F59665203F1D3A58 /* manifest.json */; };
+		25946EE6F7B571BE62C70227 /* AirPlayDirectory.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C278924C43E44226477052B /* AirPlayDirectory.swift */; };
+		352C1C5B0B2BBBC6EAEBD83E /* LoginItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3CE4CC8DBF22FF3F2534CC1 /* LoginItem.swift */; };
+		35F7A60866E845BE0A7B1507 /* PopoverPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4C66E6909D36CEDCC01237A4 /* PopoverPage.swift */; };
+		413988A95735C9103647140B /* LaunchAgents in CopyFiles */ = {isa = PBXBuildFile; fileRef = FE0AFBB14019783C41891E6B /* LaunchAgents */; };
+		4A54D4673574AC1A7BFA6A19 /* Controls.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9054DD2A2560EB44BFDF8F69 /* Controls.swift */; };
+		4E602A86EE6608B89B8C6739 /* Fixtures.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4A2F525440D004C430C9776 /* Fixtures.swift */; };
+		55B559A3D6610CC924BE6D8B /* VerificationPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE264BDCF218DAE1DEDC5873 /* VerificationPage.swift */; };
+		56F8357B90838465EC6FF1D4 /* OutputRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 403A9EFA5D8721D4A096D69B /* OutputRow.swift */; };
+		5B372C00BB623039A5E4C8E5 /* SpotifySession.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8888766EE265295AABC40A8 /* SpotifySession.swift */; };
+		5C3B97573D311B9A3D17D6DE /* NotifyClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 984C7237A9838C8CD4F33FFB /* NotifyClient.swift */; };
+		5EC48458DA0EA77B84204F58 /* NowPlayingCenter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C76363A9F190EF0DE6C6B60 /* NowPlayingCenter.swift */; };
+		5FC04EF88D04FF92241F08E2 /* Preferences.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB9E1189DD5E5149F849EDD5 /* Preferences.swift */; };
+		69508283FA57D34A56F76363 /* SpotifyControl.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7AFA2CE4107890ADEAFCE3BB /* SpotifyControl.swift */; };
+		7275F5D41495B767C926F7B6 /* NowPlayingCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89A06D35E2D24F090FFBA38D /* NowPlayingCard.swift */; };
+		7914DC9A6164973887E5C07F /* LocalNetworkProbe.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2CB4B3735CEEBCCEFFAC32F0 /* LocalNetworkProbe.swift */; };
+		7F59FD051535AB810FE51942 /* EngineHelper in Embed Dependencies */ = {isa = PBXBuildFile; fileRef = 8695A8714EBD97FD76FE26F0 /* EngineHelper */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		8733FBD2690909B7F7D8057B /* MenuBarLabel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 19773F8E529ABA288E743679 /* MenuBarLabel.swift */; };
+		87D43C1B8BF30694EC74B19F /* EngineClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = C07B0EE36DF8DB70B2D3160B /* EngineClient.swift */; };
+		8C91074390E9D7936D935148 /* EngineEndpoint.swift in Sources */ = {isa = PBXBuildFile; fileRef = 35B11434B16292C9D01C0F12 /* EngineEndpoint.swift */; };
+		97F50C4E16E2CE7F1A1BBE9E /* IntendedOutputs.swift in Sources */ = {isa = PBXBuildFile; fileRef = 567E1E217395D6BDD018904B /* IntendedOutputs.swift */; };
+		A03BD5CD29768C3F4E668A14 /* htdocs in CopyFiles */ = {isa = PBXBuildFile; fileRef = FEC622225F492D4931767F8C /* htdocs */; };
+		A3AC198CD6E468E60480F664 /* Metadata.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85474C0622B58203DEC6C5EE /* Metadata.swift */; };
+		AECAB6C4FD6D086F4F8DEBBD /* ReceiverRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4135BE65448EF8B55D89585F /* ReceiverRow.swift */; };
+		B71D7793974BE79D26900B7F /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 51AEA12BB1D341EE78FD837E /* Models.swift */; };
+		BB3CC64120963552527BFA0A /* SpotifyDevice.swift in Sources */ = {isa = PBXBuildFile; fileRef = 61FCB466949FB53EE596B652 /* SpotifyDevice.swift */; };
+		C723BBFE5517AFFE70A87DA5 /* bin in CopyFiles */ = {isa = PBXBuildFile; fileRef = 02F50B335213283A57290E39 /* bin */; };
+		C97AC3DD3E4C511849BEBA4D /* EngineTransport.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1042AEA39227FA87E079205 /* EngineTransport.swift */; };
+		CB84F31F6A49A7DBC6B602A8 /* Branding.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7BFAD3D9E191CB528077E51 /* Branding.swift */; };
+		D40BBB4C5D2BA1B8FDBC53CB /* DeviceKind.swift in Sources */ = {isa = PBXBuildFile; fileRef = FFFC683139D14BAEBEC657DB /* DeviceKind.swift */; };
+		D6468FBA96D2A8AF1E4F053A /* SpotifySession.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8888766EE265295AABC40A8 /* SpotifySession.swift */; };
+		D91DBAA83DB7361222C557AB /* NOTICES.txt in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1CD1D6761C5655A29BEF48B0 /* NOTICES.txt */; };
+		DACC5E53C9990E1B353738D5 /* EngineService.swift in Sources */ = {isa = PBXBuildFile; fileRef = E258CBE7A9FF7F8F527CA0B5 /* EngineService.swift */; };
+		DC0B10C27CE404C32646D367 /* EngineInstallation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 475D5A03DC98FC3BEC5CFF15 /* EngineInstallation.swift */; };
+		FCADF0FD497B4E0A29403DCD /* lib in CopyFiles */ = {isa = PBXBuildFile; fileRef = E76046F3B7942CAB7459D025 /* lib */; };
+		FF68A291926A2F498D144168 /* EngineStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4147B5DAB379F486729D6003 /* EngineStore.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		E00D2365B2C25C7B68C949B6 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 4F07471B82B66CD738827072 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = AFCC158E8EBFB0D4A6153D2C;
+			remoteInfo = EngineHelper;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		1A9F340D7F6D151373EC527B /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = Contents/Helpers;
+			dstSubfolderSpec = 1;
+			files = (
+				C723BBFE5517AFFE70A87DA5 /* bin in CopyFiles */,
+				FCADF0FD497B4E0A29403DCD /* lib in CopyFiles */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		45EEB7FCF4AE9D8563C8E9F3 /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = Contents/Library;
+			dstSubfolderSpec = 1;
+			files = (
+				413988A95735C9103647140B /* LaunchAgents in CopyFiles */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		7C6D5D32D4BBC7DCC1CA823F /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 7;
+			files = (
+				D91DBAA83DB7361222C557AB /* NOTICES.txt in CopyFiles */,
+				A03BD5CD29768C3F4E668A14 /* htdocs in CopyFiles */,
+				24DBB897B84AE554418F19D9 /* manifest.json in CopyFiles */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B5C48117209A3AD4347530F1 /* Embed Dependencies */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = Contents/MacOS;
+			dstSubfolderSpec = 1;
+			files = (
+				7F59FD051535AB810FE51942 /* EngineHelper in Embed Dependencies */,
+			);
+			name = "Embed Dependencies";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		02F50B335213283A57290E39 /* bin */ = {isa = PBXFileReference; lastKnownFileType = folder; name = bin; path = Engine/bin; sourceTree = SOURCE_ROOT; };
+		0C76363A9F190EF0DE6C6B60 /* NowPlayingCenter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NowPlayingCenter.swift; sourceTree = "<group>"; };
+		19773F8E529ABA288E743679 /* MenuBarLabel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarLabel.swift; sourceTree = "<group>"; };
+		1CD1D6761C5655A29BEF48B0 /* NOTICES.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = NOTICES.txt; sourceTree = "<group>"; };
+		2CB4B3735CEEBCCEFFAC32F0 /* LocalNetworkProbe.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalNetworkProbe.swift; sourceTree = "<group>"; };
+		2E38E2030FA8C39E4288F616 /* PopoverView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PopoverView.swift; sourceTree = "<group>"; };
+		35B11434B16292C9D01C0F12 /* EngineEndpoint.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EngineEndpoint.swift; sourceTree = "<group>"; };
+		3C278924C43E44226477052B /* AirPlayDirectory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AirPlayDirectory.swift; sourceTree = "<group>"; };
+		403A9EFA5D8721D4A096D69B /* OutputRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OutputRow.swift; sourceTree = "<group>"; };
+		4135BE65448EF8B55D89585F /* ReceiverRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReceiverRow.swift; sourceTree = "<group>"; };
+		4147B5DAB379F486729D6003 /* EngineStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EngineStore.swift; sourceTree = "<group>"; };
+		475D5A03DC98FC3BEC5CFF15 /* EngineInstallation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EngineInstallation.swift; sourceTree = "<group>"; };
+		49D0B788F59665203F1D3A58 /* manifest.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = manifest.json; sourceTree = "<group>"; };
+		4C66E6909D36CEDCC01237A4 /* PopoverPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PopoverPage.swift; sourceTree = "<group>"; };
+		51AEA12BB1D341EE78FD837E /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
+		567E1E217395D6BDD018904B /* IntendedOutputs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IntendedOutputs.swift; sourceTree = "<group>"; };
+		58FC0029BB59C32F9F1DC0B2 /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
+		5F69A0B1F684B0E7AFD4A630 /* Schtaap.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Schtaap.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		61FCB466949FB53EE596B652 /* SpotifyDevice.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpotifyDevice.swift; sourceTree = "<group>"; };
+		7AFA2CE4107890ADEAFCE3BB /* SpotifyControl.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpotifyControl.swift; sourceTree = "<group>"; };
+		85474C0622B58203DEC6C5EE /* Metadata.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Metadata.swift; sourceTree = "<group>"; };
+		85B5B5AB611FB9353FA24B65 /* AppMain.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppMain.swift; sourceTree = "<group>"; };
+		8695A8714EBD97FD76FE26F0 /* EngineHelper */ = {isa = PBXFileReference; includeInIndex = 0; path = EngineHelper; sourceTree = BUILT_PRODUCTS_DIR; };
+		89A06D35E2D24F090FFBA38D /* NowPlayingCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NowPlayingCard.swift; sourceTree = "<group>"; };
+		9054DD2A2560EB44BFDF8F69 /* Controls.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Controls.swift; sourceTree = "<group>"; };
+		984C7237A9838C8CD4F33FFB /* NotifyClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotifyClient.swift; sourceTree = "<group>"; };
+		A1042AEA39227FA87E079205 /* EngineTransport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EngineTransport.swift; sourceTree = "<group>"; };
+		AB9E1189DD5E5149F849EDD5 /* Preferences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Preferences.swift; sourceTree = "<group>"; };
+		B7BFAD3D9E191CB528077E51 /* Branding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Branding.swift; sourceTree = "<group>"; };
+		BE264BDCF218DAE1DEDC5873 /* VerificationPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VerificationPage.swift; sourceTree = "<group>"; };
+		C07B0EE36DF8DB70B2D3160B /* EngineClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EngineClient.swift; sourceTree = "<group>"; };
+		D4A2F525440D004C430C9776 /* Fixtures.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Fixtures.swift; sourceTree = "<group>"; };
+		E258CBE7A9FF7F8F527CA0B5 /* EngineService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EngineService.swift; sourceTree = "<group>"; };
+		E76046F3B7942CAB7459D025 /* lib */ = {isa = PBXFileReference; lastKnownFileType = folder; name = lib; path = Engine/lib; sourceTree = SOURCE_ROOT; };
+		F3CE4CC8DBF22FF3F2534CC1 /* LoginItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginItem.swift; sourceTree = "<group>"; };
+		F8888766EE265295AABC40A8 /* SpotifySession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpotifySession.swift; sourceTree = "<group>"; };
+		FE0AFBB14019783C41891E6B /* LaunchAgents */ = {isa = PBXFileReference; lastKnownFileType = folder; path = LaunchAgents; sourceTree = SOURCE_ROOT; };
+		FEC622225F492D4931767F8C /* htdocs */ = {isa = PBXFileReference; lastKnownFileType = folder; name = htdocs; path = Engine/htdocs; sourceTree = SOURCE_ROOT; };
+		FFFC683139D14BAEBEC657DB /* DeviceKind.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceKind.swift; sourceTree = "<group>"; };
+		"TEMP_11D8A1DD-3D65-4643-BBFD-94D63656AD72" /* Version.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Version.xcconfig; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXGroup section */
+		0110C4C77A66B2A4F32B12EF /* .claude */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = .claude;
+			sourceTree = "<group>";
+		};
+		04B7383BF1F0BD39F877F6E1 /* UI */ = {
+			isa = PBXGroup;
+			children = (
+				9054DD2A2560EB44BFDF8F69 /* Controls.swift */,
+				19773F8E529ABA288E743679 /* MenuBarLabel.swift */,
+				89A06D35E2D24F090FFBA38D /* NowPlayingCard.swift */,
+				403A9EFA5D8721D4A096D69B /* OutputRow.swift */,
+				4C66E6909D36CEDCC01237A4 /* PopoverPage.swift */,
+				2E38E2030FA8C39E4288F616 /* PopoverView.swift */,
+				4135BE65448EF8B55D89585F /* ReceiverRow.swift */,
+				BE264BDCF218DAE1DEDC5873 /* VerificationPage.swift */,
+			);
+			path = UI;
+			sourceTree = "<group>";
+		};
+		058C0ABCA0DFD5FB78E45DEE = {
+			isa = PBXGroup;
+			children = (
+				C2953F8B5561B56D9B4AF165 /* Engine */,
+				AE31712AF8313C6E0300CB2F /* Helper */,
+				6F1238ED930A9A3567F38A6B /* Sources */,
+				FE0AFBB14019783C41891E6B /* LaunchAgents */,
+				DDA597B201830D1B8264A1A9 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		0EA3978F313AFC04BA10308F /* App */ = {
+			isa = PBXGroup;
+			children = (
+				85B5B5AB611FB9353FA24B65 /* AppMain.swift */,
+				0C76363A9F190EF0DE6C6B60 /* NowPlayingCenter.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		5B8F536D56369C8166904717 /* Engine */ = {
+			isa = PBXGroup;
+			children = (
+				DDE781653EF03C0CFA3FB78A /* .claude */,
+				3C278924C43E44226477052B /* AirPlayDirectory.swift */,
+				FFFC683139D14BAEBEC657DB /* DeviceKind.swift */,
+				C07B0EE36DF8DB70B2D3160B /* EngineClient.swift */,
+				35B11434B16292C9D01C0F12 /* EngineEndpoint.swift */,
+				475D5A03DC98FC3BEC5CFF15 /* EngineInstallation.swift */,
+				E258CBE7A9FF7F8F527CA0B5 /* EngineService.swift */,
+				4147B5DAB379F486729D6003 /* EngineStore.swift */,
+				D4A2F525440D004C430C9776 /* Fixtures.swift */,
+				567E1E217395D6BDD018904B /* IntendedOutputs.swift */,
+				51AEA12BB1D341EE78FD837E /* Models.swift */,
+				984C7237A9838C8CD4F33FFB /* NotifyClient.swift */,
+				7AFA2CE4107890ADEAFCE3BB /* SpotifyControl.swift */,
+				61FCB466949FB53EE596B652 /* SpotifyDevice.swift */,
+				F8888766EE265295AABC40A8 /* SpotifySession.swift */,
+			);
+			path = Engine;
+			sourceTree = "<group>";
+		};
+		6F1238ED930A9A3567F38A6B /* Sources */ = {
+			isa = PBXGroup;
+			children = (
+				9245653FA93555A5600FF98A /* .claude */,
+				0EA3978F313AFC04BA10308F /* App */,
+				5B8F536D56369C8166904717 /* Engine */,
+				EAD3ADD19F76923DA61E0E55 /* Support */,
+				04B7383BF1F0BD39F877F6E1 /* UI */,
+			);
+			path = Sources;
+			sourceTree = "<group>";
+		};
+		9245653FA93555A5600FF98A /* .claude */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = .claude;
+			sourceTree = "<group>";
+		};
+		AE31712AF8313C6E0300CB2F /* Helper */ = {
+			isa = PBXGroup;
+			children = (
+				0110C4C77A66B2A4F32B12EF /* .claude */,
+				A1042AEA39227FA87E079205 /* EngineTransport.swift */,
+				2CB4B3735CEEBCCEFFAC32F0 /* LocalNetworkProbe.swift */,
+				58FC0029BB59C32F9F1DC0B2 /* main.swift */,
+				85474C0622B58203DEC6C5EE /* Metadata.swift */,
+			);
+			path = Helper;
+			sourceTree = "<group>";
+		};
+		C2953F8B5561B56D9B4AF165 /* Engine */ = {
+			isa = PBXGroup;
+			children = (
+				02F50B335213283A57290E39 /* bin */,
+				FEC622225F492D4931767F8C /* htdocs */,
+				E76046F3B7942CAB7459D025 /* lib */,
+				49D0B788F59665203F1D3A58 /* manifest.json */,
+				1CD1D6761C5655A29BEF48B0 /* NOTICES.txt */,
+			);
+			path = Engine;
+			sourceTree = "<group>";
+		};
+		DDA597B201830D1B8264A1A9 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				8695A8714EBD97FD76FE26F0 /* EngineHelper */,
+				5F69A0B1F684B0E7AFD4A630 /* Schtaap.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		DDE781653EF03C0CFA3FB78A /* .claude */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = .claude;
+			sourceTree = "<group>";
+		};
+		EAD3ADD19F76923DA61E0E55 /* Support */ = {
+			isa = PBXGroup;
+			children = (
+				B7BFAD3D9E191CB528077E51 /* Branding.swift */,
+				F3CE4CC8DBF22FF3F2534CC1 /* LoginItem.swift */,
+				AB9E1189DD5E5149F849EDD5 /* Preferences.swift */,
+			);
+			path = Support;
+			sourceTree = "<group>";
+		};
+		"TEMP_F74502EB-A08E-460D-902B-727F4DBCD681" /* macos */ = {
+			isa = PBXGroup;
+			children = (
+				"TEMP_11D8A1DD-3D65-4643-BBFD-94D63656AD72" /* Version.xcconfig */,
+			);
+			path = macos;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		87235143CA15CF38874B5564 /* Schtaap */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 50764F504BC14571E1D156F8 /* Build configuration list for PBXNativeTarget "Schtaap" */;
+			buildPhases = (
+				09FAB77AC93F7E89317161A4 /* Sources */,
+				45EEB7FCF4AE9D8563C8E9F3 /* CopyFiles */,
+				1A9F340D7F6D151373EC527B /* CopyFiles */,
+				7C6D5D32D4BBC7DCC1CA823F /* CopyFiles */,
+				B5C48117209A3AD4347530F1 /* Embed Dependencies */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				B3C3435E72A9608E7E97D8F1 /* PBXTargetDependency */,
+			);
+			name = Schtaap;
+			packageProductDependencies = (
+			);
+			productName = Schtaap;
+			productReference = 5F69A0B1F684B0E7AFD4A630 /* Schtaap.app */;
+			productType = "com.apple.product-type.application";
+		};
+		AFCC158E8EBFB0D4A6153D2C /* EngineHelper */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = FD1EC352DC051157F5738A42 /* Build configuration list for PBXNativeTarget "EngineHelper" */;
+			buildPhases = (
+				913A8E21C748DF9102B64A24 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = EngineHelper;
+			packageProductDependencies = (
+			);
+			productName = EngineHelper;
+			productReference = 8695A8714EBD97FD76FE26F0 /* EngineHelper */;
+			productType = "com.apple.product-type.tool";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		4F07471B82B66CD738827072 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+					87235143CA15CF38874B5564 = {
+						DevelopmentTeam = 75NVZ7W4W3;
+						ProvisioningStyle = Manual;
+					};
+					AFCC158E8EBFB0D4A6153D2C = {
+						DevelopmentTeam = 75NVZ7W4W3;
+						ProvisioningStyle = Manual;
+					};
+				};
+			};
+			buildConfigurationList = 26562E835F1CB41892EB8C0F /* Build configuration list for PBXProject "Schtaap" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = 058C0ABCA0DFD5FB78E45DEE;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				AFCC158E8EBFB0D4A6153D2C /* EngineHelper */,
+				87235143CA15CF38874B5564 /* Schtaap */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		09FAB77AC93F7E89317161A4 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				25946EE6F7B571BE62C70227 /* AirPlayDirectory.swift in Sources */,
+				2457C79AC7A1BC06290D0141 /* AppMain.swift in Sources */,
+				CB84F31F6A49A7DBC6B602A8 /* Branding.swift in Sources */,
+				4A54D4673574AC1A7BFA6A19 /* Controls.swift in Sources */,
+				D40BBB4C5D2BA1B8FDBC53CB /* DeviceKind.swift in Sources */,
+				87D43C1B8BF30694EC74B19F /* EngineClient.swift in Sources */,
+				8C91074390E9D7936D935148 /* EngineEndpoint.swift in Sources */,
+				DC0B10C27CE404C32646D367 /* EngineInstallation.swift in Sources */,
+				DACC5E53C9990E1B353738D5 /* EngineService.swift in Sources */,
+				FF68A291926A2F498D144168 /* EngineStore.swift in Sources */,
+				4E602A86EE6608B89B8C6739 /* Fixtures.swift in Sources */,
+				97F50C4E16E2CE7F1A1BBE9E /* IntendedOutputs.swift in Sources */,
+				352C1C5B0B2BBBC6EAEBD83E /* LoginItem.swift in Sources */,
+				8733FBD2690909B7F7D8057B /* MenuBarLabel.swift in Sources */,
+				B71D7793974BE79D26900B7F /* Models.swift in Sources */,
+				5C3B97573D311B9A3D17D6DE /* NotifyClient.swift in Sources */,
+				7275F5D41495B767C926F7B6 /* NowPlayingCard.swift in Sources */,
+				5EC48458DA0EA77B84204F58 /* NowPlayingCenter.swift in Sources */,
+				56F8357B90838465EC6FF1D4 /* OutputRow.swift in Sources */,
+				35F7A60866E845BE0A7B1507 /* PopoverPage.swift in Sources */,
+				1CDE2253E5882DBA3713446F /* PopoverView.swift in Sources */,
+				5FC04EF88D04FF92241F08E2 /* Preferences.swift in Sources */,
+				AECAB6C4FD6D086F4F8DEBBD /* ReceiverRow.swift in Sources */,
+				69508283FA57D34A56F76363 /* SpotifyControl.swift in Sources */,
+				BB3CC64120963552527BFA0A /* SpotifyDevice.swift in Sources */,
+				D6468FBA96D2A8AF1E4F053A /* SpotifySession.swift in Sources */,
+				55B559A3D6610CC924BE6D8B /* VerificationPage.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		913A8E21C748DF9102B64A24 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C97AC3DD3E4C511849BEBA4D /* EngineTransport.swift in Sources */,
+				7914DC9A6164973887E5C07F /* LocalNetworkProbe.swift in Sources */,
+				A3AC198CD6E468E60480F664 /* Metadata.swift in Sources */,
+				12481DCB8C3FDBED4808A8C2 /* SpotifyControl.swift in Sources */,
+				5B372C00BB623039A5E4C8E5 /* SpotifySession.swift in Sources */,
+				23EDF6C29F58C5DB4F0D9F51 /* main.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		B3C3435E72A9608E7E97D8F1 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = AFCC158E8EBFB0D4A6153D2C /* EngineHelper */;
+			targetProxy = E00D2365B2C25C7B68C949B6 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		4BB72DE8DE81FFF7EAB15D89 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = "TEMP_11D8A1DD-3D65-4643-BBFD-94D63656AD72" /* Version.xcconfig */;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				APP_PRODUCT_NAME = Schtaap;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGNING_ALLOWED = YES;
+				CODE_SIGNING_REQUIRED = YES;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Manual;
+				COPY_PHASE_STRIP = NO;
+				DEAD_CODE_STRIPPING = YES;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = 75NVZ7W4W3;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_INHIBIT_ALL_WARNINGS = NO;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		5005CA218BDB4C52FF5D4A92 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = "TEMP_11D8A1DD-3D65-4643-BBFD-94D63656AD72" /* Version.xcconfig */;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				APP_PRODUCT_NAME = Schtaap;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGNING_ALLOWED = YES;
+				CODE_SIGNING_REQUIRED = YES;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Manual;
+				COPY_PHASE_STRIP = NO;
+				DEAD_CODE_STRIPPING = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = 75NVZ7W4W3;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_INHIBIT_ALL_WARNINGS = NO;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
+		9FC5F20F55C822B8CD8320A2 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				COMBINE_HIDPI_IMAGES = YES;
+				CREATE_INFOPLIST_SECTION_IN_BINARY = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				INFOPLIST_FILE = HelperInfo.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = bar.esko.Schtaap.EngineHelper;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+			};
+			name = Release;
+		};
+		C0EBF0990A19683706BD24E6 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				COMBINE_HIDPI_IMAGES = YES;
+				CREATE_INFOPLIST_SECTION_IN_BINARY = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				INFOPLIST_FILE = HelperInfo.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = bar.esko.Schtaap.EngineHelper;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+			};
+			name = Debug;
+		};
+		D1C1A454644B0704D6979B7E /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				COMBINE_HIDPI_IMAGES = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				INFOPLIST_FILE = Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = bar.esko.Schtaap;
+				PRODUCT_NAME = "$(APP_PRODUCT_NAME)";
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		D2DFFE657691C09315BE5C75 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				COMBINE_HIDPI_IMAGES = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				INFOPLIST_FILE = Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = bar.esko.Schtaap;
+				PRODUCT_NAME = "$(APP_PRODUCT_NAME)";
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		26562E835F1CB41892EB8C0F /* Build configuration list for PBXProject "Schtaap" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				4BB72DE8DE81FFF7EAB15D89 /* Debug */,
+				5005CA218BDB4C52FF5D4A92 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		50764F504BC14571E1D156F8 /* Build configuration list for PBXNativeTarget "Schtaap" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D1C1A454644B0704D6979B7E /* Debug */,
+				D2DFFE657691C09315BE5C75 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		FD1EC352DC051157F5738A42 /* Build configuration list for PBXNativeTarget "EngineHelper" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				C0EBF0990A19683706BD24E6 /* Debug */,
+				9FC5F20F55C822B8CD8320A2 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 4F07471B82B66CD738827072 /* Project object */;
+}

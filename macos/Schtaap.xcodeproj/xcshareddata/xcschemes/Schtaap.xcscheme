@@ -15,10 +15,10 @@
                <EnvironmentBuildable>
                   <BuildableReference
                      BuildableIdentifier = "primary"
-                     BlueprintIdentifier = "9B9D5A4BDF85F98661DB0BF7"
-                     BuildableName = "Tutti.app"
-                     BlueprintName = "Tutti"
-                     ReferencedContainer = "container:Tutti.xcodeproj">
+                     BlueprintIdentifier = "87235143CA15CF38874B5564"
+                     BuildableName = "Schtaap.app"
+                     BlueprintName = "Schtaap"
+                     ReferencedContainer = "container:Schtaap.xcodeproj">
                   </BuildableReference>
                </EnvironmentBuildable>
             </ActionContent>
@@ -33,10 +33,10 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "9B9D5A4BDF85F98661DB0BF7"
-               BuildableName = "Tutti.app"
-               BlueprintName = "Tutti"
-               ReferencedContainer = "container:Tutti.xcodeproj">
+               BlueprintIdentifier = "87235143CA15CF38874B5564"
+               BuildableName = "Schtaap.app"
+               BlueprintName = "Schtaap"
+               ReferencedContainer = "container:Schtaap.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -50,10 +50,10 @@
       <MacroExpansion>
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "9B9D5A4BDF85F98661DB0BF7"
-            BuildableName = "Tutti.app"
-            BlueprintName = "Tutti"
-            ReferencedContainer = "container:Tutti.xcodeproj">
+            BlueprintIdentifier = "87235143CA15CF38874B5564"
+            BuildableName = "Schtaap.app"
+            BlueprintName = "Schtaap"
+            ReferencedContainer = "container:Schtaap.xcodeproj">
          </BuildableReference>
       </MacroExpansion>
       <Testables>
@@ -73,10 +73,10 @@
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "9B9D5A4BDF85F98661DB0BF7"
-            BuildableName = "Tutti.app"
-            BlueprintName = "Tutti"
-            ReferencedContainer = "container:Tutti.xcodeproj">
+            BlueprintIdentifier = "87235143CA15CF38874B5564"
+            BuildableName = "Schtaap.app"
+            BlueprintName = "Schtaap"
+            ReferencedContainer = "container:Schtaap.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
       <CommandLineArguments>
@@ -92,10 +92,10 @@
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "9B9D5A4BDF85F98661DB0BF7"
-            BuildableName = "Tutti.app"
-            BlueprintName = "Tutti"
-            ReferencedContainer = "container:Tutti.xcodeproj">
+            BlueprintIdentifier = "87235143CA15CF38874B5564"
+            BuildableName = "Schtaap.app"
+            BlueprintName = "Schtaap"
+            ReferencedContainer = "container:Schtaap.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
       <CommandLineArguments>

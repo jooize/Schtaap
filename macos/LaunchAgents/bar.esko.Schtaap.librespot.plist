@@ -15,7 +15,7 @@
 <plist version="1.0">
 <dict>
 	<key>Label</key>
-	<string>bar.esko.Tutti.librespot</string>
+	<string>bar.esko.Schtaap.librespot</string>
 
 	<key>BundleProgram</key>
 	<string>Contents/MacOS/EngineHelper</string>

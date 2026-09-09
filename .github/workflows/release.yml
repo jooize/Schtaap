@@ -10,7 +10,7 @@
 # Anyone can then check that a download is the build of the commit it
 # claims to be:
 #
-#     gh attestation verify Tutti-0.1.0-macos.zip --owner jooize
+#     gh attestation verify Schtaap-0.1.0-macos.zip --owner jooize
 #
 # Run by hand (workflow_dispatch) it builds and compares in the same way
 # and leaves the zip as a workflow artifact, without attesting or
@@ -86,11 +86,11 @@ jobs:
           # CODE_SIGN_IDENTITY "-" is ad-hoc; the project's Apple Development
           # identity only exists on the author's Mac. The build number is the
           # version (Version.xcconfig), so nothing is passed for it.
-          xcodebuild -project Tutti.xcodeproj -scheme Tutti -configuration Release \
+          xcodebuild -project Schtaap.xcodeproj -scheme Schtaap -configuration Release \
             -derivedDataPath .build \
             CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM= \
             build
-          app=.build/Build/Products/Release/Tutti.app
+          app=.build/Build/Products/Release/Schtaap.app
           codesign --verify --deep --strict --verbose=2 "$app"
           # The scheme pre-action stamped the commit; a "-dirty" here would
           # mean something changed the tree before the build, and the bytes
@@ -104,14 +104,14 @@ jobs:
           VERSION: ${{ steps.version.outputs.version }}
           EPOCH: ${{ steps.version.outputs.epoch }}
         run: |
-          app=macos/.build/Build/Products/Release/Tutti.app
+          app=macos/.build/Build/Products/Release/Schtaap.app
           # Every file's mtime becomes the commit's, so the zip depends on
           # the sources and not on when the runner happened to build them.
           stamp="$(TZ=UTC date -u -r "$EPOCH" +%Y%m%d%H%M.%S)"
           TZ=UTC find "$app" -exec touch -h -t "$stamp" {} +
           mkdir dist
           ditto -c -k --keepParent --norsrc --noextattr --noqtn --noacl \
-            "$app" "dist/Tutti-$VERSION-macos.zip"
+            "$app" "dist/Schtaap-$VERSION-macos.zip"
           (cd dist && shasum -a 256 ./*.zip > SHA256SUMS)
           cat dist/SHA256SUMS
 

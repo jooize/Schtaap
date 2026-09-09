@@ -4,7 +4,7 @@
 # Nix builds owntone and librespot; relocate.bash rewrites their dylib
 # closure into a self-contained tree with no /nix/store references; the
 # result is swapped into macos/Engine, which is gitignored. Xcode's copy
-# phase takes it from there into Tutti.app/Contents/Helpers/engine.
+# phase takes it from there into Schtaap.app/Contents/Helpers/engine.
 #
 # No binaries live in the repository. A clone builds the app but ships no
 # engine until this has run once.

@@ -9,7 +9,7 @@
 # configFiles below. Target settings must not carry MARKETING_VERSION or
 # CURRENT_PROJECT_VERSION, or they would shadow the xcconfig.
 
-name: Tutti
+name: Schtaap
 
 options:
   bundleIdPrefix: bar.esko
@@ -32,7 +32,7 @@ settings:
     # target takes its PRODUCT_NAME from here, and so does the engine
     # helper's CFBundleName -- the helper is a separate target but must
     # present itself to the user as the app, not as itself.
-    APP_PRODUCT_NAME: Tutti
+    APP_PRODUCT_NAME: Schtaap
 
     SWIFT_VERSION: "6.0"
     SWIFT_STRICT_CONCURRENCY: complete
@@ -71,7 +71,7 @@ targets:
       - path: Sources/Engine/SpotifySession.swift
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: bar.esko.Tutti.EngineHelper
+        PRODUCT_BUNDLE_IDENTIFIER: bar.esko.Schtaap.EngineHelper
         PRODUCT_NAME: $(TARGET_NAME)
         ENABLE_HARDENED_RUNTIME: YES
         SKIP_INSTALL: YES
@@ -103,7 +103,7 @@ targets:
           $(APP_PRODUCT_NAME) appears as a speaker in Spotify and plays to
           your AirPlay speakers.
 
-  Tutti:
+  Schtaap:
     type: application
     platform: macOS
     dependencies:
@@ -173,7 +173,7 @@ targets:
     settings:
       base:
         # Reverse-DNS casing: lowercase organization, CamelCase brand segment.
-        PRODUCT_BUNDLE_IDENTIFIER: bar.esko.Tutti
+        PRODUCT_BUNDLE_IDENTIFIER: bar.esko.Schtaap
         PRODUCT_NAME: $(APP_PRODUCT_NAME)
         COMBINE_HIDPI_IMAGES: YES
         ENABLE_HARDENED_RUNTIME: YES
@@ -206,10 +206,10 @@ targets:
           - _airplay._tcp
 
 schemes:
-  Tutti:
+  Schtaap:
     build:
       targets:
-        Tutti: all
+        Schtaap: all
       preActions:
         # Runs before Xcode reads the xcconfig, which is the only point early
         # enough to feed a build setting a value from outside. A build phase
@@ -217,7 +217,7 @@ schemes:
         # the version (Version.xcconfig); this only records which commit was
         # built, "-dirty" if the tree had changes, "unknown" without git.
         - name: Stamp Commit
-          settingsTarget: Tutti
+          settingsTarget: Schtaap
           script: |
             set -o errexit
             set -o nounset

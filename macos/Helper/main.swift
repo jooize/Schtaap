@@ -58,7 +58,7 @@ private enum HelperError: Error, CustomStringConvertible {
     case usage
     case noExecutablePath
     case notInBundle(String)
-    case unreadableBundleName(String)
+    case unreadableBundleIdentifier(String)
     case unreadableSettings(String, Error)
 
     var description: String {
@@ -69,8 +69,8 @@ private enum HelperError: Error, CustomStringConvertible {
             return "could not determine own executable path"
         case .notInBundle(let path):
             return "not running from inside an app bundle: \(path)"
-        case .unreadableBundleName(let path):
-            return "no CFBundleName in \(path)"
+        case .unreadableBundleIdentifier(let path):
+            return "no CFBundleIdentifier in \(path)"
         case .unreadableSettings(let path, let error):
             return "could not read \(path): \(error.localizedDescription)"
         }
@@ -101,12 +101,13 @@ private struct Layout {
     /// codesign walks that directory for nested code and fails on anything
     /// there it cannot sign.
     let webRoot: URL
-    /// ~/Library/Application Support/<app name>, named for the app rather
-    /// than for owntone, and matching what Branding.swift computes.
+    /// ~/Library/Application Support/<app bundle identifier>, named for
+    /// the app rather than for owntone, and matching what Branding.swift
+    /// computes.
     let support: URL
 
     init() throws {
-        // .../Tutti.app/Contents/MacOS/EngineHelper
+        // .../Schtaap.app/Contents/MacOS/EngineHelper
         let executable = try executablePath()
         let contents = executable
             .deletingLastPathComponent()   // MacOS
@@ -121,14 +122,14 @@ private struct Layout {
         let infoPath = contents.appending(path: "Info.plist")
         guard
             let info = NSDictionary(contentsOf: infoPath),
-            let name = info["CFBundleName"] as? String,
-            !name.isEmpty
+            let identifier = info["CFBundleIdentifier"] as? String,
+            !identifier.isEmpty
         else {
-            throw HelperError.unreadableBundleName(infoPath.path)
+            throw HelperError.unreadableBundleIdentifier(infoPath.path)
         }
 
         let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-        self.support = base.appending(path: name, directoryHint: .isDirectory)
+        self.support = base.appending(path: identifier, directoryHint: .isDirectory)
     }
 
     var settingsFile: URL { support.appending(path: "engine.json") }

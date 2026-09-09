@@ -18,7 +18,7 @@
 <plist version="1.0">
 <dict>
 	<key>Label</key>
-	<string>bar.esko.Tutti.owntone</string>
+	<string>bar.esko.Schtaap.owntone</string>
 
 	<key>BundleProgram</key>
 	<string>Contents/MacOS/EngineHelper</string>

@@ -3,7 +3,7 @@
 .trash/
 result*
 
-# macOS app build output. Tutti.xcodeproj and macos/Info.plist are generated
+# macOS app build output. Schtaap.xcodeproj and macos/Info.plist are generated
 # by XcodeGen but committed, so a clone builds without it.
 macos/.build/
 

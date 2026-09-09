@@ -36,7 +36,7 @@ struct SpotifyControl: Sendable {
     }
 
     let socket: URL
-    private static let log = Logger(subsystem: "bar.esko.Tutti", category: "spotify")
+    private static let log = Logger(subsystem: "bar.esko.Schtaap", category: "spotify")
 
     func play() async throws { _ = try await send("play") }
     func pause() async throws { _ = try await send("pause") }

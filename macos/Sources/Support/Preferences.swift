@@ -17,8 +17,8 @@ enum PreferenceKey {
     /// OwnTone's `loglevel`, for diagnosing the engine. Not in the popover;
     /// set from a terminal and cleared the same way:
     ///
-    ///     defaults write bar.esko.Tutti EngineLogLevel debug
-    ///     defaults delete bar.esko.Tutti EngineLogLevel
+    ///     defaults write bar.esko.Schtaap EngineLogLevel debug
+    ///     defaults delete bar.esko.Schtaap EngineLogLevel
     ///
     /// The app reads it at launch, and a changed value restarts the engine.
     static let engineLogLevel = "EngineLogLevel"
