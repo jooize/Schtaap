@@ -5,7 +5,8 @@ import Foundation
 /// The engine's stdout and stderr are a pipe into this process, and a thread
 /// here appends whatever arrives to `Logs/<name>.log`, starting the file
 /// anew when it reaches `maxBytes` and keeping `generations` older ones
-/// beside it (`<name>.1.log` is the most recent). The engine could write the
+/// beside it, each named for the moment it was closed
+/// (`<name>.20260910T133912Z.log`). The engine could write the
 /// file itself, and owntone did until 2026-09-10, but a file the engine holds
 /// open can only be rotated by asking the engine to reopen it, and librespot
 /// cannot be asked. A pipe puts both files under one owner and one rule.
@@ -169,30 +170,92 @@ final class EngineLog: @unchecked Sendable {
         return true
     }
 
-    /// Moves every generation down one and starts an empty file.
-    /// `<name>.log` becomes `<name>.1.log`, the oldest falls off the end.
+    /// Closes the file under the name of this moment and starts an empty
+    /// one, then drops the oldest generations beyond the count kept.
+    ///
+    /// A stamp says when a file was closed without a `stat`, and needs no
+    /// cascade of renames: the numbered convention (`<name>.1.log`) exists
+    /// so that other tools can be pointed at a fixed name, and nothing here
+    /// is. A second rotation within the same second gets a `-2` suffix
+    /// rather than replacing the first.
     private func rotate() {
         if descriptor >= 0 {
             close(descriptor)
             descriptor = -1
         }
-        for generation in stride(from: generations, through: 1, by: -1) {
-            let from = generation == 1 ? file : Self.generation(generation - 1, of: file)
-            let to = Self.generation(generation, of: file)
-            // rename replaces the destination, which is how the oldest goes.
-            // A missing source (fewer generations yet) is nothing to report.
-            rename(from.path, to.path)
+        if generations == 0 {
+            unlink(file.path)
+        } else {
+            rename(file.path, Self.rotation(of: file, stamp: Self.stamp(time(nil))).path)
+            for old in Self.rotations(of: file).dropFirst(generations) {
+                unlink(old.path)
+            }
         }
-        if generations == 0 { unlink(file.path) }
         _ = open(reporting: false)
         midLine = false
     }
 
-    /// `owntone.log` -> `owntone.2.log`. The extension stays last so the
-    /// files open in the same application.
-    static func generation(_ number: Int, of file: URL) -> URL {
+    /// `20260910T133912Z`: UTC, to the second, sorting as it reads.
+    static func stamp(_ moment: time_t) -> String {
+        var seconds = moment
+        var parts = tm()
+        gmtime_r(&seconds, &parts)
+        var buffer = [UInt8](repeating: 0, count: 24)
+        let count = buffer.withUnsafeMutableBufferPointer { bytes in
+            bytes.withMemoryRebound(to: CChar.self) { chars in
+                strftime(chars.baseAddress, chars.count, "%Y%m%dT%H%M%SZ", &parts)
+            }
+        }
+        return String(decoding: buffer.prefix(count), as: UTF8.self)
+    }
+
+    /// `owntone.log` + `20260910T133912Z` -> `owntone.20260910T133912Z.log`,
+    /// or `owntone.20260910T133912Z-2.log` for a second rotation in that
+    /// second, counting on from the highest attempt present rather than
+    /// filling a gap: a pruned name reused would sort as the oldest and be
+    /// pruned next. The extension stays last so the files open in the same
+    /// application.
+    static func rotation(of file: URL, stamp: String) -> URL {
+        let taken = entries(of: file).filter { $0.stamp == stamp }.map(\.attempt).max() ?? 0
+        let attempt = taken + 1
         let stem = file.deletingPathExtension().lastPathComponent
+        let middle = attempt == 1 ? stamp : "\(stamp)-\(attempt)"
         return file.deletingLastPathComponent()
-            .appending(path: "\(stem).\(number).\(file.pathExtension)")
+            .appending(path: "\(stem).\(middle).\(file.pathExtension)")
+    }
+
+    /// The rotated generations of `file` beside it, newest first.
+    static func rotations(of file: URL) -> [URL] {
+        entries(of: file).map(\.url)
+    }
+
+    private static func entries(of file: URL) -> [(stamp: String, attempt: Int, url: URL)] {
+        let directory = file.deletingLastPathComponent()
+        let stem = file.deletingPathExtension().lastPathComponent
+        let prefix = "\(stem)."
+        let suffix = ".\(file.pathExtension)"
+        let names = (try? FileManager.default.contentsOfDirectory(atPath: directory.path)) ?? []
+        return names.compactMap { name -> (stamp: String, attempt: Int, url: URL)? in
+            guard name.hasPrefix(prefix), name.hasSuffix(suffix),
+                  name.count > prefix.count + suffix.count,
+                  let order = Self.order(name.dropFirst(prefix.count).dropLast(suffix.count))
+            else { return nil }
+            return (order.0, order.1, directory.appending(path: name))
+        }
+        .sorted { ($0.stamp, $0.attempt) > ($1.stamp, $1.attempt) }
+    }
+
+    /// The stamp and the same-second attempt of a rotated name's middle
+    /// part, or nil for a name that is not one of ours.
+    private static func order(_ middle: Substring) -> (String, Int)? {
+        let stamp = middle.prefix(16)
+        guard stamp.count == 16, stamp[stamp.index(stamp.startIndex, offsetBy: 8)] == "T",
+              stamp.last == "Z",
+              stamp.dropLast().enumerated().allSatisfy({ $0.offset == 8 || ("0"..."9").contains($0.element) })
+        else { return nil }
+        let rest = middle.dropFirst(16)
+        if rest.isEmpty { return (String(stamp), 1) }
+        guard rest.first == "-", let attempt = Int(rest.dropFirst()), attempt >= 2 else { return nil }
+        return (String(stamp), attempt)
     }
 }

@@ -13,7 +13,7 @@ The app ships them, configures them, and registers them with launchd.
 Or from the command line:
 
     xcodebuild -project Schtaap.xcodeproj -scheme Schtaap -configuration Debug \
-      -derivedDataPath .build build
+      -derivedDataPath build build
 
 `build-engine` needs Nix and takes a while the first time; after that the
 payload sits in `Engine/`, which is gitignored, and only has to be rebuilt
@@ -26,7 +26,7 @@ never hand-edit the project file.
 
 ## Running without the engine
 
-    open .build/Build/Products/Debug/Schtaap.app --args -UseFixtures YES
+    open build/Build/Products/Debug/Schtaap.app --args -UseFixtures YES
 
 Loads `Fixtures.swift` instead of the network, so the whole UI is reachable
 with nothing else running. Fixture mode also blocks engine registration, which
@@ -86,7 +86,8 @@ State lives in `~/Library/Application Support/bar.esko.Schtaap`:
                             .metadata companion
     Logs/                   owntone.log and librespot.log, each started anew
                             at 10 MB with the two previous files kept beside
-                            it (owntone.1.log, owntone.2.log)
+                            it, named for when they were closed
+                            (owntone.20260910T133912Z.log)
     songs3.db, Cache/       owntone's database and caches; Cache/Metadata holds
                             the current track and its cover for the bridge
 
