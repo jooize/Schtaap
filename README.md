@@ -199,7 +199,6 @@ someone else yet:
   with a protocol OwnTone does not speak.
 - OwnTone runs without PTP (ports 319 and 320 are privileged), so the
   speakers sync over NTP. Fine for one stereo pair; unmeasured beyond it.
-- Logs under Application Support grow without bound.
 - The default receiver name is "HomePods", which sits oddly in a list of
   actual HomePods. Rename it in the popover.
 - librespot 0.8 never learns which phone is connected, so the popover

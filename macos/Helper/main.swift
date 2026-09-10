@@ -169,34 +169,19 @@ private struct Layout {
     }
 }
 
-/// Sends this process's stdout and stderr to `file`, so the engine inherits
-/// them and its output ends up somewhere a user can be pointed at.
+/// Where this process's stdout and stderr, and so the engine's, end up: a
+/// file under Logs/ that `EngineLog` rotates. A global so that the exit
+/// paths below can flush it; every `exit()` does through `atexit`, and the
+/// death by signal in `exitAsEngine` flushes by hand first.
 ///
 /// The plist cannot do this with StandardErrorPath: that key takes an
 /// absolute path, and the destination is only known once the app bundle has
-/// been located. A failure here is deliberately not fatal -- losing the log
-/// is not a reason to refuse to play music -- so it is reported on whatever
-/// stderr still exists and the launch continues.
-private func redirectOutput(to file: URL) {
-    do {
-        try FileManager.default.createDirectory(
-            at: file.deletingLastPathComponent(), withIntermediateDirectories: true
-        )
-    } catch {
-        FileHandle.standardError.write(Data("could not create log directory: \(error)\n".utf8))
-        return
-    }
+/// been located.
+private nonisolated(unsafe) var engineLog: EngineLog?
 
-    let descriptor = open(file.path, O_WRONLY | O_CREAT | O_APPEND, 0o644)
-    guard descriptor >= 0 else {
-        FileHandle.standardError.write(Data(
-            "could not open \(file.path): \(String(cString: strerror(errno)))\n".utf8
-        ))
-        return
-    }
-    dup2(descriptor, STDOUT_FILENO)
-    dup2(descriptor, STDERR_FILENO)
-    close(descriptor)
+private func captureOutput(to file: URL) {
+    engineLog = EngineLog.capture(file)
+    atexit { engineLog?.finish() }
 }
 
 /// The spawned engine, for the signal handlers below. A global because a C
@@ -276,6 +261,7 @@ private func exitAsEngine(_ status: Int32) -> Never {
     // than looping. Swift does not surface the wait macros, so the low seven
     // bits are the signal that killed it and the next eight are the status.
     let terminatingSignal = status & 0x7F
+    engineLog?.finish()
     if stopRequested {
         exit(EXIT_SUCCESS)
     }
@@ -337,10 +323,11 @@ private func run() throws -> Never {
 
     switch which {
     case "owntone":
-        // OwnTone also writes its own logfile, named in owntone.conf. This
-        // one catches what it says before the config is parsed, which is
-        // where startup failures appear.
-        redirectOutput(to: layout.logFile("owntone"))
+        // OwnTone in the foreground logs to the console, before the config
+        // is parsed (which is where startup failures appear) and after. The
+        // config leaves its own logfile empty (our patch makes that mean
+        // none; see EngineInstallation), so this capture is the one log.
+        captureOutput(to: layout.logFile("owntone"))
         // -s and -w override the two paths compiled into owntone at
         // /usr/local. Without them it dies on a missing SQLite extension and
         // an unstat-able web root.
@@ -354,7 +341,7 @@ private func run() throws -> Never {
     case "librespot":
         let settings = try layout.settings()
         // librespot has no logfile option: stderr is the only channel.
-        redirectOutput(to: layout.logFile("librespot"))
+        captureOutput(to: layout.logFile("librespot"))
 
         guard settings.showsInSpotify else {
             FileHandle.standardError.write(Data(

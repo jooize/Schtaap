@@ -133,6 +133,10 @@ stdenv.mkDerivation (finalAttrs: {
   # And a resume re-anchored the stream's clock while its rtptime stood
   # still, so a device reading the first packet before the sync played
   # a moment of the song at once. The rtptime moves on by the pause now.
+  #
+  # And an empty `logfile` means none. In the foreground owntone logs to
+  # the console as well, and the helper captures that into a file it
+  # rotates, so the logfile was the same log twice.
   patches = [
     ../patches/owntone/owntone-evrtsp-connect-failure.patch
     ../patches/owntone/owntone-websocket-vhost-init.patch
@@ -146,6 +150,7 @@ stdenv.mkDerivation (finalAttrs: {
     ../patches/owntone/owntone-pipe-title.patch
     ../patches/owntone/owntone-airplay-flush-drops-partial-packet.patch
     ../patches/owntone/owntone-airplay-resume-continues-timeline.patch
+    ../patches/owntone/owntone-logfile-empty-means-none.patch
   ];
 
   configureFlags = [ "--without-avahi" ];

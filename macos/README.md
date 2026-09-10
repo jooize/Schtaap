@@ -84,7 +84,9 @@ State lives in `~/Library/Application Support/bar.esko.Schtaap`:
                             back when another sender takes one
     Library/                owntone's media library: the audio pipe and its
                             .metadata companion
-    Logs/                   owntone.log, librespot.log, owntone-server.log
+    Logs/                   owntone.log and librespot.log, each started anew
+                            at 10 MB with the two previous files kept beside
+                            it (owntone.1.log, owntone.2.log)
     songs3.db, Cache/       owntone's database and caches; Cache/Metadata holds
                             the current track and its cover for the bridge
 
@@ -186,7 +188,6 @@ from whatever was playing the first time the app sees a live engine.
   HostUnreachable`, seven then one a minute, is libmdns sending on an
   interface without a route. It advertises anyway; the lines are noise,
   not the Local Network permission.
-- **Logs grow without bound.** Nothing rotates them.
 - **The default Connect name collides with the hardware.** "HomePods" as
   `Branding.defaultConnectName` puts a receiver named after HomePods above
   a list of actual HomePods. Editable in the popover.

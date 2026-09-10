@@ -1,0 +1,20 @@
+An empty logfile means no logfile.
+
+The config's `logfile` has a compiled-in default, so there was no way to
+run without one: the console (`-f`) was always a second copy of the same
+lines. A supervisor that captures the console and owns the file has no
+use for the copy, and an empty string is the natural way to say so.
+
+SPDX-License-Identifier: GPL-2.0-or-later
+
+--- a/src/main.c
++++ b/src/main.c
+@@ -634,6 +634,8 @@
+   if (!logformat)
+     logformat = cfg_getstr(cfg_getsec(cfg, "general"), "logformat");
+   logfile = cfg_getstr(cfg_getsec(cfg, "general"), "logfile");
++  if (logfile && !*logfile)
++    logfile = NULL;
+ 
+   ret = logger_init(logfile, logdomains, loglevel, logformat);
+   if (ret != 0)
