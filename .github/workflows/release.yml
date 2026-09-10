@@ -87,10 +87,10 @@ jobs:
           # identity only exists on the author's Mac. The build number is the
           # version (Version.xcconfig), so nothing is passed for it.
           xcodebuild -project Schtaap.xcodeproj -scheme Schtaap -configuration Release \
-            -derivedDataPath .build \
+            -derivedDataPath build \
             CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM= \
             build
-          app=.build/Build/Products/Release/Schtaap.app
+          app=build/Build/Products/Release/Schtaap.app
           codesign --verify --deep --strict --verbose=2 "$app"
           # The scheme pre-action stamped the commit; a "-dirty" here would
           # mean something changed the tree before the build, and the bytes
@@ -104,7 +104,7 @@ jobs:
           VERSION: ${{ steps.version.outputs.version }}
           EPOCH: ${{ steps.version.outputs.epoch }}
         run: |
-          app=macos/.build/Build/Products/Release/Schtaap.app
+          app=macos/build/Build/Products/Release/Schtaap.app
           # Every file's mtime becomes the commit's, so the zip depends on
           # the sources and not on when the runner happened to build them.
           stamp="$(TZ=UTC date -u -r "$EPOCH" +%Y%m%d%H%M.%S)"

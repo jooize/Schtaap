@@ -77,8 +77,8 @@ without that certificate can set `CODE_SIGN_IDENTITY: "-"` in
     ./build-engine      # owntone + librespot from the flake, staged in Engine/
     ./generate          # Schtaap.xcodeproj from project.yml (XcodeGen via nix run)
     xcodebuild -project Schtaap.xcodeproj -scheme Schtaap -configuration Debug \
-      -derivedDataPath .build build
-    open .build/Build/Products/Debug/Schtaap.app
+      -derivedDataPath build build
+    open build/Build/Products/Debug/Schtaap.app
 
 The first launch registers the two agents with launchd (System Settings
 lists them under Login Items as "Schtaap, 2 items") and asks for Local

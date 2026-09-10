@@ -5,7 +5,7 @@ result*
 
 # macOS app build output. Schtaap.xcodeproj and macos/Info.plist are generated
 # by XcodeGen but committed, so a clone builds without it.
-macos/.build/
+macos/build/
 
 # The bundled engine payload: owntone, librespot and their relocated dylib
 # closure, ~25 MB of Mach-O. Rebuilt from the flake by macos/build-engine,
