@@ -5,8 +5,59 @@ run without one: the console (`-f`) was always a second copy of the same
 lines. A supervisor that captures the console and owns the file has no
 use for the copy, and an empty string is the natural way to say so.
 
+logger_init() used to return before completing initialization when given
+no file, since upstream only ever does that for the bootstrap before the
+config is read. An uninitialized logger writes every message to the
+console with no threshold, no domain filter and no lock, so a run with
+no logfile logged at spam level whatever `loglevel` said. Initialization
+now completes without a file; the bootstrap phase then honours its
+threshold too (the default, or `-d`).
+
 SPDX-License-Identifier: GPL-2.0-or-later
 
+--- a/src/logger.c
++++ b/src/logger.c
+@@ -473,25 +473,25 @@
+   else
+     logdomains = ~0;
+ 
+-  if (!file)
+-    return 0;
+-
+-  logfile = fopen(file, "a");
+-  if (!logfile)
++  if (file)
+     {
+-      fprintf(stderr, "Could not open logfile %s: %s\n", file, strerror(errno));
++      logfile = fopen(file, "a");
++      if (!logfile)
++	{
++	  fprintf(stderr, "Could not open logfile %s: %s\n", file, strerror(errno));
+ 
+-      return -1;
+-    }
++	  return -1;
++	}
++
++      ret = fchown(fileno(logfile), runas_uid, 0);
++      if (ret < 0)
++	fprintf(stderr, "Failed to set ownership on logfile: %s\n", strerror(errno));
+ 
+-  ret = fchown(fileno(logfile), runas_uid, 0);
+-  if (ret < 0)
+-    fprintf(stderr, "Failed to set ownership on logfile: %s\n", strerror(errno));
++      ret = fchmod(fileno(logfile), 0644);
++      if (ret < 0)
++	fprintf(stderr, "Failed to set permissions on logfile: %s\n", strerror(errno));
++    }
+ 
+-  ret = fchmod(fileno(logfile), 0644);
+-  if (ret < 0)
+-    fprintf(stderr, "Failed to set permissions on logfile: %s\n", strerror(errno));
+-
+   logfilename = file;
+ 
+   /* logging w/o locks before initialized complete */
 --- a/src/main.c
 +++ b/src/main.c
 @@ -634,6 +634,8 @@
