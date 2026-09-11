@@ -249,9 +249,14 @@ private func watchForParentExit() {
 }
 
 private func parentDidExit() {
-    FileHandle.standardError.write(Data(
-        "helper: the app is gone, stopping the engine\n".utf8
-    ))
+    // An ordinary quit stops the engine first (EngineService.stop, which is
+    // our SIGTERM), and the app's exit that follows is no news. Only an app
+    // that died without doing that is worth a line.
+    if !stopRequested {
+        FileHandle.standardError.write(Data(
+            "helper: the app exited without stopping the engine, stopping it\n".utf8
+        ))
+    }
     forwardToEngine(SIGTERM)
     // Nothing spawned yet, so there is nothing to wait for and no supervisor
     // left to report to. `run()` checks `stopRequested` the moment it has a
