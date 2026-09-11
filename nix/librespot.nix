@@ -20,6 +20,10 @@
 # volume sent on the socket, which the app would apply to its own master a
 # second time, late, and not at activation, which would put the speakers
 # at librespot's own level on every connect.
+# The sixth makes `--volume-ctrl fixed` leave the samples alone. Stock 0.8
+# scales every sample by the remote's volume whatever the control says, so
+# a volume change was heard once at the speakers and again seconds later in
+# the audio; the speakers apply it now, and they are the only ones that do.
 #
 # Only librespot's own crates are touched, and no dependency is added, so
 # the vendored Cargo hash stays nixpkgs' own.
@@ -32,6 +36,7 @@ librespot.overrideAttrs (previous: {
     ../patches/librespot/librespot-play-from-stopped.patch
     ../patches/librespot/librespot-pause-keeps-position.patch
     ../patches/librespot/librespot-volume-events-only-from-remotes.patch
+    ../patches/librespot/librespot-fixed-volume-keeps-samples.patch
   ];
 
   # rustc records a source path for every panic location, and the vendored

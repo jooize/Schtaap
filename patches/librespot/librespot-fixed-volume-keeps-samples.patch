@@ -1,0 +1,56 @@
+A fixed volume control leaves the samples alone.
+
+`--volume-ctrl fixed` reads as "do not touch the audio", and that is how
+the app uses it: the supervisor owns this device's volume, sends it to
+the speakers through the engine, and wants librespot's samples at full
+scale. In 0.8 the flag does not do that. Fixed is not one of the mapped
+controls, so to_mapped falls through to the linear arm and the volume
+lands in the soft mixer as a plain fraction, and get_soft_volume hands
+the player a live SoftVolume whatever the control is. Every sample was
+multiplied by the remote's volume.
+
+So each volume change was heard twice. The speakers applied the level
+the supervisor sent them, at once, and then the samples that had been
+scaled by the same level reached them about three seconds later, once
+the pipe and the engine's buffer had drained. A drag to half volume
+played as half, then a quarter.
+
+Now get_soft_volume returns NoOpVolume for a fixed control, which is
+what a hardware mixer hands the player, and the mixer goes on tracking
+the volume so the remotes still see it. Every other control keeps its
+SoftVolume.
+
+Applies on top of librespot-control-socket.patch,
+librespot-session-loss-reconnect.patch,
+librespot-play-from-stopped.patch,
+librespot-pause-keeps-position.patch and
+librespot-volume-events-only-from-remotes.patch, none of which touch
+the mixer.
+
+SPDX-License-Identifier: MIT
+
+--- a/playback/src/mixer/softmixer.rs
++++ b/playback/src/mixer/softmixer.rs
+@@ -1,6 +1,6 @@
+ use super::VolumeGetter;
+ use super::{MappedCtrl, VolumeCtrl};
+-use super::{Mixer, MixerConfig};
++use super::{Mixer, MixerConfig, NoOpVolume};
+ use librespot_core::Error;
+ use portable_atomic::AtomicU64;
+ use std::sync::Arc;
+@@ -37,7 +37,14 @@
+     }
+
+     fn get_soft_volume(&self) -> Box<dyn VolumeGetter + Send> {
+-        Box::new(SoftVolume(self.volume.clone()))
++        // A fixed volume control tracks the volume for the remotes and never
++        // scales the audio: something downstream applies it. Every other
++        // control is this mixer's own, so the player scales by it.
++        if matches!(self.volume_ctrl, VolumeCtrl::Fixed) {
++            Box::new(NoOpVolume)
++        } else {
++            Box::new(SoftVolume(self.volume.clone()))
++        }
+     }
+ }

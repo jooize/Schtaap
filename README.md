@@ -195,6 +195,10 @@ librespot:
   for the phone's own change. A volume the app sent came back and set the
   engine a second time, late, which made a slider jump back and forth,
   and a connect would have put the speakers at librespot's own level.
+- `librespot-fixed-volume-keeps-samples` makes `--volume-ctrl fixed` leave
+  the audio at full scale. Stock 0.8 scales every sample by the remote's
+  volume whatever the control says, so a change was heard at the speakers
+  at once and again, in the samples, seconds later.
 
 ## Status
 

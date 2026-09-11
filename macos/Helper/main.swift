@@ -439,10 +439,10 @@ private func run() throws -> Never {
             "--device", settings.audioPipe,
             "--bitrate", String(settings.bitrate),
             "--disable-audio-cache",
-            // The phone's volume slider does not scale the samples: the
-            // metadata bridge forwards it to the engine's master volume
-            // instead, so there is one volume, not two stacked ones. See
-            // Metadata.swift for what stacking sounded like.
+            // With our patch this leaves the samples unscaled; in stock 0.8
+            // the flag is a plain linear software volume. The phone's level
+            // is applied once, by the speakers: the metadata bridge forwards
+            // it to the engine's master volume. See Metadata.swift.
             "--volume-ctrl", "fixed",
             // The other direction: the app's play, pause and volume go in
             // here and through Spotify Connect, so the phone follows.

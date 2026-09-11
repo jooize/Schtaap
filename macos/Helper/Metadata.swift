@@ -37,10 +37,12 @@ import Foundation
 // app's top slider moves (EngineTransport.setVolume). Not as a pvol item on
 // the metadata pipe, which OwnTone applies the same way but reads only
 // while playing, so a phone's slider moved during a pause never arrived.
-// librespot runs with `--volume-ctrl fixed` so the phone's slider no longer
-// attenuates the samples: before this it did, on a 60 dB log curve, and 45%
-// on the phone arrived as -33 dBFS on top of whatever the AirPlay volume
-// was, which the user heard as silence.
+// librespot runs with `--volume-ctrl fixed`, which keeps the samples
+// unscaled only with our patch: in stock 0.8 the flag is still a linear
+// software volume. The level is applied once, by the speakers, through this
+// forward to the engine. Before that it was applied twice, the second time
+// on a 60 dB log curve, and 45% on the phone arrived as -33 dBFS on top of
+// whatever the AirPlay volume was, which the user heard as silence.
 //
 // The other direction goes over librespot's control socket: the app sends
 // the engine's master to Spotify whenever it moves for a reason of its own,
