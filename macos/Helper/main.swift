@@ -397,11 +397,19 @@ private func run() throws -> Never {
         // -s and -w override the two paths compiled into owntone at
         // /usr/local. Without them it dies on a missing SQLite extension and
         // an unstat-able web root.
+        //
+        // --mdns-no-cname: owntone announces owntone.local as a name for
+        // this Mac, which exists for its own Spotify login in its web
+        // interface. Spotify is librespot's here, so the name only pointed
+        // the network at a web interface nobody is meant to use, and
+        // mDNSResponder refused it anyway (-65540, bad parameter), a log
+        // error on every start.
         supervise(layout.engineBin.appending(path: "owntone"), [
             "-f",
             "-c", layout.owntoneConfig.path,
             "-s", layout.engineBin.appending(path: "owntone-sqlext.so").path,
             "-w", layout.webRoot.path,
+            "--mdns-no-cname",
         ])
 
     case "librespot":
