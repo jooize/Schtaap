@@ -10,10 +10,11 @@ import SwiftUI
 /// under its own heading puts the two in signal order, and the topology stops
 /// needing to be explained.
 ///
-/// It behaves like a speaker row too: a click anywhere on it flips whether
-/// this Mac appears in Spotify, which is what the hover fill promises all the
-/// way down the popover. Renaming is the pencil that appears beside the name
-/// on hover, and a click on the name itself.
+/// Unlike a speaker row, a click on the row does nothing: the switch is the
+/// only thing that flips whether this Mac appears in Spotify. A row-wide click
+/// used to do that too, and got flipped by accident. The name is the one
+/// click target, and it is the only thing that lights up on hover, with the
+/// pencil, so the click says what it does before it happens: rename.
 struct ReceiverRow: View {
     @Binding var name: String
     @Binding var isEditing: Bool
@@ -31,24 +32,12 @@ struct ReceiverRow: View {
     var onCancelRename: () -> Void = {}
 
     @FocusState private var isFocused: Bool
-    @State private var isHovering = false
+    @State private var isHoveringName = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             HStack(spacing: 10) {
-                if isEditing {
-                    leading
-                } else {
-                    Button {
-                        showsInSpotify.toggle()
-                    } label: {
-                        leading.contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("Appear in Spotify")
-                    .accessibilityValue(name)
-                    .accessibilityAddTraits(showsInSpotify ? [.isSelected] : [])
-                }
+                leading
 
                 Toggle("", isOn: $showsInSpotify)
                     .labelsHidden()
@@ -64,11 +53,6 @@ struct ReceiverRow: View {
         .opacity(showsInSpotify ? 1 : 0.55)
         .padding(.horizontal, 6)
         .padding(.vertical, 4)
-        .background(
-            RoundedRectangle(cornerRadius: 6, style: .continuous)
-                .fill(Color.primary.opacity(isHovering && !isEditing ? 0.07 : 0))
-        )
-        .onHover { isHovering = $0 }
         // The popover commits the name on dismissal and on a tap outside the
         // field, so leaving the field is driven from out here as well as from
         // the focus below.
@@ -80,19 +64,13 @@ struct ReceiverRow: View {
         }
     }
 
-    /// Icon, name and subtitle: the part of the row that is the click target
-    /// when not editing.
+    /// Icon, name and subtitle.
     private var leading: some View {
         HStack(spacing: 10) {
             DeviceIcon(symbol: symbolName, isActive: showsInSpotify)
 
             VStack(alignment: .leading, spacing: 1) {
-                HStack(spacing: 6) {
-                    nameField
-                    if isHovering, !isEditing {
-                        pencil
-                    }
-                }
+                nameField
                 // A warning names what to fix and where ("... is off for
                 // Schtaap Engine"), which does not fit one line beside the
                 // toggle; cutting the name off would cut off the one thing
@@ -121,14 +99,33 @@ struct ReceiverRow: View {
                 .onSubmit { onCommit() }
                 .onExitCommand { onCommit() }
         } else {
+            // The fill and the pencil belong to the name alone, so hovering
+            // the row promises nothing and hovering the name promises a
+            // rename. The negative padding keeps the text where it sits when
+            // nothing is hovered.
             Button { isEditing = true } label: {
-                Text(name)
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundStyle(.primary)
-                    .lineLimit(1)
-                    .truncationMode(.tail)
+                HStack(spacing: 6) {
+                    Text(name)
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(.primary)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                    if isHoveringName {
+                        pencil
+                    }
+                }
+                .padding(.horizontal, 4)
+                .padding(.vertical, 2)
+                .background(
+                    RoundedRectangle(cornerRadius: 4, style: .continuous)
+                        .fill(Color.primary.opacity(isHoveringName ? 0.08 : 0))
+                )
+                .padding(.horizontal, -4)
+                .padding(.vertical, -2)
+                .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
+            .onHover { isHoveringName = $0 }
             .help("Rename how this Mac appears in Spotify")
         }
     }
@@ -155,19 +152,15 @@ struct ReceiverRow: View {
         .padding(.leading, Metrics.iconColumn + 10)
     }
 
-    /// Says the name can be changed, only while the pointer is on the row,
-    /// the way a speaker row's slider shows up only once it plays.
+    /// Says the name can be changed, only while the pointer is on it, the
+    /// way a speaker row's slider shows up only once it plays. Part of the
+    /// name's button, not one of its own.
     private var pencil: some View {
-        Button { isEditing = true } label: {
-            Image(systemName: "pencil")
-                .font(.system(size: 11, weight: .medium))
-                .foregroundStyle(.secondary)
-                .frame(width: 16, height: 16)
-                .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .help("Rename how this Mac appears in Spotify")
-        .accessibilityLabel("Rename")
+        Image(systemName: "pencil")
+            .font(.system(size: 11, weight: .medium))
+            .foregroundStyle(.secondary)
+            .frame(width: 16, height: 16)
+            .accessibilityHidden(true)
     }
 }
 

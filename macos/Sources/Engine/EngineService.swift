@@ -196,6 +196,7 @@ final class EngineService {
 
         // Recomputed on every install, so committing the name that is already
         // running is what clears a waiting rename.
+        let wasPending = pendingConnectName
         pendingConnectName = nil
 
         if
@@ -213,7 +214,10 @@ final class EngineService {
             // gone. A change to appearing in Spotify at all is not held back:
             // switching the receiver off is asking for the disconnect.
             pendingConnectName = connectName
-            Self.log.info("rename to '\(connectName, privacy: .public)' waits, a Spotify client is connected")
+            // Every tap outside the field commits it again; say it once.
+            if wasPending != connectName {
+                Self.log.info("rename to '\(connectName, privacy: .public)' waits, a Spotify client is connected")
+            }
             return
         }
 
