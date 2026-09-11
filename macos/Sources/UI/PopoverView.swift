@@ -130,12 +130,14 @@ struct PopoverView: View {
                 hint: "Sound and track details are on their way."
             )
         } else if store.spotifySession?.active == true {
-            // A phone has picked this receiver but nothing has reached the
-            // engine yet: the seconds between a pick and the first track,
-            // or a phone that is connected and idle.
+            // A Spotify client has picked this receiver but nothing has
+            // reached the engine yet: the seconds between a pick and the
+            // first track, or a client that is connected and idle. Spotify
+            // runs on phones, computers, speakers and consoles, so the hint
+            // names none of them.
             ConnectingCard(
                 title: "Waiting for Spotify\u{2026}",
-                hint: "Play something on the phone that chose this receiver."
+                hint: "Press play in Spotify to hear it here."
             )
         } else {
             IdleCard(

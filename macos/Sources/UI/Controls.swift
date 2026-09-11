@@ -239,6 +239,9 @@ private struct TransportButtonBody: View {
 
     var body: some View {
         configuration.label
+            // A custom style draws its own disabled state; SwiftUI dims
+            // only the built-in ones.
+            .foregroundStyle(isEnabled ? AnyShapeStyle(.primary) : AnyShapeStyle(.tertiary))
             .opacity(configuration.isPressed ? 0.7 : 1)
             .background {
                 Circle()

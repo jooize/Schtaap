@@ -112,23 +112,10 @@ struct NowPlayingCard: View {
     }
 
     private var transport: some View {
-        HStack(spacing: 26) {
-            transportButton("backward.fill", size: 13, action: onPrevious)
-            transportButton(isPlaying ? "pause.fill" : "play.fill", size: 19, action: onPlayPause)
-                .frame(width: 22)
-            transportButton("forward.fill", size: 13, action: onNext)
-        }
-        .frame(maxWidth: .infinity)
-    }
-
-    private func transportButton(_ symbol: String, size: CGFloat, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Image(systemName: symbol)
-                .font(.system(size: size, weight: .semibold))
-                .foregroundStyle(.primary)
-                .frame(minWidth: 22, minHeight: 22)
-        }
-        .buttonStyle(TransportButtonStyle())
+        TransportRow(
+            isPlaying: isPlaying, onPlayPause: onPlayPause,
+            onPrevious: onPrevious, onNext: onNext
+        )
     }
 
     /// "m:ss", or "h:mm:ss" past the hour, as every player writes it.
@@ -205,30 +192,84 @@ struct IdleCard: View {
     }
 }
 
-/// The slot while a phone has this receiver but no track has reached the
+/// Previous, play/pause and next, as the now-playing card has them. With no
+/// actions, as the connecting card has them, the row is drawn disabled: the
+/// player is on its way, and nothing in it can be pressed yet.
+struct TransportRow: View {
+    var isPlaying = false
+    var onPlayPause: (() -> Void)?
+    var onPrevious: (() -> Void)?
+    var onNext: (() -> Void)?
+
+    var body: some View {
+        HStack(spacing: 26) {
+            button("backward.fill", size: 13, action: onPrevious)
+            button(isPlaying ? "pause.fill" : "play.fill", size: 19, action: onPlayPause)
+                .frame(width: 22)
+            button("forward.fill", size: 13, action: onNext)
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    private func button(_ symbol: String, size: CGFloat, action: (() -> Void)?) -> some View {
+        Button {
+            action?()
+        } label: {
+            Image(systemName: symbol)
+                .font(.system(size: size, weight: .semibold))
+                .frame(minWidth: 22, minHeight: 22)
+        }
+        .buttonStyle(TransportButtonStyle())
+        .disabled(action == nil)
+    }
+}
+
+/// The slot while Spotify has this receiver but no track has reached the
 /// engine: the engine streaming the pipe before Spotify has said what is in
-/// it, or a phone that has picked the receiver and not played yet. A spinner
-/// where the cover goes, since something is in motion, and never the pipe
-/// item's own title, which is the plumbing showing through.
+/// it, or a Spotify client that has picked the receiver and not played yet.
+///
+/// Drawn as the player it is about to become: a spinner where the cover
+/// goes, since something is in motion, then the timeline and transport,
+/// disabled. That fills the slot's height with what will be there, so
+/// nothing moves when the track arrives. Never the pipe item's own title,
+/// which is the plumbing showing through.
 struct ConnectingCard: View {
     let title: String
     let hint: String
 
     var body: some View {
-        HStack(spacing: 10) {
-            ArtworkWell {
-                ProgressView()
-                    .controlSize(.small)
+        VStack(spacing: 6) {
+            HStack(spacing: 10) {
+                ArtworkWell {
+                    ProgressView()
+                        .controlSize(.small)
+                }
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title)
+                        .font(.system(size: 13, weight: .medium))
+                    Text(hint)
+                        .font(.system(size: 11))
+                        .foregroundStyle(.secondary)
+                }
+                .lineLimit(1)
+                .truncationMode(.tail)
+                Spacer(minLength: 0)
             }
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title)
-                    .font(.system(size: 13, weight: .medium))
-                Text(hint)
-                    .font(.system(size: 11))
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
+
+            HStack(spacing: 8) {
+                Text("0:00")
+                    .frame(width: 34, alignment: .trailing)
+                Slider(value: .constant(0), in: 0...1)
+                    .controlSize(.mini)
+                Text("-:--")
+                    .frame(width: 34, alignment: .leading)
             }
-            Spacer(minLength: 0)
+            .font(.system(size: 10).monospacedDigit())
+            .foregroundStyle(.tertiary)
+            .disabled(true)
+            .accessibilityHidden(true)
+
+            TransportRow()
         }
         .frame(maxWidth: .infinity, minHeight: Metrics.cardHeight, alignment: .topLeading)
     }
