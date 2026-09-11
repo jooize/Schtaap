@@ -48,10 +48,12 @@ on it and [Releases](#releases) for how a download is verified.
 
 Both daemons are built from Nix with the patches in `nix/`, bundled into
 the app, and run by launchd as LaunchAgents for as long as the app runs.
-One helper binary in the bundle, `EngineHelper`, is the program launchd
-runs for both: it resolves every path from the bundle it finds itself in,
-supervises the daemon, and stays alive as its parent so that macOS
-attributes the daemon's network access to it. The same binary is also
+One helper in the bundle, `Schtaap Engine.app` under Contents/Helpers, is
+the program launchd runs for both: it resolves every path from the app
+bundle it finds itself in, supervises the daemon, and stays alive as its
+parent so that macOS attributes the daemon's network access to it. It is
+a bundle of its own so that the Local Network prompt and list can name
+it ("Schtaap Engine", beside the app's own row). The same binary is also
 librespot's event hook: it turns librespot's track and playback events
 into the metadata OwnTone reads beside the pipe, fetches the cover, and
 keeps the two transports in step (a pause on either side pauses the
@@ -190,10 +192,6 @@ Works, daily, on one Mac with one HomePod pair. Not something to hand to
 someone else yet:
 
 - Unsigned for distribution and not notarized. No updater.
-- The Local Network prompt for the engine reads "EngineHelper", not the
-  app's name: macOS names a bare executable by its file name and ignores
-  its embedded plist. The fix is to ship the helper as a bundle of its
-  own.
 - A resume is heard about two seconds after the press, which is the
   AirPlay 2 buffer OwnTone streams into. Apple's own senders do better
   with a protocol OwnTone does not speak.

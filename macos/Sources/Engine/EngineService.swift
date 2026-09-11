@@ -164,6 +164,12 @@ final class EngineService {
                 try service.register()
                 Self.log.info("\(label, privacy: .public): re-registered")
             }
+            // A fresh registration is a job that has never run, and the
+            // plists carry no RunAtLoad, so nothing starts it but this.
+            // Seen 2026-09-10: the helper moved into its own bundle, the
+            // restart failed against the old plist, the re-registration
+            // took the new one, and the engine then sat at zero runs.
+            start()
             return
         }
         Self.log.info("agents respawned after restart")

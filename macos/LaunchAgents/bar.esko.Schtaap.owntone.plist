@@ -6,14 +6,20 @@
 
     The file name must equal the Label, and both carry the bundle
     identifier, so renaming the app means renaming this file too. That is
-    the one place the branding rule in project.yml cannot reach: launchd
-    labels have to be unique across the system, and the reverse-DNS
-    identifier is what makes them so.
+    one of two places the branding rule in project.yml cannot reach:
+    launchd labels have to be unique across the system, and the reverse-DNS
+    identifier is what makes them so. The other is the program path below,
+    which carries the helper bundle's name (ENGINE_PRODUCT_NAME).
 
     BundleProgram is resolved relative to the app bundle, which is the only
     reason this plist can stay static. Every other path -- config, database,
     web root, log -- is computed by the helper at launch. See
     macos/Helper/main.swift.
+
+    The helper is an app bundle of its own inside Contents/Helpers, so that
+    macOS names the engine's Local Network prompt from its Info.plist rather
+    than from the executable's file name. The path here is the executable
+    inside that bundle.
 -->
 <plist version="1.0">
 <dict>
@@ -21,11 +27,11 @@
 	<string>bar.esko.Schtaap.owntone</string>
 
 	<key>BundleProgram</key>
-	<string>Contents/MacOS/EngineHelper</string>
+	<string>Contents/Helpers/Schtaap Engine.app/Contents/MacOS/Schtaap Engine</string>
 
 	<key>ProgramArguments</key>
 	<array>
-		<string>Contents/MacOS/EngineHelper</string>
+		<string>Contents/Helpers/Schtaap Engine.app/Contents/MacOS/Schtaap Engine</string>
 		<string>owntone</string>
 	</array>
 

@@ -48,14 +48,21 @@ the three apart.
 
 Both plists run one program, `EngineHelper`, with one argument. A plist is a
 static file and every path the engine needs is known only at runtime, so the
-helper resolves them from the bundle it finds itself in. It spawns the engine
-and waits rather than exec'ing into it, because macOS attributes local network
-access to the responsible process: exec'ing left librespot with no responsible
-ancestor and the permission prompt read "Allow librespot ...". Staying alive as
-the parent makes the prompt name the helper, "EngineHelper". It was meant to
-read "Schtaap" through an embedded Info.plist, but macOS names a bare executable
-by its file name and ignores that plist (settled 2026-09-08); shipping the
-helper as a bundle of its own is the fix, not done yet.
+helper resolves them from the app bundle it finds itself in. It spawns the
+engine and waits rather than exec'ing into it, because macOS attributes local
+network access to the responsible process: exec'ing left librespot with no
+responsible ancestor and the permission prompt read "Allow librespot ...".
+Staying alive as the parent makes the prompt name the helper, and the helper
+ships as an app bundle of its own, `Contents/Helpers/Schtaap Engine.app`, so
+that the prompt and the Local Network list read "Schtaap Engine", beside the
+app's own "Schtaap" row (the app browses for AirPlay speakers itself). macOS
+shows a process by its bundle's file name and reads the usage description from
+the bundle's Info.plist; a bare executable with an embedded Info.plist
+(2026-09-08) and a bundle whose `CFBundleName` differed from its file name
+(2026-09-10) were both tried and both showed "EngineHelper". The helper bundle
+has no UI (`LSBackgroundOnly`), its name is one setting in `project.yml`
+(`ENGINE_PRODUCT_NAME`), and `Branding.engineName` reads it back from the
+bundle.
 
 The helper also probes Local Network access for itself, by sending one
 datagram to an unused multicast group from a fresh child process (a grant
@@ -141,7 +148,9 @@ carries the name. Change those, run `./generate`, done.
                          installation and SMAppService registration
     Sources/UI/          popover, rows, pages
     Sources/Support/     branding, preferences, login item
-    Helper/              EngineHelper: the program launchd runs
+    Helper/              the engine helper launchd runs, built as
+                         "Schtaap Engine.app" so the Local Network prompt
+                         has a name
     LaunchAgents/        the two agent plists, copied into the bundle
     Engine/              gitignored payload from ./build-engine, with its
                          NOTICES.txt of bundled packages and licenses
@@ -175,8 +184,8 @@ from whatever was playing the first time the app sees a live engine.
 
 - **Unsigned for distribution, not notarized, no updater.** Debug builds
   only, on the developer's certificate.
-- **The Local Network prompt names "EngineHelper".** See above. Every
-  helper rebuild or bundle move re-prompts, once unbranded.
+- **A moved app re-prompts for Local Network**, once for the app and once
+  for the engine: a Debug build's grant follows the bundle's path.
 - **A resume is heard ~2 s after the press.** That is the AirPlay 2 buffer
   OwnTone streams into (`event_play_start` two seconds after the sync
   packet). Apple's own senders resume faster with SETRATEANCHORTIME, which

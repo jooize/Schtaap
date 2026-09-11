@@ -18,6 +18,7 @@
 		3917E559879ECAAEF20B5B66 /* EngineLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 99D7A2F9941C8826B94B5402 /* EngineLog.swift */; };
 		413988A95735C9103647140B /* LaunchAgents in CopyFiles */ = {isa = PBXBuildFile; fileRef = FE0AFBB14019783C41891E6B /* LaunchAgents */; };
 		4A54D4673574AC1A7BFA6A19 /* Controls.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9054DD2A2560EB44BFDF8F69 /* Controls.swift */; };
+		4D310C7B47461F0791BA8A42 /* EngineHelper.app in Embed Dependencies */ = {isa = PBXBuildFile; fileRef = 5DF9F9DCD9AB8EDB9C95B342 /* EngineHelper.app */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		4E602A86EE6608B89B8C6739 /* Fixtures.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4A2F525440D004C430C9776 /* Fixtures.swift */; };
 		55B559A3D6610CC924BE6D8B /* VerificationPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE264BDCF218DAE1DEDC5873 /* VerificationPage.swift */; };
 		56F8357B90838465EC6FF1D4 /* OutputRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 403A9EFA5D8721D4A096D69B /* OutputRow.swift */; };
@@ -28,7 +29,6 @@
 		69508283FA57D34A56F76363 /* SpotifyControl.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7AFA2CE4107890ADEAFCE3BB /* SpotifyControl.swift */; };
 		7275F5D41495B767C926F7B6 /* NowPlayingCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89A06D35E2D24F090FFBA38D /* NowPlayingCard.swift */; };
 		7914DC9A6164973887E5C07F /* LocalNetworkProbe.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2CB4B3735CEEBCCEFFAC32F0 /* LocalNetworkProbe.swift */; };
-		7F59FD051535AB810FE51942 /* EngineHelper in Embed Dependencies */ = {isa = PBXBuildFile; fileRef = 8695A8714EBD97FD76FE26F0 /* EngineHelper */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		8733FBD2690909B7F7D8057B /* MenuBarLabel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 19773F8E529ABA288E743679 /* MenuBarLabel.swift */; };
 		87D43C1B8BF30694EC74B19F /* EngineClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = C07B0EE36DF8DB70B2D3160B /* EngineClient.swift */; };
 		8C91074390E9D7936D935148 /* EngineEndpoint.swift in Sources */ = {isa = PBXBuildFile; fileRef = 35B11434B16292C9D01C0F12 /* EngineEndpoint.swift */; };
@@ -97,10 +97,10 @@
 		B5C48117209A3AD4347530F1 /* Embed Dependencies */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
-			dstPath = Contents/MacOS;
+			dstPath = Contents/Helpers;
 			dstSubfolderSpec = 1;
 			files = (
-				7F59FD051535AB810FE51942 /* EngineHelper in Embed Dependencies */,
+				4D310C7B47461F0791BA8A42 /* EngineHelper.app in Embed Dependencies */,
 			);
 			name = "Embed Dependencies";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -125,12 +125,12 @@
 		51AEA12BB1D341EE78FD837E /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
 		567E1E217395D6BDD018904B /* IntendedOutputs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IntendedOutputs.swift; sourceTree = "<group>"; };
 		58FC0029BB59C32F9F1DC0B2 /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
+		5DF9F9DCD9AB8EDB9C95B342 /* EngineHelper.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = EngineHelper.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		5F69A0B1F684B0E7AFD4A630 /* Schtaap.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Schtaap.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		61FCB466949FB53EE596B652 /* SpotifyDevice.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpotifyDevice.swift; sourceTree = "<group>"; };
 		7AFA2CE4107890ADEAFCE3BB /* SpotifyControl.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpotifyControl.swift; sourceTree = "<group>"; };
 		85474C0622B58203DEC6C5EE /* Metadata.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Metadata.swift; sourceTree = "<group>"; };
 		85B5B5AB611FB9353FA24B65 /* AppMain.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppMain.swift; sourceTree = "<group>"; };
-		8695A8714EBD97FD76FE26F0 /* EngineHelper */ = {isa = PBXFileReference; includeInIndex = 0; path = EngineHelper; sourceTree = BUILT_PRODUCTS_DIR; };
 		89A06D35E2D24F090FFBA38D /* NowPlayingCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NowPlayingCard.swift; sourceTree = "<group>"; };
 		9054DD2A2560EB44BFDF8F69 /* Controls.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Controls.swift; sourceTree = "<group>"; };
 		984C7237A9838C8CD4F33FFB /* NotifyClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotifyClient.swift; sourceTree = "<group>"; };
@@ -148,7 +148,7 @@
 		FE0AFBB14019783C41891E6B /* LaunchAgents */ = {isa = PBXFileReference; lastKnownFileType = folder; path = LaunchAgents; sourceTree = SOURCE_ROOT; };
 		FEC622225F492D4931767F8C /* htdocs */ = {isa = PBXFileReference; lastKnownFileType = folder; name = htdocs; path = Engine/htdocs; sourceTree = SOURCE_ROOT; };
 		FFFC683139D14BAEBEC657DB /* DeviceKind.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceKind.swift; sourceTree = "<group>"; };
-		"TEMP_7E3F7FF6-34BB-4F67-8C72-BD6B6A23B10C" /* Version.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Version.xcconfig; sourceTree = "<group>"; };
+		"TEMP_2C5B8E0A-E1DA-4645-806D-F421134E8EB0" /* Version.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Version.xcconfig; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -271,7 +271,7 @@
 		DDA597B201830D1B8264A1A9 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				8695A8714EBD97FD76FE26F0 /* EngineHelper */,
+				5DF9F9DCD9AB8EDB9C95B342 /* EngineHelper.app */,
 				5F69A0B1F684B0E7AFD4A630 /* Schtaap.app */,
 			);
 			name = Products;
@@ -294,10 +294,10 @@
 			path = Support;
 			sourceTree = "<group>";
 		};
-		"TEMP_2BE1E359-3BB1-45C8-96B0-0475D70B9DB7" /* macos */ = {
+		"TEMP_1EA7E461-A3D7-407A-B684-63B13DDFB315" /* macos */ = {
 			isa = PBXGroup;
 			children = (
-				"TEMP_7E3F7FF6-34BB-4F67-8C72-BD6B6A23B10C" /* Version.xcconfig */,
+				"TEMP_2C5B8E0A-E1DA-4645-806D-F421134E8EB0" /* Version.xcconfig */,
 			);
 			path = macos;
 			sourceTree = "<group>";
@@ -341,8 +341,8 @@
 			packageProductDependencies = (
 			);
 			productName = EngineHelper;
-			productReference = 8695A8714EBD97FD76FE26F0 /* EngineHelper */;
-			productType = "com.apple.product-type.tool";
+			productReference = 5DF9F9DCD9AB8EDB9C95B342 /* EngineHelper.app */;
+			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
 
@@ -445,7 +445,7 @@
 /* Begin XCBuildConfiguration section */
 		4BB72DE8DE81FFF7EAB15D89 /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = "TEMP_7E3F7FF6-34BB-4F67-8C72-BD6B6A23B10C" /* Version.xcconfig */;
+			baseConfigurationReference = "TEMP_2C5B8E0A-E1DA-4645-806D-F421134E8EB0" /* Version.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				APP_PRODUCT_NAME = Schtaap;
@@ -489,6 +489,7 @@
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				ENGINE_PRODUCT_NAME = "$(APP_PRODUCT_NAME) Engine";
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_NO_COMMON_BLOCKS = YES;
@@ -519,7 +520,7 @@
 		};
 		5005CA218BDB4C52FF5D4A92 /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = "TEMP_7E3F7FF6-34BB-4F67-8C72-BD6B6A23B10C" /* Version.xcconfig */;
+			baseConfigurationReference = "TEMP_2C5B8E0A-E1DA-4645-806D-F421134E8EB0" /* Version.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				APP_PRODUCT_NAME = Schtaap;
@@ -563,6 +564,7 @@
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				ENGINE_PRODUCT_NAME = "$(APP_PRODUCT_NAME) Engine";
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
@@ -587,8 +589,8 @@
 		9FC5F20F55C822B8CD8320A2 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				COMBINE_HIDPI_IMAGES = YES;
-				CREATE_INFOPLIST_SECTION_IN_BINARY = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
 				INFOPLIST_FILE = HelperInfo.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -596,7 +598,7 @@
 					"@executable_path/../Frameworks",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = bar.esko.Schtaap.EngineHelper;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_NAME = "$(ENGINE_PRODUCT_NAME)";
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
 			};
@@ -605,8 +607,8 @@
 		C0EBF0990A19683706BD24E6 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				COMBINE_HIDPI_IMAGES = YES;
-				CREATE_INFOPLIST_SECTION_IN_BINARY = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
 				INFOPLIST_FILE = HelperInfo.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -614,7 +616,7 @@
 					"@executable_path/../Frameworks",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = bar.esko.Schtaap.EngineHelper;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_NAME = "$(ENGINE_PRODUCT_NAME)";
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
 			};

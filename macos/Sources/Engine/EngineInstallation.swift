@@ -198,12 +198,13 @@ struct EngineInstallation {
     /// binary and the engine payload it spawns. Same string, nothing to
     /// restart for.
     ///
-    /// The helper is identified by its code directory hash rather than a
-    /// hash of the file. The cdhash covers the executable's pages and its
-    /// embedded Info.plist but not the CMS signature blob, which carries a
-    /// signing time and so differs on every re-sign of identical code. For
-    /// this to hold, the helper's Info.plist must not carry the build
-    /// number; see the EngineHelper target in project.yml.
+    /// The helper is identified by its bundle's code directory hash rather
+    /// than a hash of the file. The cdhash covers the executable's pages and
+    /// the seal over the bundle's resources (its Info.plist included) but
+    /// not the CMS signature blob, which carries a signing time and so
+    /// differs on every re-sign of identical code. For this to hold, the
+    /// helper's Info.plist must not carry the build number; see the
+    /// EngineHelper target in project.yml.
     ///
     /// The payload is identified by the Nix store paths build-engine wrote
     /// into manifest.json: a store path hashes the whole build closure, so
@@ -212,11 +213,13 @@ struct EngineInstallation {
     /// it does have, which under-restarts rather than over-restarts.
     func engineFingerprint() -> String {
         let contents = Bundle.main.bundleURL.appending(path: "Contents")
-        let helper = contents.appending(path: "MacOS/EngineHelper")
+        let helper = Branding.engineHelperBundle
         let manifest = contents.appending(path: "Resources/manifest.json")
 
-        let helperID = Self.codeDirectoryHash(of: helper)
-            ?? Self.contentHash(of: helper)
+        // An unsigned helper (no certificate on the build machine, ad-hoc
+        // stripped) has no code directory; its executable's bytes stand in.
+        let helperID = helper.flatMap { Self.codeDirectoryHash(of: $0) }
+            ?? helper.flatMap { Bundle(url: $0)?.executableURL }.flatMap { Self.contentHash(of: $0) }
             ?? "no-helper"
         let payloadID = Self.payloadIdentity(from: manifest) ?? "no-payload"
         return "\(helperID)+\(payloadID)"

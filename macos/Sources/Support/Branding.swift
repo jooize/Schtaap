@@ -22,6 +22,29 @@ enum Branding {
         return base.appending(path: identifier, directoryHint: .isDirectory)
     }
 
+    /// The engine helper's bundle inside this one: what the LaunchAgent
+    /// plists run, and what the Local Network permission is granted to.
+    /// Found rather than named, because its file name is the name the user
+    /// sees (`ENGINE_PRODUCT_NAME` in project.yml) and this file must not
+    /// carry it. Contents/Helpers holds the engine payload's `bin` and
+    /// `lib` and exactly one app.
+    static var engineHelperBundle: URL? {
+        let helpers = Bundle.main.bundleURL.appending(path: "Contents/Helpers", directoryHint: .isDirectory)
+        let entries = try? FileManager.default.contentsOfDirectory(
+            at: helpers, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles]
+        )
+        return entries?.first { $0.pathExtension == "app" }
+    }
+
+    /// What System Settings calls the engine: the helper bundle's
+    /// `CFBundleName`, which project.yml keeps equal to its file name. Read
+    /// from the bundle so the UI says exactly what the Local Network list
+    /// says.
+    static var engineName: String {
+        engineHelperBundle.flatMap { Bundle(url: $0)?.object(forInfoDictionaryKey: "CFBundleName") as? String }
+            ?? "\(appName) Engine"
+    }
+
     /// Fallback name advertised to Spotify Connect before the user picks one.
     static let defaultConnectName = "HomePods"
 

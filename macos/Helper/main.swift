@@ -17,8 +17,11 @@ import MachO
 // with librespot's, leaving no responsible ancestor, so the permission
 // prompt read "Allow librespot to find devices on local networks?" -- a name
 // the user has never seen and no reason to trust. Staying alive as the
-// parent makes this helper the responsible process, and its embedded
-// Info.plist carries the app's name.
+// parent makes this helper the responsible process, and the bundle it ships
+// as is what the prompt names (its file name, ENGINE_PRODUCT_NAME in
+// project.yml). A bare executable's embedded Info.plist was tried first and
+// ignored, and so was a bundle's CFBundleName: macOS shows the bundle's file
+// name and reads the usage description from inside it, nothing else.
 //
 // Waiting also means launchd's KeepAlive still works: this process exits
 // with the engine's own status, so a crashed engine looks like a crashed
@@ -107,12 +110,20 @@ private struct Layout {
     let support: URL
 
     init() throws {
-        // .../Schtaap.app/Contents/MacOS/EngineHelper
+        // .../Schtaap.app/Contents/Helpers/Schtaap Engine.app/Contents/MacOS/Schtaap Engine
+        //
+        // This helper is a bundle of its own (so that macOS has a name to
+        // show the user for it), nested in the app's; everything it needs
+        // is in the outer one. Nothing here depends on either name.
         let executable = try executablePath()
-        let contents = executable
+        let own = executable
             .deletingLastPathComponent()   // MacOS
-            .deletingLastPathComponent()   // Contents
-        guard contents.lastPathComponent == "Contents" else {
+            .deletingLastPathComponent()   // Contents, the helper's
+        let contents = own
+            .deletingLastPathComponent()   // the helper's .app
+            .deletingLastPathComponent()   // Helpers
+            .deletingLastPathComponent()   // Contents, the app's
+        guard own.lastPathComponent == "Contents", contents.lastPathComponent == "Contents" else {
             throw HelperError.notInBundle(executable.path)
         }
         self.contents = contents

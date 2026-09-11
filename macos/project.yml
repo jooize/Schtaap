@@ -3,7 +3,9 @@
 # The product name is deliberately confined to this file (and the fallback
 # string in Sources/Support/Branding.swift). No Swift type carries it, so
 # renaming the app is: change `name:` + PRODUCT_BUNDLE_IDENTIFIER here,
-# change Branding.swift, regenerate.
+# change Branding.swift, rename the two LaunchAgents plists (their labels
+# carry the bundle identifier and their program paths the engine helper's
+# bundle name), regenerate.
 #
 # Versions live in Version.xcconfig, never here -- see the project-level
 # configFiles below. Target settings must not carry MARKETING_VERSION or
@@ -33,6 +35,16 @@ settings:
     # helper's CFBundleName -- the helper is a separate target but must
     # present itself to the user as the app, not as itself.
     APP_PRODUCT_NAME: Schtaap
+    # What the engine helper's bundle is called on disk, and so what the
+    # Local Network prompt and list call the engine: macOS names an app by
+    # its bundle's file name, whatever CFBundleName says (seen 2026-09-10,
+    # "EngineHelper" in the prompt title above our own description). The
+    # app's name with a suffix, not the app's name: the app asks for Local
+    # Network access too (it browses for AirPlay speakers), and two rows
+    # both called "Schtaap" would leave the user guessing which switch is
+    # which. Branding.engineName reads the bundle's CFBundleName back, so
+    # nothing in Swift carries the string.
+    ENGINE_PRODUCT_NAME: $(APP_PRODUCT_NAME) Engine
 
     SWIFT_VERSION: "6.0"
     SWIFT_STRICT_CONCURRENCY: complete
@@ -57,10 +69,21 @@ settings:
 targets:
   # The program launchd runs for both engine agents. A LaunchAgent plist is
   # a static file and cannot name paths that are only known at runtime, so
-  # it names this instead and this resolves the rest. Deliberately unbranded:
-  # the app name reaches it through the bundle it finds itself in.
+  # it names this instead and this resolves the rest. The target and the
+  # source directory are unbranded; the product is not, see
+  # ENGINE_PRODUCT_NAME above, because the product's file name is what the
+  # user gets shown.
+  #
+  # An application bundle, not a bare tool, although it has no UI: macOS
+  # names a process to the user from the bundle it belongs to, and a bare
+  # executable belongs to none. The Local Network prompt for the engine
+  # read "EngineHelper" with Apple's generic text, and the embedded
+  # __TEXT,__info_plist that was meant to brand it was ignored (settled
+  # 2026-09-08). Only a real bundle is read, and only its file name is
+  # shown. It lives in Contents/Helpers, which is where Apple puts helper
+  # apps; the LaunchAgent plists name the executable inside it.
   EngineHelper:
-    type: tool
+    type: application
     platform: macOS
     sources:
       - path: Helper
@@ -72,33 +95,30 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: bar.esko.Schtaap.EngineHelper
-        PRODUCT_NAME: $(TARGET_NAME)
+        PRODUCT_NAME: $(ENGINE_PRODUCT_NAME)
         ENABLE_HARDENED_RUNTIME: YES
         SKIP_INSTALL: YES
-        # A bare executable has no Info.plist, so when macOS has to name the
-        # process to the user it falls back to the file name -- which is how
-        # the local network prompt came to say "librespot". This embeds one
-        # in the binary's __TEXT,__info_plist section. Combined with the
-        # helper staying alive as the engine's parent, and so being the
-        # process macOS holds responsible, the prompt speaks for the app.
-        CREATE_INFOPLIST_SECTION_IN_BINARY: YES
     info:
       path: HelperInfo.plist
       properties:
-        # Deliberately the app's name, not the target's: the user has heard
-        # of the app and has never heard of EngineHelper.
-        CFBundleName: $(APP_PRODUCT_NAME)
+        # The same as the bundle's file name, which is what is actually
+        # shown; this key is what the app reads back (Branding.engineName).
+        CFBundleName: $(ENGINE_PRODUCT_NAME)
         CFBundleIdentifier: $(PRODUCT_BUNDLE_IDENTIFIER)
+        CFBundlePackageType: APPL
         CFBundleShortVersionString: $(MARKETING_VERSION)
         # The marketing version, not the build number, on purpose. The build
-        # number changes on every build, and anything in this plist is
-        # linked into the binary, so carrying it would make every build a
+        # number changes on every build, and the Info.plist is sealed into
+        # the bundle's signature, so carrying it would make every build a
         # new helper. The app decides whether to restart the engine by the
         # helper's code directory hash (EngineInstallation.engineFingerprint),
         # and that hash must only move when the helper's code does. The key
-        # stays because Apple lists it as required and the Local Network
-        # prompt names the process from this plist.
+        # stays because Apple lists it as required.
         CFBundleVersion: $(MARKETING_VERSION)
+        LSMinimumSystemVersion: $(MACOSX_DEPLOYMENT_TARGET)
+        # No UI, no Dock icon, no menu bar, never the frontmost app. It is
+        # a supervisor that happens to be packaged as an app.
+        LSBackgroundOnly: true
         NSLocalNetworkUsageDescription: >-
           $(APP_PRODUCT_NAME) appears as a speaker in Spotify and plays to
           your AirPlay speakers.
@@ -107,10 +127,14 @@ targets:
     type: application
     platform: macOS
     dependencies:
+      # Copied in signed; the app's own signature then seals it as nested
+      # code. Contents/Helpers, beside the engine payload's bin and lib.
       - target: EngineHelper
+        embed: true
+        codeSign: true
         copy:
           destination: wrapper
-          subpath: Contents/MacOS
+          subpath: Contents/Helpers
     sources:
       - path: Sources
 

@@ -82,11 +82,18 @@ struct ReceiverRow: View {
                         pencil
                     }
                 }
+                // A warning names what to fix and where ("... is off for
+                // Schtaap Engine"), which does not fit one line beside the
+                // toggle; cutting the name off would cut off the one thing
+                // the user needs to find the switch.
                 Text(subtitle)
                     .font(.system(size: 10))
                     .foregroundStyle(subtitleIsWarning ? AnyShapeStyle(.orange) : AnyShapeStyle(.tertiary))
-                    .lineLimit(1)
+                    .lineLimit(subtitleIsWarning ? 2 : 1)
                     .truncationMode(.tail)
+                    // Inside an HStack a Text truncates rather than wraps
+                    // unless it may take the height it needs.
+                    .fixedSize(horizontal: false, vertical: true)
             }
 
             Spacer(minLength: 6)
