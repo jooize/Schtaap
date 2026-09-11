@@ -19,6 +19,14 @@ struct AppMain: App {
         let engine = EngineService(usesFixtures: usesFixtures)
         _engine = State(initialValue: engine)
 
+        // A rename waits while a Spotify client is connected, and goes through
+        // by itself once that client has gone. The store's file watch is the
+        // only thing that sees the session change with the popover closed, so
+        // it feeds the service directly rather than through a view.
+        store.onSpotifySessionChange = { [weak engine] session in
+            engine?.spotifyClientConnected = session?.active == true
+        }
+
         // The engine first, so its processes are on their way up before
         // anything asks them a question. Both calls are no-ops under fixtures.
         engine.apply(

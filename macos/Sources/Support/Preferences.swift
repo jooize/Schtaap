@@ -20,7 +20,8 @@ enum PreferenceKey {
     ///     defaults write bar.esko.Schtaap EngineLogLevel debug
     ///     defaults delete bar.esko.Schtaap EngineLogLevel
     ///
-    /// The app reads it at launch, and a changed value restarts the engine.
+    /// The app reads it at launch, and a changed value rewrites owntone.conf,
+    /// which restarts both halves.
     static let engineLogLevel = "EngineLogLevel"
 }
 

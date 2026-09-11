@@ -28,8 +28,9 @@ import MachO
 // spawns and the metadata bridge below that, and the user is asked once,
 // under the app's name.
 
-/// What the app writes for the helper to read. Regenerated whenever a
-/// setting changes; the helper is then restarted to pick it up.
+/// What the app writes for the helper to read, and only the librespot mode
+/// reads it. Regenerated whenever a setting in it changes; that helper alone
+/// is then restarted to pick it up, and owntone plays on.
 private struct EngineSettings: Decodable {
     var connectName: String
     var audioPipe: String
@@ -39,8 +40,9 @@ private struct EngineSettings: Decodable {
     /// False once the user has switched off appearing in Spotify.
     var showsInSpotify: Bool
 
-    /// The app writes this file before it spawns the helper, so what is read
-    /// here is always current. The tolerant decoding stays anyway, for the
+    /// The app writes this file before it spawns the helper, and spawns it
+    /// again whenever the file changes, so what is read here is always
+    /// current. The tolerant decoding stays anyway, for the
     /// cost of nothing: a file left by an older build is still readable, and
     /// a missing key added since then falls back rather than failing the
     /// launch.
@@ -343,8 +345,8 @@ private func exitAsEngine(_ status: Int32) -> Never {
 }
 
 /// Nothing to run here. A clean exit stays down: the app starts a half again
-/// only when it crashed, and switching the setting back on rewrites the
-/// config, which restarts both halves like any other config change.
+/// only when it crashed, and switching the setting back on rewrites
+/// engine.json, which starts this half again on its own.
 private func park() -> Never {
     exit(EXIT_SUCCESS)
 }

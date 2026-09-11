@@ -24,31 +24,42 @@ struct ReceiverRow: View {
     var subtitleIsWarning = false
     let symbolName: String
     let onCommit: () -> Void
+    /// True while a rename is written down but not applied, because applying
+    /// it would disconnect the Spotify client that is using the receiver.
+    var isRenamePending = false
+    var onRename: () -> Void = {}
+    var onCancelRename: () -> Void = {}
 
     @FocusState private var isFocused: Bool
     @State private var isHovering = false
 
     var body: some View {
-        HStack(spacing: 10) {
-            if isEditing {
-                leading
-            } else {
-                Button {
-                    showsInSpotify.toggle()
-                } label: {
-                    leading.contentShape(Rectangle())
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 10) {
+                if isEditing {
+                    leading
+                } else {
+                    Button {
+                        showsInSpotify.toggle()
+                    } label: {
+                        leading.contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Appear in Spotify")
+                    .accessibilityValue(name)
+                    .accessibilityAddTraits(showsInSpotify ? [.isSelected] : [])
                 }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Appear in Spotify")
-                .accessibilityValue(name)
-                .accessibilityAddTraits(showsInSpotify ? [.isSelected] : [])
+
+                Toggle("", isOn: $showsInSpotify)
+                    .labelsHidden()
+                    .toggleStyle(.switch)
+                    .controlSize(.mini)
+                    .accessibilityLabel("Appear in Spotify")
             }
 
-            Toggle("", isOn: $showsInSpotify)
-                .labelsHidden()
-                .toggleStyle(.switch)
-                .controlSize(.mini)
-                .accessibilityLabel("Appear in Spotify")
+            if isRenamePending {
+                pendingRename
+            }
         }
         .opacity(showsInSpotify ? 1 : 0.55)
         .padding(.horizontal, 6)
@@ -122,6 +133,28 @@ struct ReceiverRow: View {
         }
     }
 
+    /// The new name is kept but not applied while a Spotify client is using
+    /// the receiver: the restart it takes would drop that client, and the
+    /// music with it. A note rather than a warning -- nothing is wrong, the
+    /// user simply decides when. It sits under the name, indented past the
+    /// icon so it reads as part of this row.
+    private var pendingRename: some View {
+        HStack(spacing: 8) {
+            Text("Renaming disconnects Spotify.")
+                .font(.system(size: 10))
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Spacer(minLength: 0)
+
+            Button("Rename", action: onRename)
+                .controlSize(.small)
+            Button("Cancel", action: onCancelRename)
+                .controlSize(.small)
+        }
+        .padding(.leading, Metrics.iconColumn + 10)
+    }
+
     /// Says the name can be changed, only while the pointer is on the row,
     /// the way a speaker row's slider shows up only once it plays.
     private var pencil: some View {
@@ -146,6 +179,20 @@ struct ReceiverRow: View {
         subtitle: "on MacBook Pro",
         symbolName: SpotifyDeviceType.advertised.symbolName,
         onCommit: {}
+    )
+    .frame(width: Metrics.popoverWidth)
+    .padding()
+}
+
+#Preview("Rename waiting") {
+    ReceiverRow(
+        name: .constant("Living Room"),
+        isEditing: .constant(false),
+        showsInSpotify: .constant(true),
+        subtitle: "Connected",
+        symbolName: SpotifyDeviceType.advertised.symbolName,
+        onCommit: {},
+        isRenamePending: true
     )
     .frame(width: Metrics.popoverWidth)
     .padding()

@@ -143,6 +143,12 @@ final class EngineStore {
     private(set) var spotifySession: SpotifySession?
     private var spotifySessionWatch: DispatchSourceFileSystemObject?
 
+    /// Called whenever that session changes. The file watch runs for as long
+    /// as the app does, so this is how something that is not a view -- the
+    /// engine service, waiting to rename the receiver -- learns that the
+    /// client has gone, with the popover closed.
+    var onSpotifySessionChange: (@MainActor (SpotifySession?) -> Void)?
+
     /// Whether librespot can reach Spotify's servers: what `status` says,
     /// asked every so often. Idle is the honest state before anyone has
     /// ever picked the device, when there is no session to be alive.
@@ -273,6 +279,7 @@ final class EngineStore {
         let session = SpotifySessionFile.read(at: Self.spotifySessionFile)
         if session != spotifySession {
             spotifySession = session
+            onSpotifySessionChange?(session)
         }
     }
 

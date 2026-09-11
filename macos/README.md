@@ -92,8 +92,8 @@ State lives in `~/Library/Application Support/bar.esko.Schtaap`:
 
     owntone.conf            generated each launch; hand edits are overwritten
     engine.json             connect name, pipe path, bitrate; read by the
-                            helper, and diffed to decide whether to restart
-                            the engine
+                            librespot helper alone, and diffed to decide
+                            whether to restart that half
     intended-outputs.json   the speakers the user asked for, which the app wins
                             back when another sender takes one
     Library/                owntone's media library: the audio pipe and its
@@ -186,7 +186,10 @@ from whatever was playing the first time the app sees a live engine.
   not the Local Network permission.
 - **The default Connect name collides with the hardware.** "HomePods" as
   `Branding.defaultConnectName` puts a receiver named after HomePods above
-  a list of actual HomePods. Editable in the popover.
+  a list of actual HomePods. Editable in the popover: a rename restarts the
+  Spotify receiver alone, owntone keeps playing, and while a Spotify client
+  is connected the new name waits for a click on Rename, since the restart
+  is a new device to Spotify and drops that client.
 - **The controlling phone cannot be named.** librespot 0.8 never fills
   the client name, brand or model, so the receiver row says "Connected".
 - **No groups editor, no first-run explanation.** Both wanted, neither

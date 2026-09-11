@@ -17,9 +17,10 @@ struct EngineInstallation {
     /// Parsed by owntone at launch, named by the helper's `-c`.
     var configFile: URL { root.appending(path: "owntone.conf") }
 
-    /// Read by the helper to build librespot's argv. Kept separate from
-    /// owntone.conf so editing the Spotify name never risks a malformed
-    /// engine config.
+    /// Read by the helper to build librespot's argv, and by nothing else:
+    /// owntone never sees the Spotify name. Kept separate from owntone.conf
+    /// so editing the name never risks a malformed engine config, and so a
+    /// rename restarts the Spotify receiver alone.
     var settingsFile: URL { root.appending(path: "engine.json") }
 
     /// owntone's media library. Its only member is the named pipe librespot
@@ -60,14 +61,26 @@ struct EngineInstallation {
 
     // MARK: - Writing
 
+    /// Which of the engine's two config files a `prepare` actually rewrote.
+    ///
+    /// Each half reads one of them, once, at launch, so this is what decides
+    /// which half has to be restarted: owntone.conf is owntone's, engine.json
+    /// is librespot's.
+    struct ConfigChanges {
+        var owntoneConfig = false
+        var engineSettings = false
+
+        var any: Bool { owntoneConfig || engineSettings }
+    }
+
     /// Creates the directory tree, the named pipe and both config files.
     ///
-    /// Returns true when something the engine reads at launch actually
-    /// changed, which is the caller's signal to restart it. Writing identical
-    /// bytes returns false, so an app launch that changes nothing does not
-    /// interrupt playback.
+    /// Reports which files actually changed, which is the caller's signal to
+    /// restart the half that reads them. Writing identical bytes reports no
+    /// change, so an app launch that changes nothing does not interrupt
+    /// playback.
     @discardableResult
-    func prepare(connectName: String, showsInSpotify: Bool) throws -> Bool {
+    func prepare(connectName: String, showsInSpotify: Bool) throws -> ConfigChanges {
         let manager = FileManager.default
         for directory in [root, libraryDirectory, cacheDirectory, logDirectory] {
             try manager.createDirectory(at: directory, withIntermediateDirectories: true)
@@ -81,12 +94,13 @@ struct EngineInstallation {
         // a copy nobody rotates should not sit there for good.
         try? manager.removeItem(at: logDirectory.appending(path: "owntone-server.log"))
 
-        let configChanged = try write(owntoneConfig(), to: configFile)
-        let settingsChanged = try write(
-            settingsJSON(connectName: connectName, showsInSpotify: showsInSpotify),
-            to: settingsFile
+        return ConfigChanges(
+            owntoneConfig: try write(owntoneConfig(), to: configFile),
+            engineSettings: try write(
+                settingsJSON(connectName: connectName, showsInSpotify: showsInSpotify),
+                to: settingsFile
+            )
         )
-        return configChanged || settingsChanged
     }
 
     /// A named pipe, not a regular file. owntone identifies the audio pipe by
@@ -169,7 +183,7 @@ struct EngineInstallation {
     private func settingsJSON(connectName: String, showsInSpotify: Bool) -> String {
         // Hand-rolled rather than JSONEncoder so the file stays readable
         // and stably ordered: it is diffed against what is already on disk
-        // to decide whether the engine needs restarting.
+        // to decide whether librespot needs restarting.
         """
         {
           "connectName": \(quotedJSON(connectName)),

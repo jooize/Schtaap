@@ -212,7 +212,9 @@ someone else yet:
 - OwnTone runs without PTP (ports 319 and 320 are privileged), so the
   speakers sync over NTP. Fine for one stereo pair; unmeasured beyond it.
 - The default receiver name is "HomePods", which sits oddly in a list of
-  actual HomePods. Rename it in the popover.
+  actual HomePods. Rename it in the popover: that restarts the Spotify
+  receiver alone, and while a phone is connected the new name waits for a
+  click on Rename, because the restart disconnects it.
 - librespot 0.8 never learns which phone is connected, so the popover
   says "Connected" and cannot say from what.
 

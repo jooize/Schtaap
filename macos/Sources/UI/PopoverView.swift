@@ -96,7 +96,16 @@ struct PopoverView: View {
                     subtitle: receiverSubtitle.text,
                     subtitleIsWarning: receiverSubtitle.isWarning,
                     symbolName: SymbolCatalog.name(SpotifyDeviceType.advertised.symbolName),
-                    onCommit: { commitName() }
+                    onCommit: { commitName() },
+                    isRenamePending: engine.pendingConnectName != nil,
+                    onRename: { engine.applyPendingRename() },
+                    onCancelRename: {
+                        // The field goes back to the name that is actually
+                        // being advertised, which is what the row claims once
+                        // the note is gone.
+                        connectName = engine.appliedConnectName ?? Branding.defaultConnectName
+                        engine.cancelPendingRename()
+                    }
                 )
                 .padding(.horizontal, Metrics.horizontalInset - 6)
 
@@ -383,9 +392,11 @@ struct PopoverView: View {
     /// Leaves the name field and hands the result to the engine.
     ///
     /// The name is librespot's `--name`, so a changed one has to reach the
-    /// agent to mean anything. `apply` writes it and restarts librespot only
-    /// if the file actually changed, which is why this can be called on every
-    /// dismissal, focus loss and tap outside the field.
+    /// agent to mean anything. `apply` writes it and restarts the Spotify
+    /// receiver only if the file actually changed, which is why this can be
+    /// called on every dismissal, focus loss and tap outside the field. While
+    /// a Spotify client is connected it holds the new name back instead, and
+    /// the row grows a Rename button.
     private func commitName() {
         isEditingName = false
 
@@ -397,9 +408,9 @@ struct PopoverView: View {
     }
 
     /// Hands everything the engine reads at launch to it at once. `apply`
-    /// restarts the engine only when the file it writes actually changed, and
-    /// starts it when it is down, so this is safe to call on every edit,
-    /// dismissal and tap outside.
+    /// restarts a half only when the file that half reads actually changed --
+    /// a rename is librespot's alone -- and starts what is down, so this is
+    /// safe to call on every edit, dismissal and tap outside.
     private func applySettings() {
         engine.apply(connectName: connectName, showsInSpotify: showsInSpotify)
     }

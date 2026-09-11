@@ -93,6 +93,31 @@ final class EngineService {
 
     private var states: [Which: State] = [:]
 
+    /// What engine.json holds, as this process last wrote it. Nil until the
+    /// first install, which is why an app launch never defers anything.
+    private var appliedSettings: (connectName: String, showsInSpotify: Bool)?
+
+    /// The name the Spotify receiver is advertising under, for the popover's
+    /// Cancel to restore the field to.
+    var appliedConnectName: String? { appliedSettings?.connectName }
+
+    /// Whether a Spotify client is using the receiver right now.
+    ///
+    /// Set from outside, from the same file the popover reads, because a
+    /// waiting rename has to go through the moment the client disconnects and
+    /// no view need be alive to see that happen.
+    var spotifyClientConnected = false {
+        didSet {
+            guard oldValue, !spotifyClientConnected, pendingConnectName != nil else { return }
+            // Nobody is left to disconnect, so the rename costs nothing now.
+            applyPendingRename()
+        }
+    }
+
+    /// A rename that is waiting: for the client to go away, or for the user to
+    /// press Rename. Nil whenever nothing is waiting.
+    private(set) var pendingConnectName: String?
+
     /// When each half was last spawned, for the restart throttle.
     private var lastStart: [Which: ContinuousClock.Instant] = [:]
 
@@ -128,26 +153,73 @@ final class EngineService {
 
     // MARK: - Lifecycle
 
-    /// Writes the engine's config, starts both halves, and restarts them if
-    /// what they read at launch has changed.
+    /// Writes the engine's config, starts what is down, and restarts whichever
+    /// half reads a file that changed.
     ///
     /// Safe to call on every app launch and after every settings edit: it
     /// only disturbs a running engine when something it depends on actually
     /// moved.
+    ///
+    /// One change is held back rather than applied: a rename while a Spotify
+    /// client is connected. See `install`.
     func apply(connectName: String, showsInSpotify: Bool) {
         guard !isOffline else { return }
-        enqueue { await self.install(connectName: connectName, showsInSpotify: showsInSpotify) }
+        enqueue {
+            await self.install(
+                connectName: connectName, showsInSpotify: showsInSpotify, deferrable: true
+            )
+        }
     }
 
-    private func install(connectName: String, showsInSpotify: Bool) async {
+    /// Puts a waiting rename through, client connected or not: the user
+    /// pressed Rename, or the client has gone.
+    func applyPendingRename() {
+        guard !isOffline, let pending = pendingConnectName else { return }
+        let showsInSpotify = appliedSettings?.showsInSpotify ?? true
+        enqueue {
+            await self.install(
+                connectName: pending, showsInSpotify: showsInSpotify, deferrable: false
+            )
+        }
+    }
+
+    /// Drops a waiting rename. The popover puts the old name back in the field.
+    func cancelPendingRename() {
+        pendingConnectName = nil
+    }
+
+    private func install(connectName: String, showsInSpotify: Bool, deferrable: Bool) async {
         guard hasPayload else {
             status = .missingPayload
             return
         }
 
-        let changed: Bool
+        // Recomputed on every install, so committing the name that is already
+        // running is what clears a waiting rename.
+        pendingConnectName = nil
+
+        if
+            deferrable,
+            let applied = appliedSettings,
+            applied.showsInSpotify == showsInSpotify,
+            applied.connectName != connectName,
+            spotifyClientConnected,
+            states[.librespot]?.process != nil
+        {
+            // Spotify derives the device's ID from its name, so a rename is a
+            // new device: the restart drops whoever is connected, and their
+            // music stops. The user says when that happens, with the popover's
+            // Rename button, and it happens on its own once the client has
+            // gone. A change to appearing in Spotify at all is not held back:
+            // switching the receiver off is asking for the disconnect.
+            pendingConnectName = connectName
+            Self.log.info("rename to '\(connectName, privacy: .public)' waits, a Spotify client is connected")
+            return
+        }
+
+        let changes: EngineInstallation.ConfigChanges
         do {
-            changed = try installation.prepare(
+            changes = try installation.prepare(
                 connectName: connectName, showsInSpotify: showsInSpotify
             )
         } catch {
@@ -155,12 +227,29 @@ final class EngineService {
             status = .failed(error.localizedDescription)
             return
         }
+        let renamed = appliedSettings.map { $0.connectName != connectName } ?? false
+        appliedSettings = (connectName, showsInSpotify)
 
         let live = Which.allCases.filter { states[$0]?.process != nil }
-        if changed && !live.isEmpty {
-            // The halves read their config once, at launch.
+        if changes.owntoneConfig && !live.isEmpty {
+            // Both halves read their config once, at launch, and owntone's
+            // restart closes the read end of the audio pipe, so librespot has
+            // to go with it.
             Self.log.info("config changed, restarting the engine")
             await restartAll()
+        } else if changes.engineSettings && !live.isEmpty {
+            // Only librespot reads engine.json. owntone never learns the name,
+            // so it and its AirPlay sessions stay put: a rename with nothing
+            // playing is silent, and one that drops a playing client ends
+            // that stream the way any disconnect does, nothing more.
+            if renamed {
+                Self.log.info("connect name changed, restarting librespot")
+            } else {
+                Self.log.info("appearing in Spotify changed, restarting librespot")
+            }
+            await restart(.librespot)
+            // owntone too, should it have been the half that was down.
+            await startDown()
         } else {
             // Starts what is down and leaves what is up alone, which is both
             // the first launch and the Try Again button.
@@ -241,19 +330,29 @@ final class EngineService {
         await startDown()
     }
 
+    /// Takes one half down and starts it again, so it re-reads the file it
+    /// reads at launch. A half that is down, or parked, is simply started.
+    private func restart(_ which: Which) async {
+        let stopping = terminate(which)
+        await waitForExit(stopping.map { [$0] } ?? [])
+        states[which] = .stopped
+        await spawn(which)
+    }
+
     /// SIGTERMs every live helper and returns them, so a caller that needs
-    /// them gone can wait. Marking them stopped first is what tells the
-    /// termination handler this death was asked for.
+    /// them gone can wait.
     private func terminateAll() -> [Process] {
-        var stopping: [Process] = []
-        for which in Which.allCases {
-            guard let process = states[which]?.process else { continue }
-            states[which] = .stopped
-            stopping.append(process)
-            Self.log.info("\(which.rawValue, privacy: .public): stopping pid \(process.processIdentifier)")
-            kill(process.processIdentifier, SIGTERM)
-        }
-        return stopping
+        Which.allCases.compactMap { terminate($0) }
+    }
+
+    /// SIGTERMs one live helper and returns it. Marking it stopped first is
+    /// what tells the termination handler this death was asked for.
+    private func terminate(_ which: Which) -> Process? {
+        guard let process = states[which]?.process else { return nil }
+        states[which] = .stopped
+        Self.log.info("\(which.rawValue, privacy: .public): stopping pid \(process.processIdentifier)")
+        kill(process.processIdentifier, SIGTERM)
+        return process
     }
 
     private func waitForExit(_ processes: [Process]) async {
