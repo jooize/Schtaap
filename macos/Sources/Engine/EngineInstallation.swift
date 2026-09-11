@@ -1,6 +1,4 @@
-import CryptoKit
 import Foundation
-import Security
 
 /// The engine's on-disk state, and the code that writes it.
 ///
@@ -65,9 +63,9 @@ struct EngineInstallation {
     /// Creates the directory tree, the named pipe and both config files.
     ///
     /// Returns true when something the engine reads at launch actually
-    /// changed, which is the caller's signal to restart the agents. Writing
-    /// identical bytes returns false, so an app launch that changes nothing
-    /// does not interrupt playback.
+    /// changed, which is the caller's signal to restart it. Writing identical
+    /// bytes returns false, so an app launch that changes nothing does not
+    /// interrupt playback.
     @discardableResult
     func prepare(connectName: String, showsInSpotify: Bool) throws -> Bool {
         let manager = FileManager.default
@@ -171,17 +169,9 @@ struct EngineInstallation {
     private func settingsJSON(connectName: String, showsInSpotify: Bool) -> String {
         // Hand-rolled rather than JSONEncoder so the file stays readable
         // and stably ordered: it is diffed against what is already on disk
-        // to decide whether the agents need restarting.
-        //
-        // The engine fingerprint is in here for that diff and nothing else.
-        // The agents run the helper out of the bundle, and launchd keeps a
-        // running job on the old binary until something stops it -- so an
-        // update that changed only the helper would otherwise never take
-        // effect. It used to be the app's build number, which restarts the
-        // engine, and drops the Spotify session, on every UI-only rebuild.
+        // to decide whether the engine needs restarting.
         """
         {
-          "engine": \(quotedJSON(engineFingerprint())),
           "connectName": \(quotedJSON(connectName)),
           "deviceType": \(quotedJSON(SpotifyDeviceType.advertised.rawValue)),
           "showsInSpotify": \(showsInSpotify),
@@ -190,75 +180,6 @@ struct EngineInstallation {
         }
 
         """
-    }
-
-    // MARK: - Fingerprint
-
-    /// Identifies the code the agents would run if restarted now: the helper
-    /// binary and the engine payload it spawns. Same string, nothing to
-    /// restart for.
-    ///
-    /// The helper is identified by its bundle's code directory hash rather
-    /// than a hash of the file. The cdhash covers the executable's pages and
-    /// the seal over the bundle's resources (its Info.plist included) but
-    /// not the CMS signature blob, which carries a signing time and so
-    /// differs on every re-sign of identical code. For this to hold, the
-    /// helper's Info.plist must not carry the build number; see the
-    /// EngineHelper target in project.yml.
-    ///
-    /// The payload is identified by the Nix store paths build-engine wrote
-    /// into manifest.json: a store path hashes the whole build closure, so
-    /// a rebuilt ffmpeg changes it even when the owntone version does not.
-    /// A manifest from before that field existed falls back to the versions
-    /// it does have, which under-restarts rather than over-restarts.
-    func engineFingerprint() -> String {
-        let contents = Bundle.main.bundleURL.appending(path: "Contents")
-        let helper = Branding.engineHelperBundle
-        let manifest = contents.appending(path: "Resources/manifest.json")
-
-        // An unsigned helper (no certificate on the build machine, ad-hoc
-        // stripped) has no code directory; its executable's bytes stand in.
-        let helperID = helper.flatMap { Self.codeDirectoryHash(of: $0) }
-            ?? helper.flatMap { Bundle(url: $0)?.executableURL }.flatMap { Self.contentHash(of: $0) }
-            ?? "no-helper"
-        let payloadID = Self.payloadIdentity(from: manifest) ?? "no-payload"
-        return "\(helperID)+\(payloadID)"
-    }
-
-    private static func codeDirectoryHash(of url: URL) -> String? {
-        var code: SecStaticCode?
-        guard SecStaticCodeCreateWithPath(url as CFURL, [], &code) == errSecSuccess,
-              let code
-        else { return nil }
-        var information: CFDictionary?
-        guard SecCodeCopySigningInformation(code, [], &information) == errSecSuccess,
-              let dictionary = information as? [String: Any],
-              let unique = dictionary[kSecCodeInfoUnique as String] as? Data
-        else { return nil }
-        return unique.map { String(format: "%02x", $0) }.joined()
-    }
-
-    private static func contentHash(of url: URL) -> String? {
-        guard let data = try? Data(contentsOf: url) else { return nil }
-        return SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
-    }
-
-    private static func payloadIdentity(from manifest: URL) -> String? {
-        guard
-            let data = try? Data(contentsOf: manifest),
-            let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
-        else { return nil }
-        if let owntone = object["owntonePath"] as? String,
-           let librespot = object["librespotPath"] as? String {
-            return [owntone, librespot]
-                .map { URL(fileURLWithPath: $0).lastPathComponent }
-                .joined(separator: "+")
-        }
-        let versions = object.compactMap { key, value -> String? in
-            guard let value = value as? String else { return nil }
-            return "\(key)=\(value)"
-        }
-        return versions.isEmpty ? nil : versions.sorted().joined(separator: "+")
     }
 
     /// libconfuse strings are double-quoted with backslash escapes.

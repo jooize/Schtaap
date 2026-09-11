@@ -19,8 +19,8 @@ struct AppMain: App {
         let engine = EngineService(usesFixtures: usesFixtures)
         _engine = State(initialValue: engine)
 
-        // The engine first, so the agents are on their way up before anything
-        // asks them a question. Both calls are no-ops under fixtures.
+        // The engine first, so its processes are on their way up before
+        // anything asks them a question. Both calls are no-ops under fixtures.
         engine.apply(
             connectName: Preferences.connectName,
             showsInSpotify: Preferences.showsInSpotify
@@ -41,9 +41,12 @@ struct AppMain: App {
     }
 }
 
-/// The engine lives as long as the app does, and every way of quitting
-/// ends here: the footer's Quit, an AppleScript quit, a logout. The stop
-/// returns at once, so nothing waits on the engine.
+/// The engine lives as long as the app does, and every way of quitting ends
+/// here: the footer's Quit, an AppleScript quit, a logout. The stop signals
+/// the engine's two helpers and returns at once, so nothing waits on them;
+/// they tear the AirPlay sessions down on their own. A death this never sees
+/// -- a crash, a Force Quit -- is caught on the other side: each helper
+/// watches for its parent's exit and stops its engine then.
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     static var engine: EngineService?

@@ -61,14 +61,14 @@ struct PopoverView: View {
         .onExitCommand { leavePage() }
         .onAppear {
             store.startDirectoryIfEnabled()
-            // launchd can have stopped the agents, or the user approved them
-            // in System Settings, since the popover was last open.
+            // The engine can have stopped since the popover was last
+            // open: a half that failed stays down and says so.
             engine.refreshStatus()
             store.requestLocalNetworkProbe()
         }
         .onDisappear { commitName() }
-        // Switching the receiver off has to reach the agent to mean anything:
-        // it is what stops librespot advertising.
+        // Switching the receiver off has to reach the engine to mean
+        // anything: it is what stops librespot advertising.
         .onChange(of: showsInSpotify) { _, _ in applySettings() }
         .onChange(of: showsInNowPlaying) { _, enabled in store.publishesNowPlaying = enabled }
     }
@@ -167,11 +167,11 @@ struct PopoverView: View {
             break
         }
         // The one fault neither the uplink nor the session shows: the engine
-        // is running and reaching Spotify, and no phone can see it. Named
-        // as System Settings names it, which is the helper's bundle, not
-        // the app: the two have separate rows in the Local Network list.
+        // is running and reaching Spotify, and no phone can see it. Named as
+        // System Settings names it: the engine runs as this app's children, so
+        // the grant that is missing is the app's own row.
         if store.spotifySession?.isLocalNetworkDenied == true {
-            return ("Local Network access is off for \(Branding.engineName)", true)
+            return ("Local Network access is off for \(Branding.appName)", true)
         }
         if let session = store.spotifySession, session.active {
             if let client = session.clientDescription {
@@ -268,7 +268,7 @@ struct PopoverView: View {
 
     /// Shown when there is no speaker list to show. What is wrong is usually
     /// the engine rather than the network, so this asks the engine first and
-    /// only falls back to the connection when the agents are up.
+    /// only falls back to the connection when the engine is up.
     @ViewBuilder
     private var emptyState: some View {
         if isStartingUp {
@@ -278,13 +278,13 @@ struct PopoverView: View {
         }
     }
 
-    /// The agents are registered and launchd is expected to bring them up,
-    /// but nothing has answered yet. Not a failure until the grace runs out.
+    /// The engine is up, or on its way, but nothing has answered yet. Not a
+    /// failure until the grace runs out.
     private var isStartingUp: Bool {
         guard store.isAwaitingFirstContact, !store.connection.isOnline else { return false }
         switch engine.status {
-        case .running, .notRegistered: return true
-        case .missingPayload, .requiresApproval, .failed: return false
+        case .running, .idle: return true
+        case .missingPayload, .failed: return false
         }
     }
 
@@ -315,11 +315,7 @@ struct PopoverView: View {
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
 
-            if case .requiresApproval = engine.status {
-                Button("Open Login Items") { engine.openLoginItemsSettings() }
-                    .controlSize(.small)
-                    .padding(.top, 2)
-            } else if case .missingPayload = engine.status {
+            if case .missingPayload = engine.status {
                 // Nothing the user can do from here: this build has no engine
                 // in it, which is a thing that happened at compile time.
                 EmptyView()
@@ -397,9 +393,10 @@ struct PopoverView: View {
         applySettings()
     }
 
-    /// Hands everything the agents read at launch to the engine at once.
-    /// `apply` restarts them only when the file it writes actually changed,
-    /// so this is safe to call on every edit, dismissal and tap outside.
+    /// Hands everything the engine reads at launch to it at once. `apply`
+    /// restarts the engine only when the file it writes actually changed, and
+    /// starts it when it is down, so this is safe to call on every edit,
+    /// dismissal and tap outside.
     private func applySettings() {
         engine.apply(connectName: connectName, showsInSpotify: showsInSpotify)
     }
@@ -409,9 +406,8 @@ struct PopoverView: View {
     private var emptyStateTitle: String {
         switch engine.status {
         case .missingPayload: "No audio engine"
-        case .requiresApproval: "Waiting for permission"
         case .failed: "The engine could not start"
-        case .notRegistered, .running:
+        case .idle, .running:
             store.connection.isOnline ? "No speakers found" : "Engine not running"
         }
     }
@@ -420,12 +416,9 @@ struct PopoverView: View {
         switch engine.status {
         case .missingPayload:
             "This build of \(Branding.appName) was made without the audio engine."
-        case .requiresApproval:
-            "macOS needs you to allow \(Branding.appName)'s background items before "
-                + "it can play to your speakers."
         case .failed(let reason):
             reason
-        case .notRegistered, .running:
+        case .idle, .running:
             switch store.connection {
             case .offline(let reason): reason
             case .connecting: "Waiting for the audio engine to answer."

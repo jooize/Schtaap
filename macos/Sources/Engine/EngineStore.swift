@@ -23,11 +23,11 @@ final class EngineStore {
     }
 
     /// True from `start()` until the engine answers for the first time, or
-    /// the grace period runs out. launchd may still be spawning the agents
-    /// -- after a rebuild, up to about 35 s while the registration heals --
-    /// and the notify client retries throughout, so the honest thing to show
-    /// meanwhile is "starting", not "not running". The grace is generous
-    /// because a wrong "failed" costs more than a slow spinner.
+    /// the grace period runs out. The engine takes a moment to come up -- it
+    /// scans its library before it serves anything -- and the notify client
+    /// retries throughout, so the honest thing to show meanwhile is
+    /// "starting", not "not running". The grace is generous because a wrong
+    /// "failed" costs more than a slow spinner.
     private(set) var isAwaitingFirstContact = false
     private var firstContactGrace: Task<Void, Never>?
     private static let firstContactGracePeriod = Duration.seconds(60)

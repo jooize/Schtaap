@@ -1,12 +1,11 @@
 import Foundation
 import ServiceManagement
 
-/// Registration of the app itself as a login item.
+/// Registration of the app itself as a login item, and nothing else.
 ///
-/// The bundled engine helpers are a separate concern: they become
-/// `SMAppService.daemon`/`.agent` registrations reading plists from
-/// Contents/Library/LaunchDaemons, and appear in Login Items under this app's
-/// name. That wiring lands with the engine lifecycle work.
+/// The engine is not a separate item and never appears here: its two halves
+/// are child processes of this app, started when it launches and stopped when
+/// it quits. Start at Login is therefore the one switch for the whole thing.
 @MainActor
 enum LoginItem {
     static var isEnabled: Bool {

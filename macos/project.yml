@@ -3,9 +3,7 @@
 # The product name is deliberately confined to this file (and the fallback
 # string in Sources/Support/Branding.swift). No Swift type carries it, so
 # renaming the app is: change `name:` + PRODUCT_BUNDLE_IDENTIFIER here,
-# change Branding.swift, rename the two LaunchAgents plists (their labels
-# carry the bundle identifier and their program paths the engine helper's
-# bundle name), regenerate.
+# change Branding.swift, regenerate.
 #
 # Versions live in Version.xcconfig, never here -- see the project-level
 # configFiles below. Target settings must not carry MARKETING_VERSION or
@@ -35,15 +33,13 @@ settings:
     # helper's CFBundleName -- the helper is a separate target but must
     # present itself to the user as the app, not as itself.
     APP_PRODUCT_NAME: Schtaap
-    # What the engine helper's bundle is called on disk, and so what the
-    # Local Network prompt and list call the engine: macOS names an app by
-    # its bundle's file name, whatever CFBundleName says (seen 2026-09-10,
-    # "EngineHelper" in the prompt title above our own description). The
-    # app's name with a suffix, not the app's name: the app asks for Local
-    # Network access too (it browses for AirPlay speakers), and two rows
-    # both called "Schtaap" would leave the user guessing which switch is
-    # which. Branding.engineName reads the bundle's CFBundleName back, so
-    # nothing in Swift carries the string.
+    # What the engine helper's bundle is called on disk, and so what macOS
+    # calls the engine's two processes in Activity Monitor: a process is
+    # named from the bundle it belongs to, by that bundle's file name,
+    # whatever CFBundleName says (seen 2026-09-10). No permission prompt
+    # shows this name -- the helpers are children of the app, so the one
+    # Local Network row is the app's. The app's name with a suffix, so that
+    # the engine is recognisable beside the app it belongs to.
     ENGINE_PRODUCT_NAME: $(APP_PRODUCT_NAME) Engine
 
     SWIFT_VERSION: "6.0"
@@ -52,14 +48,13 @@ settings:
     ENABLE_USER_SCRIPT_SANDBOXING: YES
     GCC_WARN_INHIBIT_ALL_WARNINGS: NO
     CLANG_ENABLE_MODULES: YES
-    # Signed with the developer certificate even for Debug, and on purpose.
-    # An ad-hoc signature's designated requirement is the binary's cdhash,
-    # which changes on every build. launchd records that requirement when
-    # the app registers its agents, so every rebuild left it refusing to
-    # spawn them (EX_CONFIG), the app re-registering, and macOS posting the
-    # "can run in the background" notice again. A certificate-based
-    # requirement is stable across builds. Developer ID + notarization
-    # arrive with the release pipeline.
+    # Signed with the developer certificate even for Debug, and on purpose:
+    # a certificate-based identity is the same on every build, so a grant
+    # macOS keys to the code's identity survives a rebuild. Whether an
+    # ad-hoc rebuild is asked for Local Network again has not been tested
+    # since the engine became the app's children; under launchd it was the
+    # agent registration that broke on every rebuild, and that reason is
+    # gone. Developer ID + notarization arrive with the release pipeline.
     CODE_SIGN_IDENTITY: "Apple Development"
     CODE_SIGN_STYLE: Manual
     DEVELOPMENT_TEAM: 75NVZ7W4W3
@@ -67,21 +62,19 @@ settings:
     CODE_SIGNING_ALLOWED: YES
 
 targets:
-  # The program launchd runs for both engine agents. A LaunchAgent plist is
-  # a static file and cannot name paths that are only known at runtime, so
-  # it names this instead and this resolves the rest. The target and the
-  # source directory are unbranded; the product is not, see
-  # ENGINE_PRODUCT_NAME above, because the product's file name is what the
-  # user gets shown.
+  # The program the app spawns for each half of the engine, with one
+  # argument saying which. Every path the engine needs is only known at
+  # runtime, and the helper resolves all of them from the bundle it finds
+  # itself in. The target and the source directory are unbranded; the
+  # product is not, see ENGINE_PRODUCT_NAME above, because the product's
+  # file name is the name the user gets shown for the engine.
   #
   # An application bundle, not a bare tool, although it has no UI: macOS
   # names a process to the user from the bundle it belongs to, and a bare
-  # executable belongs to none. The Local Network prompt for the engine
-  # read "EngineHelper" with Apple's generic text, and the embedded
-  # __TEXT,__info_plist that was meant to brand it was ignored (settled
-  # 2026-09-08). Only a real bundle is read, and only its file name is
-  # shown. It lives in Contents/Helpers, which is where Apple puts helper
-  # apps; the LaunchAgent plists name the executable inside it.
+  # executable belongs to none (an embedded __TEXT,__info_plist was tried
+  # and ignored, settled 2026-09-08). A bundle also carries an Info.plist
+  # and a version, which a bare executable in Contents/Helpers does not. It
+  # lives in Contents/Helpers because that is where Apple puts helper apps.
   EngineHelper:
     type: application
     platform: macOS
@@ -102,18 +95,14 @@ targets:
       path: HelperInfo.plist
       properties:
         # The same as the bundle's file name, which is what is actually
-        # shown; this key is what the app reads back (Branding.engineName).
+        # shown, so the two cannot disagree.
         CFBundleName: $(ENGINE_PRODUCT_NAME)
         CFBundleIdentifier: $(PRODUCT_BUNDLE_IDENTIFIER)
         CFBundlePackageType: APPL
         CFBundleShortVersionString: $(MARKETING_VERSION)
-        # The marketing version, not the build number, on purpose. The build
-        # number changes on every build, and the Info.plist is sealed into
-        # the bundle's signature, so carrying it would make every build a
-        # new helper. The app decides whether to restart the engine by the
-        # helper's code directory hash (EngineInstallation.engineFingerprint),
-        # and that hash must only move when the helper's code does. The key
-        # stays because Apple lists it as required.
+        # The marketing version, not the build number: the helper ships
+        # with the app and has no release of its own to count. The key stays
+        # because Apple lists it as required.
         CFBundleVersion: $(MARKETING_VERSION)
         LSMinimumSystemVersion: $(MACOSX_DEPLOYMENT_TARGET)
         # No UI, no Dock icon, no menu bar, never the frontmost app. It is
@@ -140,7 +129,7 @@ targets:
 
       # The relocated owntone and librespot payload, built from the flake by
       # ./build-engine. Optional so a clone still builds the UI without Nix;
-      # the app then has no engine to register, which it reports rather than
+      # the app then has no engine to start, which it reports rather than
       # pretending otherwise.
       #
       # bin and lib are copied separately from htdocs because codesign walks
@@ -170,14 +159,6 @@ targets:
         buildPhase:
           copyFiles:
             destination: resources
-      # Which payload this is, by Nix store path. Read by the app to decide
-      # whether a rebuilt engine warrants restarting the agents. Data, so it
-      # lives in Resources beside htdocs rather than in Helpers.
-      - path: Engine/manifest.json
-        optional: true
-        buildPhase:
-          copyFiles:
-            destination: resources
       # The payload's third-party notices, generated by ./build-engine from
       # the same closure: each bundled package, and every license's text.
       - path: Engine/NOTICES.txt
@@ -185,15 +166,6 @@ targets:
         buildPhase:
           copyFiles:
             destination: resources
-
-      # SMAppService reads agent plists from Contents/Library/LaunchAgents
-      # and nowhere else.
-      - path: LaunchAgents
-        type: folder
-        buildPhase:
-          copyFiles:
-            destination: wrapper
-            subpath: Contents/Library
     settings:
       base:
         # Reverse-DNS casing: lowercase organization, CamelCase brand segment.

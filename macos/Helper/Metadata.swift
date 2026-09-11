@@ -469,9 +469,9 @@ enum MetadataBridge {
 
     // MARK: - The pipe
 
-    /// The app creates this alongside the audio pipe, but launchd starts the
-    /// agents at login too and nothing orders those two, so an event can
-    /// arrive before the app has run. Making it here costs one lstat.
+    /// The app creates this alongside the audio pipe before it starts the
+    /// engine, so it is normally here already. Making it here anyway costs one
+    /// lstat, and covers a support directory emptied under a running engine.
     private static func ensurePipe(_ pipe: URL) {
         var status = stat()
         if lstat(pipe.path, &status) == 0 { return }

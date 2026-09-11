@@ -47,14 +47,16 @@ on it and [Releases](#releases) for how a download is verified.
     HomePods, and any other AirPlay speaker
 
 Both daemons are built from Nix with the patches in `nix/`, bundled into
-the app, and run by launchd as LaunchAgents for as long as the app runs.
-One helper in the bundle, `Schtaap Engine.app` under Contents/Helpers, is
-the program launchd runs for both: it resolves every path from the app
+the app, and run as child processes of it for as long as it runs. One
+helper in the bundle, `Schtaap Engine.app` under Contents/Helpers, is the
+program the app spawns for both: it resolves every path from the app
 bundle it finds itself in, supervises the daemon, and stays alive as its
-parent so that macOS attributes the daemon's network access to it. It is
-a bundle of its own so that the Local Network prompt and list can name
-it ("Schtaap Engine", beside the app's own row). The same binary is also
-librespot's event hook: it turns librespot's track and playback events
+parent, which gives the daemon a name and the app a clean way to tell a
+crash from a stop. Being the app's children is also what settles the
+Local Network permission: macOS grants it to the responsible process, and
+responsibility is inherited, so the app's one grant, asked for once,
+covers the helper, both daemons and the metadata hook. The same binary is
+also librespot's event hook: it turns librespot's track and playback events
 into the metadata OwnTone reads beside the pipe, fetches the cover, and
 keeps the two transports in step (a pause on either side pauses the
 other, and seeks Spotify back to what the speakers actually played).
@@ -70,10 +72,11 @@ Details of the app, the helper and the engine's lifecycle are in
 
 Needs a Mac with Xcode 16 or later, Nix (the flake builds the daemons),
 and an Apple Development signing identity. Debug builds are signed with
-it on purpose: under ad-hoc signing every rebuild changes the code
-requirement launchd recorded, and the agents refuse to start. A machine
-without that certificate can set `CODE_SIGN_IDENTITY: "-"` in
-`macos/project.yml` and live with re-registering after each rebuild.
+it on purpose, so that every build is the same identity to macOS and a
+grant keyed to that identity survives a rebuild. Whether an ad-hoc
+rebuild is asked for Local Network again has not been tested since the
+engine moved into the app's process tree. A machine without that
+certificate can set `CODE_SIGN_IDENTITY: "-"` in `macos/project.yml`.
 
     cd macos
     ./build-engine      # owntone + librespot from the flake, staged in Engine/
@@ -82,12 +85,12 @@ without that certificate can set `CODE_SIGN_IDENTITY: "-"` in
       -derivedDataPath DerivedData build
     open DerivedData/Build/Products/Debug/Schtaap.app
 
-The first launch registers the two agents with launchd (System Settings
-lists them under Login Items as "Schtaap, 2 items") and asks for Local
-Network access twice, once for the app and once for the helper. Both are
-needed: the helper's is what lets the engine advertise itself and reach
-the speakers, the app's only fetches speaker models and stereo-pair
-labels for the icons.
+The first launch starts the engine and asks for Local Network access
+once, for the app. That one grant is what lets the engine advertise
+itself and reach the speakers, and what lets the app fetch speaker models
+and stereo-pair labels for the icons. Nothing is registered with launchd
+and nothing appears under Login Items but the app itself, if you switch
+Start at Login on.
 
 Without Nix the app still builds and runs, with no engine; the popover
 says so. `open ... --args -UseFixtures YES` runs the whole UI against
@@ -127,7 +130,7 @@ with a paid developer account and change nothing else.
 
 ## Layout
 
-    macos/          the app, the helper, the agent plists, the build scripts
+    macos/          the app, the engine helper, the build scripts
     patches/        the changes to OwnTone and librespot, as plain patches
                     against their release sources; nothing in them is Nix
     nix/            owntone, librespot and an audio-only ffmpeg, plus the

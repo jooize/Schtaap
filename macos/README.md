@@ -2,7 +2,7 @@
 
 SwiftUI menu bar app over the bundled engine's JSON API. The engine itself
 (owntone + librespot) is two separate processes; this app never links it.
-The app ships them, configures them, and registers them with launchd.
+The app ships them, configures them, and runs them as its own children.
 
 ## Build
 
@@ -29,44 +29,51 @@ never hand-edit the project file.
     open DerivedData/Build/Products/Debug/Schtaap.app --args -UseFixtures YES
 
 Loads `Fixtures.swift` instead of the network, so the whole UI is reachable
-with nothing else running. Fixture mode also blocks engine registration, which
-matters more than it sounds: registering the agents advertises this Mac on the
-LAN and starts discovering the household's speakers.
+with nothing else running. Fixture mode also blocks the engine from starting,
+which matters more than it sounds: starting it advertises this Mac on the LAN
+and starts discovering the household's speakers.
 
 ## The engine
 
-Two LaunchAgents, registered through `SMAppService` and visible in System
-Settings under Login Items as "Schtaap, 2 items". launchd runs the processes and
-brings a crashed one back; the app decides when they run. It starts them when
-it launches (`launchctl kickstart`) and stops them when it quits (`launchctl
-kill TERM`, from `applicationShouldTerminate`), so a quit frees the speakers
-and leaves nothing advertised, and "Start at Login" is the one switch for the
-whole thing. The plists carry no `RunAtLoad` and a `KeepAlive` for crashes
-only; the helper exits clean when asked to stop, re-raises the engine's signal
-when it crashed, and passes a plain failure through, which is how launchd tells
-the three apart.
+Two child processes of the app, spawned with `Process` and supervised by
+`EngineService`. The app starts them when it launches and stops them when it
+quits (SIGTERM from `applicationShouldTerminate`), so a quit frees the
+speakers and leaves nothing advertised, and "Start at Login" is the one switch
+for the whole thing. Nothing is registered with launchd, nothing appears under
+Login Items but the app, and the engine cannot outlive the app: each helper
+watches for its parent's exit and stops its engine, which covers a crash or a
+Force Quit as well as a quit.
 
-Both plists run one program, `EngineHelper`, with one argument. A plist is a
-static file and every path the engine needs is known only at runtime, so the
-helper resolves them from the app bundle it finds itself in. It spawns the
-engine and waits rather than exec'ing into it, because macOS attributes local
-network access to the responsible process: exec'ing left librespot with no
-responsible ancestor and the permission prompt read "Allow librespot ...".
-Staying alive as the parent makes the prompt name the helper, and the helper
-ships as an app bundle of its own, `Contents/Helpers/Schtaap Engine.app`, so
-that the prompt and the Local Network list read "Schtaap Engine", beside the
-app's own "Schtaap" row (the app browses for AirPlay speakers itself). macOS
-shows a process by its bundle's file name and reads the usage description from
-the bundle's Info.plist; a bare executable with an embedded Info.plist
-(2026-09-08) and a bundle whose `CFBundleName` differed from its file name
-(2026-09-10) were both tried and both showed "EngineHelper". The helper bundle
-has no UI (`LSBackgroundOnly`), its name is one setting in `project.yml`
-(`ENGINE_PRODUCT_NAME`), and `Branding.engineName` reads it back from the
-bundle.
+`EngineService` supervises them the way launchd's `KeepAlive { Crashed }` did,
+from the same signal the helper already sends: a helper that dies by a signal
+crashed and is started again, at most one start per engine per ten seconds; a
+helper that exits 0 was asked to stop, or had nothing to run, and stays down;
+any other exit status is a failure the popover shows. Restarts are unlimited.
+Every start, exit and restart is logged:
 
-The helper also probes Local Network access for itself, by sending one
-datagram to an unused multicast group from a fresh child process (a grant
-reaches a running process, a revocation only a new one). A grant that arrives
+    log stream --info --predicate 'subsystem == "bar.esko.Schtaap"'
+
+Both halves run one program, `EngineHelper`, with one argument. Every path the
+engine needs is only known at runtime, so the helper resolves them from the app
+bundle it finds itself in. It spawns the engine and waits rather than exec'ing
+into it, for two reasons. The engine's fate lands in the helper's exit status,
+which is what the app reads. And macOS names a process to the user from the
+bundle it belongs to, so the helper ships as an app bundle of its own,
+`Contents/Helpers/Schtaap Engine.app`, and Activity Monitor shows "Schtaap
+Engine" rather than "owntone" and "librespot". Its name is one setting in
+`project.yml` (`ENGINE_PRODUCT_NAME`) and no Swift type carries it. The bundle
+has no UI (`LSBackgroundOnly`).
+
+Being children is what settles the Local Network permission. macOS grants it to
+the responsible process, and a child inherits its parent's responsibility, so
+the app's single grant covers the helper, owntone, librespot and the metadata
+hook below them, and the user answers one prompt, named Schtaap. As LaunchAgents
+the two helpers were responsible for themselves and asked under a name of their
+own, beside the app's.
+
+The helper also reads that grant, by sending one datagram to an unused
+multicast group from a fresh child process (a grant reaches a running process,
+a revocation only a new one). A grant that arrives
 after librespot opened its mDNS socket never reaches that socket, so the helper
 starts librespot again; the reading goes into `spotify-session.json` for the
 receiver row. See `Helper/LocalNetworkProbe.swift`.
@@ -84,9 +91,9 @@ traps, all read out of OwnTone's `src/inputs/pipe.c`.
 State lives in `~/Library/Application Support/bar.esko.Schtaap`:
 
     owntone.conf            generated each launch; hand edits are overwritten
-    engine.json             connect name, pipe path, bitrate, app build; read by
-                            the helper, and diffed to decide whether to restart
-                            the agents
+    engine.json             connect name, pipe path, bitrate; read by the
+                            helper, and diffed to decide whether to restart
+                            the engine
     intended-outputs.json   the speakers the user asked for, which the app wins
                             back when another sender takes one
     Library/                owntone's media library: the audio pipe and its
@@ -98,34 +105,16 @@ State lives in `~/Library/Application Support/bar.esko.Schtaap`:
     songs3.db, Cache/       owntone's database and caches; Cache/Metadata holds
                             the current track and its cover for the bridge
 
-The helper's code hash and the payload's store paths are written into
-`engine.json` so that a build which changes either restarts the agents, and
-one which changes neither leaves a running engine alone. Debug builds are
-signed with the Apple Development identity for the same reason: an ad-hoc
-signature changes on every build, and launchd refuses a job whose code no
-longer matches the requirement it recorded.
+Debug builds are signed with the Apple Development identity rather than ad hoc,
+so that every build is the same identity to macOS and a grant keyed to that
+identity survives a rebuild. Whether an ad-hoc rebuild is asked for Local
+Network again has not been tested since the engine moved into the app's
+process tree; under launchd it was the registration that broke on every
+rebuild, and that reason is gone.
 
 `defaults write bar.esko.Schtaap EngineLogLevel debug` sets owntone's log level
 at the next launch; `defaults delete` puts it back. The log grows fast at
 debug.
-
-### Ad-hoc signing and stale registrations
-
-A registration records a code requirement taken from the app's signature, and
-an ad-hoc signature changes on every build. After a rebuild launchd holds a
-job it will not spawn -- "Could not find and/or execute program" in the log,
-`EX_CONFIG`, crash-looping -- while `SMAppService.status` still reports
-`.enabled`. `EngineService` detects this by asking launchctl what state the
-job is actually in, and re-registers -- both before deciding whether to
-register at launch and again after a restart, since the check at launch runs
-while the old processes are still up and passes. If you are debugging it by
-hand:
-
-    launchctl print gui/$(id -u)/bar.esko.Schtaap.owntone
-    launchctl bootout gui/$(id -u)/bar.esko.Schtaap.owntone
-
-launchd throttles respawns to one per 10 seconds, so give it a moment before
-concluding anything.
 
 ## Renaming the app
 
@@ -134,24 +123,21 @@ The product name is confined to:
 - `project.yml` -- `APP_PRODUCT_NAME`, `name:`, `PRODUCT_BUNDLE_IDENTIFIER`
 - `Sources/Support/Branding.swift` -- only the fallback string; the real
   value is read from `CFBundleName` at runtime
-- `LaunchAgents/*.plist` -- the file names and their `Label` keys
 
-The plists are the exception the rule cannot reach: launchd labels must be
-unique across the system, so they carry the reverse-DNS identifier, and
-`SMAppService` requires the file name to equal the Label. No Swift type
-carries the name. Change those, run `./generate`, done.
+No Swift type carries the name, and the engine helper takes its own from
+`ENGINE_PRODUCT_NAME`, which is derived from the app's. Change those two, run
+`./generate`, done.
 
 ## Layout
 
     Sources/App/         app entry
     Sources/Engine/      API client, websocket, store, fixtures, engine
-                         installation and SMAppService registration
+                         installation and the child-process supervisor
     Sources/UI/          popover, rows, pages
     Sources/Support/     branding, preferences, login item
-    Helper/              the engine helper launchd runs, built as
-                         "Schtaap Engine.app" so the Local Network prompt
-                         has a name
-    LaunchAgents/        the two agent plists, copied into the bundle
+    Helper/              the engine helper the app spawns, built as
+                         "Schtaap Engine.app" so the engine's processes
+                         have a name the user recognises
     Engine/              gitignored payload from ./build-engine, with its
                          NOTICES.txt of bundled packages and licenses
 

@@ -1,34 +1,35 @@
 import Foundation
 import MachO
 
-// The program launchd actually runs for both engine agents.
+// The program the app runs for each half of the engine.
 //
-// A LaunchAgent plist is a static file, but every path it would need is
-// known only at runtime: the app can sit anywhere, and the engine's config,
-// database and named pipe live under the user's Application Support. So the
-// plist names this executable and one argument, and everything else is
-// resolved here, from the bundle this binary is standing in.
+// A child process of the app, started with one argument that says which half
+// to be. Every path the engine needs is known only at runtime -- the app can
+// sit anywhere, and the engine's config, database and named pipe live under
+// the user's Application Support -- so they are all resolved here, from the
+// bundle this binary is standing in.
 //
 // It spawns the engine and waits on it rather than exec'ing into it, which
-// costs one extra process in the tree and buys the app its own name.
+// costs one extra process in the tree and buys two things.
 //
-// macOS attributes local network access to the responsible process, not to
-// whichever binary opened the socket. exec() replaced this process's image
-// with librespot's, leaving no responsible ancestor, so the permission
-// prompt read "Allow librespot to find devices on local networks?" -- a name
-// the user has never seen and no reason to trust. Staying alive as the
-// parent makes this helper the responsible process, and the bundle it ships
-// as is what the prompt names (its file name, ENGINE_PRODUCT_NAME in
-// project.yml). A bare executable's embedded Info.plist was tried first and
-// ignored, and so was a bundle's CFBundleName: macOS shows the bundle's file
-// name and reads the usage description from inside it, nothing else.
+// A name, first: macOS names a process to the user from the bundle it belongs
+// to, and a bare executable belongs to none. This helper ships as a bundle of
+// its own, so the engine appears in Activity Monitor under a name the user
+// recognises rather than as "owntone" and "librespot".
 //
-// Waiting also means launchd's KeepAlive still works: this process exits
-// with the engine's own status, so a crashed engine looks like a crashed
-// job and gets restarted.
+// And the engine's fate in this process's exit status, which is how the app
+// tells a crash from a stop: this process re-raises the engine's own signal
+// when the engine crashed, exits 0 when it was asked to stop, and passes a
+// plain failure through. See EngineService, which acts on the three.
+//
+// Local network access belongs to the app, not to this helper. macOS
+// attributes it to the responsible process, and a child inherits its parent's
+// responsibility, so the app's one grant covers this helper, the engine it
+// spawns and the metadata bridge below that, and the user is asked once,
+// under the app's name.
 
 /// What the app writes for the helper to read. Regenerated whenever a
-/// setting changes; the agent is then restarted to pick it up.
+/// setting changes; the helper is then restarted to pick it up.
 private struct EngineSettings: Decodable {
     var connectName: String
     var audioPipe: String
@@ -38,10 +39,11 @@ private struct EngineSettings: Decodable {
     /// False once the user has switched off appearing in Spotify.
     var showsInSpotify: Bool
 
-    /// The app owns this file and rewrites it at every launch, but launchd
-    /// starts the agents at login too, and nothing orders those two. A file
-    /// written by an older build is read here before the rewrite lands, so
-    /// keys added since then fall back rather than failing the launch.
+    /// The app writes this file before it spawns the helper, so what is read
+    /// here is always current. The tolerant decoding stays anyway, for the
+    /// cost of nothing: a file left by an older build is still readable, and
+    /// a missing key added since then falls back rather than failing the
+    /// launch.
     // Writing init(from:) by hand is what withdraws the synthesized set.
     private enum CodingKeys: String, CodingKey {
         case connectName, audioPipe, bitrate, deviceType, showsInSpotify
@@ -81,7 +83,7 @@ private enum HelperError: Error, CustomStringConvertible {
 }
 
 /// This binary's own path, which `CommandLine.arguments[0]` does not reliably
-/// give: launchd passes whatever the plist's first ProgramArguments entry says.
+/// give: a parent is free to pass whatever it likes there.
 private func executablePath() throws -> URL {
     var size = UInt32(PATH_MAX)
     var buffer = [CChar](repeating: 0, count: Int(size) + 1)
@@ -185,9 +187,10 @@ private struct Layout {
 /// paths below can flush it; every `exit()` does through `atexit`, and the
 /// death by signal in `exitAsEngine` flushes by hand first.
 ///
-/// The plist cannot do this with StandardErrorPath: that key takes an
-/// absolute path, and the destination is only known once the app bundle has
-/// been located.
+/// The app cannot set this up on our behalf: the destination is only known
+/// once this process has found the app bundle it is standing in. Until then
+/// stdout and stderr are the app's own, inherited, which is where anything
+/// said before this point goes.
 private nonisolated(unsafe) var engineLog: EngineLog?
 
 private func captureOutput(to file: URL) {
@@ -199,15 +202,61 @@ private func captureOutput(to file: URL) {
 /// signal handler takes no context.
 private nonisolated(unsafe) var enginePID: pid_t = 0
 
-/// Set once this job was told to stop, so that the engine's death by our
+/// Set once this helper was told to stop, so that the engine's death by our
 /// own SIGTERM reads as a clean exit and not as a crash.
 private nonisolated(unsafe) var stopRequested = false
 
 /// Passes a termination signal on to the engine so it can shut down, rather
-/// than leaving it orphaned when launchd stops this job.
+/// than leaving it orphaned when this helper is stopped.
 private func forwardToEngine(_ signal: Int32) {
     stopRequested = true
     if enginePID > 0 { kill(enginePID, signal) }
+}
+
+/// Watches the app that spawned this helper, for as long as this process
+/// lives. A global like the other state here, and for the same reason: it has
+/// to outlive the function that set it up.
+private nonisolated(unsafe) var parentWatch: DispatchSourceProcess?
+
+/// Ends the engine when the app goes away without stopping it: a crash, a
+/// kill -9, a Force Quit. Nobody else would: owntone would keep holding the
+/// speakers and librespot would keep advertising a receiver that answers to
+/// nothing.
+///
+/// Only the app's death is watched, not a parent's in general. The metadata
+/// bridge is run by librespot and lives for one event, and the probe for one
+/// datagram; neither has anything to tear down.
+private func watchForParentExit() {
+    let parent = getppid()
+    // Already reparented to launchd: the app was gone before we got here, and
+    // no source would ever fire.
+    guard parent > 1 else {
+        parentDidExit()
+        return
+    }
+
+    let source = DispatchSource.makeProcessSource(
+        identifier: parent, eventMask: .exit, queue: DispatchQueue.global(qos: .utility)
+    )
+    source.setEventHandler { parentDidExit() }
+    source.activate()
+    parentWatch = source
+
+    // The same race from the other side: the app could have exited between
+    // the check above and the source being armed, and that exit is one the
+    // source has already missed.
+    if getppid() != parent { parentDidExit() }
+}
+
+private func parentDidExit() {
+    FileHandle.standardError.write(Data(
+        "helper: the app is gone, stopping the engine\n".utf8
+    ))
+    forwardToEngine(SIGTERM)
+    // Nothing spawned yet, so there is nothing to wait for and no supervisor
+    // left to report to. `run()` checks `stopRequested` the moment it has a
+    // pid, which covers the other side of this race.
+    if enginePID <= 0 { exit(EXIT_SUCCESS) }
 }
 
 /// Set when the engine is to be started again after it exits, by the
@@ -248,6 +297,10 @@ private func run(_ executable: URL, _ arguments: [String]) -> Int32 {
     signal(SIGTERM, forwardToEngine)
     signal(SIGINT, forwardToEngine)
 
+    // A stop that arrived while this engine was starting: the parent watch
+    // can fire between the spawn and this line, and had no pid to signal.
+    if stopRequested { kill(pid, SIGTERM) }
+
     var status: Int32 = 0
     while waitpid(pid, &status, 0) < 0 {
         // waitpid is interrupted every time a signal is forwarded; only a
@@ -264,13 +317,14 @@ private func run(_ executable: URL, _ arguments: [String]) -> Int32 {
 }
 
 private func exitAsEngine(_ status: Int32) -> Never {
-    // Report the engine's outcome as this process's own, so that launchd's
-    // KeepAlive (Crashed only) does the right thing: a stop we were asked
-    // for is a clean exit and stays down; a crash is re-raised as our own
-    // death by the same signal, which is what brings the engine back; a
-    // plain failure (a config it cannot read, say) stays down too, rather
-    // than looping. Swift does not surface the wait macros, so the low seven
-    // bits are the signal that killed it and the next eight are the status.
+    // Report the engine's outcome as this process's own, so that the app's
+    // supervisor does the right thing: a stop we were asked for is a clean
+    // exit and stays down; a crash is re-raised as our own death by the same
+    // signal, which is what brings the engine back; a plain failure (a config
+    // it cannot read, say) stays down too, rather than looping, and the app
+    // shows the status. Swift does not surface the wait macros, so the low
+    // seven bits are the signal that killed it and the next eight are the
+    // status.
     let terminatingSignal = status & 0x7F
     engineLog?.finish()
     if stopRequested {
@@ -283,9 +337,9 @@ private func exitAsEngine(_ status: Int32) -> Never {
     exit((status >> 8) & 0xFF)
 }
 
-/// Nothing to run here. A clean exit stays down: the plist's KeepAlive
-/// only brings back a crash, and switching the setting back on is the same
-/// `launchctl kickstart -k` as any other config change.
+/// Nothing to run here. A clean exit stays down: the app starts a half again
+/// only when it crashed, and switching the setting back on rewrites the
+/// config, which restarts both halves like any other config change.
 private func park() -> Never {
     exit(EXIT_SUCCESS)
 }
@@ -339,6 +393,7 @@ private func run() throws -> Never {
         // config leaves its own logfile empty (our patch makes that mean
         // none; see EngineInstallation), so this capture is the one log.
         captureOutput(to: layout.logFile("owntone"))
+        watchForParentExit()
         // -s and -w override the two paths compiled into owntone at
         // /usr/local. Without them it dies on a missing SQLite extension and
         // an unstat-able web root.
@@ -353,6 +408,7 @@ private func run() throws -> Never {
         let settings = try layout.settings()
         // librespot has no logfile option: stderr is the only channel.
         captureOutput(to: layout.logFile("librespot"))
+        watchForParentExit()
 
         guard settings.showsInSpotify else {
             FileHandle.standardError.write(Data(

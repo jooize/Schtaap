@@ -11,12 +11,10 @@
 		1CDE2253E5882DBA3713446F /* PopoverView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2E38E2030FA8C39E4288F616 /* PopoverView.swift */; };
 		23EDF6C29F58C5DB4F0D9F51 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = 58FC0029BB59C32F9F1DC0B2 /* main.swift */; };
 		2457C79AC7A1BC06290D0141 /* AppMain.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85B5B5AB611FB9353FA24B65 /* AppMain.swift */; };
-		24DBB897B84AE554418F19D9 /* manifest.json in CopyFiles */ = {isa = PBXBuildFile; fileRef = 49D0B788F59665203F1D3A58 /* manifest.json */; };
 		25946EE6F7B571BE62C70227 /* AirPlayDirectory.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C278924C43E44226477052B /* AirPlayDirectory.swift */; };
 		352C1C5B0B2BBBC6EAEBD83E /* LoginItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3CE4CC8DBF22FF3F2534CC1 /* LoginItem.swift */; };
 		35F7A60866E845BE0A7B1507 /* PopoverPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4C66E6909D36CEDCC01237A4 /* PopoverPage.swift */; };
 		3917E559879ECAAEF20B5B66 /* EngineLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 99D7A2F9941C8826B94B5402 /* EngineLog.swift */; };
-		413988A95735C9103647140B /* LaunchAgents in CopyFiles */ = {isa = PBXBuildFile; fileRef = FE0AFBB14019783C41891E6B /* LaunchAgents */; };
 		4A54D4673574AC1A7BFA6A19 /* Controls.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9054DD2A2560EB44BFDF8F69 /* Controls.swift */; };
 		4D310C7B47461F0791BA8A42 /* EngineHelper.app in Embed Dependencies */ = {isa = PBXBuildFile; fileRef = 5DF9F9DCD9AB8EDB9C95B342 /* EngineHelper.app */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		4E602A86EE6608B89B8C6739 /* Fixtures.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4A2F525440D004C430C9776 /* Fixtures.swift */; };
@@ -64,26 +62,15 @@
 		1A9F340D7F6D151373EC527B /* CopyFiles */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
-			dstPath = Contents/Library;
-			dstSubfolderSpec = 1;
-			files = (
-				413988A95735C9103647140B /* LaunchAgents in CopyFiles */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		45EEB7FCF4AE9D8563C8E9F3 /* CopyFiles */ = {
-			isa = PBXCopyFilesBuildPhase;
-			buildActionMask = 2147483647;
 			dstPath = "";
 			dstSubfolderSpec = 7;
 			files = (
 				D91DBAA83DB7361222C557AB /* NOTICES.txt in CopyFiles */,
 				A03BD5CD29768C3F4E668A14 /* htdocs in CopyFiles */,
-				24DBB897B84AE554418F19D9 /* manifest.json in CopyFiles */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		7C6D5D32D4BBC7DCC1CA823F /* CopyFiles */ = {
+		45EEB7FCF4AE9D8563C8E9F3 /* CopyFiles */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
 			dstPath = Contents/Helpers;
@@ -120,7 +107,6 @@
 		4135BE65448EF8B55D89585F /* ReceiverRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReceiverRow.swift; sourceTree = "<group>"; };
 		4147B5DAB379F486729D6003 /* EngineStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EngineStore.swift; sourceTree = "<group>"; };
 		475D5A03DC98FC3BEC5CFF15 /* EngineInstallation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EngineInstallation.swift; sourceTree = "<group>"; };
-		49D0B788F59665203F1D3A58 /* manifest.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = manifest.json; sourceTree = "<group>"; };
 		4C66E6909D36CEDCC01237A4 /* PopoverPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PopoverPage.swift; sourceTree = "<group>"; };
 		51AEA12BB1D341EE78FD837E /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
 		567E1E217395D6BDD018904B /* IntendedOutputs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IntendedOutputs.swift; sourceTree = "<group>"; };
@@ -145,10 +131,9 @@
 		E76046F3B7942CAB7459D025 /* lib */ = {isa = PBXFileReference; lastKnownFileType = folder; name = lib; path = Engine/lib; sourceTree = SOURCE_ROOT; };
 		F3CE4CC8DBF22FF3F2534CC1 /* LoginItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginItem.swift; sourceTree = "<group>"; };
 		F8888766EE265295AABC40A8 /* SpotifySession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpotifySession.swift; sourceTree = "<group>"; };
-		FE0AFBB14019783C41891E6B /* LaunchAgents */ = {isa = PBXFileReference; lastKnownFileType = folder; path = LaunchAgents; sourceTree = SOURCE_ROOT; };
 		FEC622225F492D4931767F8C /* htdocs */ = {isa = PBXFileReference; lastKnownFileType = folder; name = htdocs; path = Engine/htdocs; sourceTree = SOURCE_ROOT; };
 		FFFC683139D14BAEBEC657DB /* DeviceKind.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceKind.swift; sourceTree = "<group>"; };
-		"TEMP_2C5B8E0A-E1DA-4645-806D-F421134E8EB0" /* Version.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Version.xcconfig; sourceTree = "<group>"; };
+		"TEMP_10E1E0B8-C6B7-4E6E-A076-EB3DDC2EA954" /* Version.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Version.xcconfig; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -181,7 +166,6 @@
 				C2953F8B5561B56D9B4AF165 /* Engine */,
 				AE31712AF8313C6E0300CB2F /* Helper */,
 				6F1238ED930A9A3567F38A6B /* Sources */,
-				FE0AFBB14019783C41891E6B /* LaunchAgents */,
 				DDA597B201830D1B8264A1A9 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -262,7 +246,6 @@
 				02F50B335213283A57290E39 /* bin */,
 				FEC622225F492D4931767F8C /* htdocs */,
 				E76046F3B7942CAB7459D025 /* lib */,
-				49D0B788F59665203F1D3A58 /* manifest.json */,
 				1CD1D6761C5655A29BEF48B0 /* NOTICES.txt */,
 			);
 			path = Engine;
@@ -294,10 +277,10 @@
 			path = Support;
 			sourceTree = "<group>";
 		};
-		"TEMP_1EA7E461-A3D7-407A-B684-63B13DDFB315" /* macos */ = {
+		"TEMP_AE293B1F-3510-4B25-BC69-CC0AA4D31A70" /* macos */ = {
 			isa = PBXGroup;
 			children = (
-				"TEMP_2C5B8E0A-E1DA-4645-806D-F421134E8EB0" /* Version.xcconfig */,
+				"TEMP_10E1E0B8-C6B7-4E6E-A076-EB3DDC2EA954" /* Version.xcconfig */,
 			);
 			path = macos;
 			sourceTree = "<group>";
@@ -312,7 +295,6 @@
 				09FAB77AC93F7E89317161A4 /* Sources */,
 				45EEB7FCF4AE9D8563C8E9F3 /* CopyFiles */,
 				1A9F340D7F6D151373EC527B /* CopyFiles */,
-				7C6D5D32D4BBC7DCC1CA823F /* CopyFiles */,
 				B5C48117209A3AD4347530F1 /* Embed Dependencies */,
 			);
 			buildRules = (
@@ -445,7 +427,7 @@
 /* Begin XCBuildConfiguration section */
 		4BB72DE8DE81FFF7EAB15D89 /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = "TEMP_2C5B8E0A-E1DA-4645-806D-F421134E8EB0" /* Version.xcconfig */;
+			baseConfigurationReference = "TEMP_10E1E0B8-C6B7-4E6E-A076-EB3DDC2EA954" /* Version.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				APP_PRODUCT_NAME = Schtaap;
@@ -520,7 +502,7 @@
 		};
 		5005CA218BDB4C52FF5D4A92 /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = "TEMP_2C5B8E0A-E1DA-4645-806D-F421134E8EB0" /* Version.xcconfig */;
+			baseConfigurationReference = "TEMP_10E1E0B8-C6B7-4E6E-A076-EB3DDC2EA954" /* Version.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				APP_PRODUCT_NAME = Schtaap;

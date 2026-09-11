@@ -44,7 +44,7 @@ final class EngineLog: @unchecked Sendable {
     /// Returns nil, with the reason on the stderr that still exists, when
     /// the file cannot be opened. That is deliberately not fatal: losing the
     /// log is not a reason to refuse to play music, and output then stays
-    /// wherever launchd pointed it.
+    /// where it was inherited, on the app's own stderr.
     static func capture(
         _ file: URL, maxBytes: UInt64 = EngineLog.maxBytes, generations: Int = EngineLog.generations
     ) -> EngineLog? {

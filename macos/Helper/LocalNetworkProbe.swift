@@ -4,11 +4,13 @@ import Foundation
 /// only way it answers: by trying.
 ///
 /// macOS keeps multicast and local unicast behind the Local Network
-/// permission, keyed to the responsible process, which for the engine is
-/// this helper. There is no API that reads the setting, and no notice when
-/// the user changes it. But a denied send fails at once with EHOSTUNREACH
-/// and a permitted one goes out, so one tiny datagram to a multicast group
-/// nobody listens on is a reading.
+/// permission, keyed to the responsible process, which for the engine is the
+/// app: this helper is a child of it, and responsibility is inherited. So
+/// what is read here is the app's grant, the one row the user sees. There is
+/// no API that reads the setting, and no notice when the user changes it. But
+/// a denied send fails at once with EHOSTUNREACH and a permitted one goes
+/// out, so one tiny datagram to a multicast group nobody listens on is a
+/// reading.
 ///
 /// A reading is per process, and it is not symmetric: a grant reaches a
 /// running process (seen 2026-09-08, denied then granted three seconds
@@ -16,13 +18,14 @@ import Foundation
 /// processes started after it (the same day, the switch turned off and
 /// the running helper kept reading granted). So every reading is taken by
 /// a child process, this same executable in `probe` mode, which is new
-/// each time and inherits this helper's identity for the permission.
+/// each time and inherits this helper's responsibility, and so the app's
+/// grant, like every other descendant.
 ///
 /// The reading matters twice. librespot advertises itself over mDNS on a
 /// socket of its own, and a grant given after that socket was opened does
 /// not reach it: the device stays invisible in Spotify until librespot is
-/// started again. So a change from denied to granted ends librespot, and
-/// launchd starts it again with the grant in place. And the app shows the
+/// started again. So a change from denied to granted ends librespot, and this
+/// helper starts it again with the grant in place. And the app shows the
 /// state, so a receiver that vanished from Spotify says why. The app can
 /// also ask for a reading now, by touching the request file, which it does
 /// when the popover opens.
