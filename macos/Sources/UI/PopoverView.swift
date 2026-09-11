@@ -134,10 +134,11 @@ struct PopoverView: View {
             // reached the engine yet: the seconds between a pick and the
             // first track, or a client that is connected and idle. Spotify
             // runs on phones, computers, speakers and consoles, so the hint
-            // names none of them.
+            // names none of them; and the speakers can stand in any room,
+            // so it does not say where the sound comes out either.
             ConnectingCard(
                 title: "Waiting for Spotify\u{2026}",
-                hint: "Press play in Spotify to hear it here."
+                hint: "Press play in Spotify to play on your speakers."
             )
         } else {
             IdleCard(
