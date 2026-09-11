@@ -16,9 +16,13 @@
 # The fourth keeps a pause at the position the phone was showing, rather
 # than stepping it forward to the player's own, which runs ahead of the
 # pipe by whatever the engine has buffered.
+# The fifth raises volume_changed only for a remote's change: not for a
+# volume sent on the socket, which the app would apply to its own master a
+# second time, late, and not at activation, which would put the speakers
+# at librespot's own level on every connect.
 #
-# Only the binary crate is touched, and no dependency is added, so the
-# vendored Cargo hash stays nixpkgs' own.
+# Only librespot's own crates are touched, and no dependency is added, so
+# the vendored Cargo hash stays nixpkgs' own.
 { librespot }:
 
 librespot.overrideAttrs (previous: {
@@ -27,6 +31,7 @@ librespot.overrideAttrs (previous: {
     ../patches/librespot/librespot-session-loss-reconnect.patch
     ../patches/librespot/librespot-play-from-stopped.patch
     ../patches/librespot/librespot-pause-keeps-position.patch
+    ../patches/librespot/librespot-volume-events-only-from-remotes.patch
   ];
 
   # rustc records a source path for every panic location, and the vendored

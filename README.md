@@ -188,6 +188,10 @@ librespot:
 - `librespot-pause-keeps-position` keeps a pause at the position the
   phone was showing rather than stepping it forward to the player's
   buffer-ahead one.
+- `librespot-volume-events-only-from-remotes` raises a volume event only
+  for the phone's own change. A volume the app sent came back and set the
+  engine a second time, late, which made a slider jump back and forth,
+  and a connect would have put the speakers at librespot's own level.
 
 ## Status
 

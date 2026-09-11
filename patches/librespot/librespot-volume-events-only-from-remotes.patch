@@ -1,0 +1,126 @@
+Only a volume change from a remote raises volume_changed.
+
+The supervisor behind --onevent owns this device's volume: its master
+is what the speakers play at, and it keeps Spotify's volume in step
+with that. Two volume_changed events were not a remote's, and both
+made the supervisor set its master to something it had not chosen.
+
+A volume sent on the control socket came straight back. Spirc's
+set_volume reported it through --onevent, and the supervisor applied
+it to its master a second time. By then the master had often moved on,
+so a drag played back as the level jumping to an old value and then to
+the new one. The socket's `volume` now goes through
+Spirc::mirror_volume, which does everything set_volume does (mixer,
+cache, the delayed update that tells the remotes) except emit the
+event.
+
+And activation reported the device's own level as if a remote had set
+it: whatever librespot started with, 50% by default, which would take
+the speakers there on every connect. Activation now reports no volume.
+The supervisor sends its level on the control socket when the session
+starts instead, and the phone shows what the speakers play at.
+
+A volume from a remote still raises the event, and that is the only
+kind the supervisor needs to hear.
+
+Applies on top of librespot-control-socket.patch,
+librespot-session-loss-reconnect.patch,
+librespot-play-from-stopped.patch and
+librespot-pause-keeps-position.patch.
+
+SPDX-License-Identifier: MIT
+
+--- a/connect/src/spirc.rs
++++ b/connect/src/spirc.rs
+@@ -129,6 +129,7 @@
+     Disconnect { pause: bool },
+     SetPosition(u32),
+     SetVolume(u16),
++    MirrorVolume(u16),
+     Activate,
+     Transfer(Option<TransferRequest>),
+     Load(LoadRequest),
+@@ -367,6 +368,18 @@
+     /// Does nothing if we are not the active device.
+     pub fn set_volume(&self, volume: u16) -> Result<(), Error> {
+         Ok(self.commands.send(SpircCommand::SetVolume(volume))?)
++    }
++
++    /// Updates the volume to a value the caller already has: remotes see
++    /// it, and no VolumeChanged event reports it back.
++    ///
++    /// For a local supervisor that keeps Spotify's volume in step with its
++    /// own. The event would hand it its own value back, late, and possibly
++    /// after it had moved on, which reads as a remote setting it back.
++    ///
++    /// Does nothing if we are not the active device.
++    pub fn mirror_volume(&self, volume: u16) -> Result<(), Error> {
++        Ok(self.commands.send(SpircCommand::MirrorVolume(volume))?)
+     }
+ 
+     /// Updates the position to the given value.
+@@ -678,6 +691,7 @@
+             SpircCommand::RepeatTrack(repeat) => self.handle_repeat_track(repeat),
+             SpircCommand::SetPosition(position) => self.handle_seek(position),
+             SpircCommand::SetVolume(volume) => self.set_volume(volume),
++            SpircCommand::MirrorVolume(volume) => self.change_volume(volume, false),
+             SpircCommand::Load(command) => self.handle_load(command, None, None).await?,
+         };
+ 
+@@ -1261,8 +1275,10 @@
+             self.session.client_model_name(),
+         );
+ 
+-        self.player
+-            .emit_volume_changed_event(self.connect_state.device_info().volume as u16);
++        // No VolumeChanged here. The level is this device's own, not a
++        // remote's, and the supervisor behind --onevent owns the device's
++        // volume: it tells us its level through the control socket when a
++        // session starts (Spirc::mirror_volume), rather than taking ours.
+ 
+         self.player
+             .emit_auto_play_changed_event(self.session.autoplay());
+@@ -1839,6 +1855,12 @@
+     }
+ 
+     fn set_volume(&mut self, volume: u16) {
++        self.change_volume(volume, true)
++    }
++
++    /// `emit_event` is false for a volume the local supervisor sent, which
++    /// it already knows; see `Spirc::mirror_volume`.
++    fn change_volume(&mut self, volume: u16, emit_event: bool) {
+         debug!("SpircTask::set_volume({volume})");
+ 
+         let old_volume = self.connect_state.device_info().volume;
+@@ -1851,7 +1873,7 @@
+             if let Some(cache) = self.session.cache() {
+                 cache.save_volume(volume)
+             }
+-            if self.connect_state.is_active() {
++            if emit_event && self.connect_state.is_active() {
+                 self.player.emit_volume_changed_event(volume);
+             }
+         }
+--- a/src/control.rs
++++ b/src/control.rs
+@@ -15,6 +15,10 @@
+ //!   seek <milliseconds>     into the current track
+ //!   status                  answers `ok volume <0..65535> session <live|lost|none>`
+ //!
++//! A `volume` sent here reaches the phone but raises no volume_changed
++//! event: it is the supervisor's own level, and the event would hand it
++//! back, late, to the one place that already has it.
++//!
+ //! The socket file is created mode 0600. Whoever can open it can control
+ //! playback on the account that is connected, which is exactly the trust
+ //! the owning user already has over this process.
+@@ -103,7 +107,7 @@
+             Command::PlayPause => spirc.play_pause(),
+             Command::Next => spirc.next(),
+             Command::Prev => spirc.prev(),
+-            Command::SetVolume(volume) => spirc.set_volume(*volume),
++            Command::SetVolume(volume) => spirc.mirror_volume(*volume),
+             Command::Seek(position_ms) => spirc.set_position_ms(*position_ms),
+             Command::Status => unreachable!(),
+         };
