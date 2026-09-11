@@ -174,6 +174,9 @@ OwnTone:
 - `owntone-airplay-resume-continues-timeline` moves the RTP time on by
   the length of a pause, so the first packets after a resume are never
   due in the past under the speaker's old clock mapping.
+- `owntone-logfile-empty-means-none` lets the config turn owntone's own
+  logfile off, since the helper already captures and rotates the
+  console.
 
 librespot:
 
