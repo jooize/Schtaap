@@ -74,6 +74,20 @@ final class LocalNetworkProbe: @unchecked Sendable {
     /// How often the loop looks for a request while it waits.
     private static let requestPoll: TimeInterval = 1
 
+    /// A denial is believed only once fresh readings a moment later agree.
+    ///
+    /// The first local network use of a newly built app is refused even
+    /// when the user has granted it. macOS keys its cached grant to the
+    /// executable's UUID, finds a new one, and rebuilds the cache, which
+    /// took a fifth of a second when it was seen (nehelper, 2026-09-11:
+    /// "Local network allowed by preference ... Clearing cached UUIDs and
+    /// restarting session"). Believed, that one refusal showed "Local
+    /// Network access is off" for five seconds on the first launch of
+    /// every new build, and restarted librespot for nothing. A real denial
+    /// is still reported, two seconds later.
+    private static let denialRechecks = 2
+    private static let denialRecheckInterval: TimeInterval = 1
+
     /// RFC 4727's experimental link-local group, and a port nothing uses.
     /// Sending to it needs the permission like any multicast does, and
     /// unlike a real mDNS query it makes nobody answer.
@@ -88,29 +102,24 @@ final class LocalNetworkProbe: @unchecked Sendable {
         self.onGranted = onGranted
     }
 
+    /// Takes the first reading before it returns, so that librespot, started
+    /// next, opens its mDNS socket with the grant in place when there is
+    /// one. Then keeps reading on a thread of its own.
     func start() {
-        let thread = Thread { [self] in run() }
+        let first = readSettled()
+        report(first, after: nil)
+        let thread = Thread { [self] in run(after: first) }
         thread.name = "local-network-probe"
         thread.qualityOfService = .utility
         thread.start()
     }
 
-    private func run() {
-        var last: Verdict?
+    private func run(after first: Verdict) {
+        var last = first
         var handledRequest = requestStamp()
         while true {
-            let verdict = readInChild()
-            if verdict != last {
-                log("local network: \(verdict.rawValue)")
-                SpotifySessionFile.update(at: sessionFile) { $0.localNetwork = verdict.rawValue }
-                if last == .denied, verdict == .granted {
-                    onGranted()
-                }
-                last = verdict
-            }
-
             // Wait out the interval, or until the app asks.
-            let interval = verdict == .granted ? Self.grantedInterval : Self.deniedInterval
+            let interval = last == .granted ? Self.grantedInterval : Self.deniedInterval
             let until = Date().addingTimeInterval(interval)
             while Date() < until {
                 Thread.sleep(forTimeInterval: Self.requestPoll)
@@ -120,7 +129,34 @@ final class LocalNetworkProbe: @unchecked Sendable {
                     break
                 }
             }
+
+            let verdict = readSettled()
+            if verdict != last {
+                report(verdict, after: last)
+                last = verdict
+            }
         }
+    }
+
+    /// Tells the app, and acts on a grant that has just arrived.
+    private func report(_ verdict: Verdict, after last: Verdict?) {
+        log("local network: \(verdict.rawValue)")
+        SpotifySessionFile.update(at: sessionFile) { $0.localNetwork = verdict.rawValue }
+        if last == .denied, verdict == .granted {
+            onGranted()
+        }
+    }
+
+    /// One reading, and for a denial, the rechecks that confirm it.
+    private func readSettled() -> Verdict {
+        var verdict = readInChild()
+        var rechecks = Self.denialRechecks
+        while verdict == .denied, rechecks > 0 {
+            Thread.sleep(forTimeInterval: Self.denialRecheckInterval)
+            verdict = readInChild()
+            rechecks -= 1
+        }
+        return verdict
     }
 
     private func requestStamp() -> Date? {
