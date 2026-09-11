@@ -517,11 +517,24 @@ final class EngineStore {
     }
 
     func skipToNext() {
+        showTrackStart()
         tellSpotify("next") { try await $0.next() }
     }
 
     func skipToPrevious() {
+        showTrackStart()
         tellSpotify("previous") { try await $0.previous() }
+    }
+
+    /// A skip lands at the start of a track, a previous included: past the
+    /// first seconds Spotify restarts the current one instead. The card
+    /// goes to 0:00 at once, as the phone does, and holds off the engine's
+    /// readings the way a seek does: for a few seconds after the skip the
+    /// speakers are still playing out the old track, and the engine says
+    /// so.
+    private func showTrackStart() {
+        progressAnchor = (0, .now)
+        seekSettlingUntil = .now.addingTimeInterval(8)
     }
 
     /// Moves within the track. The card shows the new position at once; the
