@@ -1,5 +1,5 @@
 {
-  description = "Spotify Connect to synced HomePods: OwnTone + librespot, native on macOS";
+  description = "Spotify Connect to AirPlay 2 speakers, in sync: OwnTone + librespot, native on macOS";
 
   inputs.nixpkgs.url = "flake:nixpkgs";
 
