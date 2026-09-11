@@ -13,7 +13,7 @@ The app ships them, configures them, and registers them with launchd.
 Or from the command line:
 
     xcodebuild -project Schtaap.xcodeproj -scheme Schtaap -configuration Debug \
-      -derivedDataPath build build
+      -derivedDataPath DerivedData build
 
 `build-engine` needs Nix and takes a while the first time; after that the
 payload sits in `Engine/`, which is gitignored, and only has to be rebuilt
@@ -26,7 +26,7 @@ never hand-edit the project file.
 
 ## Running without the engine
 
-    open build/Build/Products/Debug/Schtaap.app --args -UseFixtures YES
+    open DerivedData/Build/Products/Debug/Schtaap.app --args -UseFixtures YES
 
 Loads `Fixtures.swift` instead of the network, so the whole UI is reachable
 with nothing else running. Fixture mode also blocks engine registration, which
