@@ -216,6 +216,49 @@ struct MenuRow<Trailing: View>: View {
     }
 }
 
+/// The now-playing card's previous, play/pause and next: a bare glyph at
+/// rest, a soft circle under the pointer, darker and a touch smaller while
+/// pressed, so a click is seen to land. `.plain` shows none of that.
+///
+/// The circle is drawn outside the label's frame and takes no layout, so
+/// the transport row keeps the height the card is measured for.
+struct TransportButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        TransportButtonBody(configuration: configuration)
+    }
+}
+
+private struct TransportButtonBody: View {
+    let configuration: ButtonStyleConfiguration
+
+    @State private var isHovering = false
+    @Environment(\.isEnabled) private var isEnabled
+
+    /// How far the circle reaches past the 22-point label.
+    private static let halo: CGFloat = 5
+
+    var body: some View {
+        configuration.label
+            .opacity(configuration.isPressed ? 0.7 : 1)
+            .background {
+                Circle()
+                    .fill(Color.primary.opacity(fillOpacity))
+                    .padding(-Self.halo)
+            }
+            .scaleEffect(configuration.isPressed ? 0.9 : 1)
+            .contentShape(Circle().inset(by: -Self.halo))
+            .onHover { isHovering = $0 }
+            .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
+            .animation(.easeOut(duration: 0.12), value: isHovering)
+    }
+
+    private var fillOpacity: Double {
+        guard isEnabled else { return 0 }
+        if configuration.isPressed { return 0.16 }
+        return isHovering ? 0.08 : 0
+    }
+}
+
 extension MenuRow where Trailing == EmptyView {
     init(title: String, action: @escaping () -> Void) {
         self.init(title: title, action: action, trailing: { EmptyView() })

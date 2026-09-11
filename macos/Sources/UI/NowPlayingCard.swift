@@ -127,9 +127,8 @@ struct NowPlayingCard: View {
                 .font(.system(size: size, weight: .semibold))
                 .foregroundStyle(.primary)
                 .frame(minWidth: 22, minHeight: 22)
-                .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(TransportButtonStyle())
     }
 
     /// "m:ss", or "h:mm:ss" past the hour, as every player writes it.
