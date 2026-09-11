@@ -48,9 +48,11 @@ struct EngineTransport {
     private struct PlayerState: Decodable {
         let state: String
         let itemProgressMs: Int
+        /// The master, 0...100.
+        let volume: Int
 
         private enum CodingKeys: String, CodingKey {
-            case state
+            case state, volume
             case itemProgressMs = "item_progress_ms"
         }
     }
@@ -110,6 +112,37 @@ struct EngineTransport {
         guard state.state == "pause" else { return }
         if put("api/player/play") {
             log("resumed the engine")
+        }
+    }
+
+    /// A phone picked this device. Spotify shows a device's own volume, and
+    /// this device's is the engine's master, so Spotify is told that level.
+    /// librespot's own is whatever it started with, and it does not report
+    /// it at activation (our patch), so the speakers stay where they were
+    /// and the phone's slider comes to them.
+    func sessionStarted() {
+        guard let state = player() else { return }
+        let level = SpotifyControl.spotifyLevel(percent: state.volume)
+        do {
+            _ = try SpotifyControl(socket: socket).exchangeBlocking("volume \(level)")
+            log("told Spotify the engine's volume, \(state.volume)%")
+        } catch {
+            log("could not tell Spotify the engine's volume: \(error.localizedDescription)")
+        }
+    }
+
+    /// A remote moved Spotify's volume (0...65535). The engine's master
+    /// follows, on the mapping the app uses the other way, so a level and
+    /// its percent agree on both sides and the app can tell whether Spotify
+    /// is where the engine was.
+    func setVolume(spotifyLevel level: Int) {
+        let percent = SpotifyControl.percent(spotifyLevel: level)
+        let url = engine.appending(path: "api/player/volume")
+            .appending(queryItems: [URLQueryItem(name: "volume", value: String(percent))])
+        var request = URLRequest(url: url)
+        request.httpMethod = "PUT"
+        if perform(request) != nil {
+            log("volume \(percent)% from Spotify")
         }
     }
 

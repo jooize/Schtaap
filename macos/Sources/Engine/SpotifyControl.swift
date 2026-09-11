@@ -79,14 +79,17 @@ struct SpotifyControl: Sendable {
     }
 
     /// Sets Spotify's level, 0...65535. Ignored by librespot while no phone
-    /// is connected, which is fine: there is nobody to show it to.
+    /// is connected, which is fine: there is nobody to show it to. Raises no
+    /// volume_changed event (our patch), so the level does not come back
+    /// through the event bridge to set the engine a second time.
     func setVolume(_ level: Int) async throws {
         _ = try await send("volume \(min(max(level, 0), Self.maxVolume))")
     }
 
     /// The engine's 0...100 master and Spotify's 0...65535 level, mapped so
-    /// that a round trip is the identity: the metadata bridge lands the
-    /// engine on `round(level / 655.35)`, and this is its inverse.
+    /// that a round trip is the identity: the event bridge sets the engine
+    /// to `percent(spotifyLevel:)`, and `spotifyLevel(percent:)` is its
+    /// inverse.
     static func spotifyLevel(percent: Int) -> Int {
         Int((Double(min(max(percent, 0), 100)) * Double(maxVolume) / 100).rounded())
     }

@@ -33,13 +33,23 @@ import Foundation
 // - OwnTone only starts watching the metadata pipe once playback begins, so
 //   writing when nothing is reading is the normal case and not an error.
 //
-// Volume is forwarded as a pvol item, which OwnTone applies to its master
-// volume, the same control the app's top slider moves. librespot runs with
-// `--volume-ctrl fixed` so the phone's slider no longer attenuates the
-// samples: before this it did, on a 60 dB log curve, and 45% on the phone
-// arrived as -33 dBFS on top of whatever the AirPlay volume was, which the
-// user heard as silence. There is no loop: nothing tells librespot what the
-// engine's volume became, so the phone only ever pushes.
+// Volume goes to the engine's master through its API, the same control the
+// app's top slider moves (EngineTransport.setVolume). Not as a pvol item on
+// the metadata pipe, which OwnTone applies the same way but reads only
+// while playing, so a phone's slider moved during a pause never arrived.
+// librespot runs with `--volume-ctrl fixed` so the phone's slider no longer
+// attenuates the samples: before this it did, on a 60 dB log curve, and 45%
+// on the phone arrived as -33 dBFS on top of whatever the AirPlay volume
+// was, which the user heard as silence.
+//
+// The other direction goes over librespot's control socket: the app sends
+// the engine's master to Spotify whenever it moves for a reason of its own,
+// so the phone follows the popover and a speaker's buttons, and this bridge
+// sends it when a session starts, so a phone that picks the device finds
+// its slider where the speakers are. A level sent that way raises no
+// volume_changed event, and neither does activation (our librespot patch),
+// so every event here is a remote's, and nothing comes back to set the
+// master a second time.
 
 enum MetadataBridge {
     /// OwnTone's PIPE_PICTURE_SIZE_MAX.
@@ -113,6 +123,7 @@ enum MetadataBridge {
             SpotifySessionFile.update(at: sessionFile) { session in
                 session = SpotifySession(active: true, userName: environment["USER_NAME"])
             }
+            transport.sessionStarted()
             return
         case "session_client_changed":
             SpotifySessionFile.update(at: sessionFile) { session in
@@ -165,14 +176,14 @@ enum MetadataBridge {
             blob = item(.ssnc, "pfls")
 
         case "volume_changed":
-            // librespot only emits this while a client is actively
-            // controlling the device, so the initial volume at startup
-            // never reaches here and never overrides the engine's own.
-            guard let volume = Int(environment["VOLUME"] ?? "") else {
-                saveState(state, in: stateDirectory)
-                return
+            // Only a remote's change (our librespot patch): not librespot's
+            // own level at startup or at activation, and not a level the
+            // app sent, so nothing here overrides the engine's own.
+            if let volume = Int(environment["VOLUME"] ?? "") {
+                transport.setVolume(spotifyLevel: volume)
             }
-            blob = volumeItem(spotifyVolume: volume)
+            saveState(state, in: stateDirectory)
+            return
 
         default:
             saveState(state, in: stateDirectory)
@@ -242,29 +253,6 @@ enum MetadataBridge {
         let end = start + frames(durationMs)
         guard end > start else { return Data() }
         return item(.ssnc, "prgr", payload: Data("\(start)/\(position)/\(end)".utf8))
-    }
-
-    /// A pvol item for a Spotify volume (0...65535).
-    ///
-    /// shairport-sync writes "airplay_volume,volume,lowest,highest"; OwnTone
-    /// reads only the first, an AirPlay level in -30...0 dB, and maps it
-    /// linearly onto its 0...100 master volume (pipe.c, parse_volume). The
-    /// rest must be exactly ",0.00,0.00,0.00": anything else is read as
-    /// shairport-sync doing its own software volume, and the item is ignored.
-    ///
-    /// OwnTone truncates the level to a whole percent, so the level sent is
-    /// the middle of the rounded percent's band rather than the exact
-    /// fraction: the engine then lands on `round(volume / 655.35)` every
-    /// time, which is the mapping the app inverts when it pushes its own
-    /// level back to Spotify. Off by a float's width, a truncation would
-    /// otherwise turn 45 into 44 and start the two sides chasing each other.
-    private static func volumeItem(spotifyVolume: Int) -> Data {
-        let fraction = Double(min(max(spotifyVolume, 0), 65_535)) / 65_535
-        let percent = Int((fraction * 100).rounded())
-        let airplayLevel = -30.0 + 30.0 * (Double(percent) + 0.5) / 100
-        let payload = String(format: "%.2f,0.00,0.00,0.00", airplayLevel)
-        log("forwarding volume \(percent)%")
-        return item(.ssnc, "pvol", payload: Data(payload.utf8))
     }
 
     private static func frames(_ milliseconds: Int) -> Int {

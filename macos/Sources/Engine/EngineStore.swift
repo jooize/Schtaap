@@ -80,6 +80,10 @@ final class EngineStore {
     /// Master volume in 0...100. Written straight through by the slider.
     private(set) var masterVolume: Double = 50
 
+    /// The master as the engine last reported it, which the slider above
+    /// does not show while it is held. What Spotify is compared with.
+    private var reportedVolume: Int?
+
     /// True when the user has muted via the popover. The pre-mute level is
     /// kept so unmuting restores it.
     private(set) var isMasterMuted = false
@@ -309,6 +313,7 @@ final class EngineStore {
         spotifySessionWatch = nil
         spotifyVolumeSync?.cancel()
         spotifyVolumeSync = nil
+        reportedVolume = nil
         pendingTransportExpiry?.cancel()
         pendingTransport = nil
         settleRead?.cancel()
@@ -407,7 +412,11 @@ final class EngineStore {
             }
             if !isAdjustingMaster {
                 masterVolume = Double(status.volume)
-                syncSpotifyVolume(status.volume)
+            }
+            let previousVolume = reportedVolume
+            reportedVolume = status.volume
+            if let previousVolume, previousVolume != status.volume {
+                syncSpotifyVolume(from: previousVolume, to: status.volume)
             }
             publishNowPlaying()
         } catch {
@@ -544,24 +553,29 @@ final class EngineStore {
         }
     }
 
-    /// Makes the phone's slider follow the engine's master, wherever the
-    /// master's change came from: this slider, a HomePod's buttons, a mute.
+    /// Makes the phone's slider follow the engine's master when the master
+    /// moved for a reason of its own: this slider, a HomePod's buttons, a
+    /// mute.
     ///
-    /// Skipped when Spotify already sits on a level that maps to the same
-    /// percent. That is what stops the echo: a level set from the phone
-    /// comes in through the metadata bridge as a percent, which maps back
-    /// to a slightly different level, and pushing that would nudge the
-    /// phone's slider by a hair and emit another volume event. Sequential
-    /// on purpose, so a burst of presses reaches Spotify in order.
-    private func syncSpotifyVolume(_ percent: Int) {
+    /// Only when Spotify was where the engine was before the change. A
+    /// change that came from Spotify finds Spotify already past the old
+    /// level: at the new one, or, while the phone's slider is still moving,
+    /// at a later one the event bridge has yet to bring the engine to.
+    /// Sending the engine's level then would pull the phone back to where
+    /// it just was, which is what it did. The order decides this, not a
+    /// clock. What is sent raises no volume event (our librespot patch), so
+    /// nothing here comes back to the engine. Sequential on purpose, so a
+    /// burst of changes reaches Spotify in order and each finds the level
+    /// the one before it left.
+    private func syncSpotifyVolume(from previous: Int, to percent: Int) {
         guard let spotify else { return }
-        let previous = spotifyVolumeSync
+        let earlier = spotifyVolumeSync
         spotifyVolumeSync = Task {
-            await previous?.value
+            await earlier?.value
             guard !Task.isCancelled else { return }
             do {
                 let current = try await spotify.volume()
-                guard SpotifyControl.percent(spotifyLevel: current) != percent else { return }
+                guard SpotifyControl.percent(spotifyLevel: current) == previous else { return }
                 try await spotify.setVolume(SpotifyControl.spotifyLevel(percent: percent))
             } catch {
                 // librespot down or unpatched: the phone keeps its own level,
